@@ -746,7 +746,7 @@ impl DirtyChunks {
 /// Storage buffer mirrored on the CPU; only changed chunks are uploaded.
 pub struct GpuTable<T: Pod + PartialEq> {
     label: &'static str,
-    buffer: wgpu::Buffer,
+    buffer: Option<wgpu::Buffer>,
     mirror: Vec<T>,
     fill: T,
     dirty: DirtyChunks,
@@ -762,7 +762,21 @@ impl<T: Pod + PartialEq> GpuTable<T> {
     pub fn new(device: &wgpu::Device, label: &'static str, cap: usize, fill: T) -> Self {
         GpuTable {
             label,
-            buffer: device.create_buffer(&Self::desc(label, cap.max(1))),
+            buffer: Some(device.create_buffer(&Self::desc(label, cap.max(1)))),
+            mirror: Vec::with_capacity(cap),
+            fill,
+            dirty: DirtyChunks::default(),
+            generation: 0,
+            uploaded: 0,
+            backoff: Backoff::default(),
+        }
+    }
+
+    /// CPU-only table for compatibility backends without `wgpu::Device`.
+    pub fn new_cpu(label: &'static str, cap: usize, fill: T) -> Self {
+        GpuTable {
+            label,
+            buffer: None,
             mirror: Vec::with_capacity(cap),
             fill,
             dirty: DirtyChunks::default(),
@@ -794,7 +808,9 @@ impl<T: Pod + PartialEq> GpuTable<T> {
     }
 
     pub fn buffer(&self) -> &wgpu::Buffer {
-        &self.buffer
+        self.buffer
+            .as_ref()
+            .expect("GpuTable::buffer called on a CPU-only compatibility table")
     }
 
     /// Set entry `i` (the table grows with the fill value); unchanged
@@ -840,25 +856,30 @@ impl<T: Pod + PartialEq> GpuTable<T> {
 
     /// Record the upload of the changed chunks in the frame's journal.
     pub fn flush(&mut self, device: &wgpu::Device, writes: &mut GpuWrites) {
+        let Some(buffer) = &mut self.buffer else {
+            self.uploaded = 0;
+            self.dirty.clear();
+            return;
+        };
         let size = std::mem::size_of::<T>();
         self.uploaded = 0;
         let needed = (self.mirror.len() * size) as u64;
-        if needed > self.buffer.size() && grow_upload_buffer(device, &mut self.buffer, &mut self.backoff, self.label, needed) {
+        if needed > buffer.size() && grow_upload_buffer(device, buffer, &mut self.backoff, self.label, needed) {
             self.generation += 1;
-            writes.write_buffer(&self.buffer, 0, bytemuck::cast_slice(&self.mirror));
+            writes.write_buffer(buffer, 0, bytemuck::cast_slice(&self.mirror));
             self.uploaded = needed;
             self.dirty.clear();
             return;
         }
         // (while the buffer could not grow, what it has no room for waits:
         // the growth writes the whole table)
-        let fits = self.buffer.size() as usize / size;
+        let fits = buffer.size() as usize / size;
         for r in self.dirty.take_ranges(self.mirror.len()) {
             let r = r.start.min(fits)..r.end.min(fits);
             if r.is_empty() {
                 continue;
             }
-            writes.write_buffer(&self.buffer, (r.start * size) as u64, bytemuck::cast_slice(&self.mirror[r.clone()]));
+            writes.write_buffer(buffer, (r.start * size) as u64, bytemuck::cast_slice(&self.mirror[r.clone()]));
             self.uploaded += (r.len() * size) as u64;
         }
     }
@@ -947,6 +968,15 @@ impl CullTables {
         CullTables {
             objects: GpuTable::new(device, "cull objects", 4096, CullObject::NONE),
             boxes: GpuTable::new(device, "cull joint boxes", 1024, JointBox::NONE),
+            last: CullCounts::default(),
+        }
+    }
+
+    /// CPU-only culling tables for compatibility backends.
+    pub fn new_cpu() -> Self {
+        CullTables {
+            objects: GpuTable::new_cpu("cull objects", 4096, CullObject::NONE),
+            boxes: GpuTable::new_cpu("cull joint boxes", 1024, JointBox::NONE),
             last: CullCounts::default(),
         }
     }

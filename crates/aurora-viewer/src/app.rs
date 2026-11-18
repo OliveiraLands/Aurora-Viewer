@@ -15620,7 +15620,7 @@ impl App {
             crate::deep_profile::PeriodSample {
                 avatars: scene.avatar_sample(),
                 gpu: crate::deep_profile::GpuMemory {
-                    video: renderer.video_memory.read(&renderer.device),
+                    video: renderer.read_video_memory(),
                     textures: render.textures,
                     texture_bytes: render.texture_bytes,
                     pages: render.texture_pages,

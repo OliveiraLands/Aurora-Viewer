@@ -1289,8 +1289,7 @@ impl App {
         };
         let per_pixel = snapshot::pass_bytes_per_pixel(self.snapshots.target_bytes, self.msaa_samples(renderer));
         let free = renderer
-            .video_memory
-            .read(&renderer.device)
+            .read_video_memory()
             .map_or(DEFAULT_TARGET_BYTES, |m| m.budget.saturating_sub(m.usage) / 2);
         snapshot::pass_pixels(free, per_pixel, renderer.size()).min(self.snapshots.gpu_cost.pass_pixels(renderer.size(), ms))
     }
@@ -2797,7 +2796,7 @@ LUT_3D_SIZE {n}
     /// figures (what it counts or the live resources, the larger) and the
     /// textures' pressure; in demo with `quality-tight`, a budget of its own.
     fn photo_memory(&mut self, renderer: &Renderer) -> Option<snapshot::quality::Memory> {
-        let video = renderer.video_memory.read(&renderer.device)?;
+        let video = renderer.read_video_memory()?;
         let mut memory = snapshot::quality::Memory {
             budget: video.budget,
             usage: video.usage.max(video.allocated),
@@ -2823,7 +2822,7 @@ LUT_3D_SIZE {n}
         let Some(m) = self.photo_memory(renderer) else {
             return;
         };
-        let live = renderer.video_memory.read(&renderer.device).map_or(0, |v| v.allocated);
+        let live = renderer.read_video_memory().map_or(0, |v| v.allocated);
         log::info!(
             "photo quality: step {} of {} for the video memory, about {} MB beyond the user's settings ({} MB taken, {} MB of resources, of a budget of {} MB, {} MB kept free, texture pressure {})",
             plan.step,

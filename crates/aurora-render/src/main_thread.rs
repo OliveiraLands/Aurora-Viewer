@@ -51,6 +51,7 @@ use std::time::{Duration, Instant};
 pub struct GpuInfo {
     pub name: String,
     pub backend: String,
+    pub active_backend: crate::backend_choice::ActiveBackend,
     pub driver: String,
     pub bindless: bool,
     pub timestamps: bool,
@@ -158,10 +159,10 @@ fn scene_gpu(
     bind_generation: u64,
 ) -> SceneGpu {
     SceneGpu {
-        records: records.buffer.clone(),
+        records: records.buffer().clone(),
         palettes: palettes.clone(),
         skin_binds: skin_binds.clone(),
-        prev_models: records.prev_models.clone(),
+        prev_models: records.prev_models().clone(),
         prev_palettes: prev_palettes.clone(),
         records_key: (records.generation, bind_generation),
         faces: records.faces.buffer().clone(),
@@ -170,21 +171,45 @@ fn scene_gpu(
         object_count: cull.objects.len(),
         joint_boxes: cull.boxes.buffer().clone(),
         record_slots: records.slot_count(),
-        textures: textures.bind_group.clone(),
-        vertices: geometry.vertex_buffer.clone(),
-        skin: geometry.skin_buffer.clone(),
-        indices: geometry.index_buffer.clone(),
+        textures: textures.bind_group().clone(),
+        vertices: geometry.vertex_buffer().clone(),
+        skin: geometry.skin_buffer().clone(),
+        indices: geometry.index_buffer().clone(),
     }
 }
 
-pub struct Renderer {
+struct WgpuBackend {
     /// Where the backend runs. First field: dropped first, so the render
     /// thread has left before the scene's stores go.
     host: Host,
-    vr: Arc<crate::vr_control::Control>,
     #[cfg(any(target_os = "linux", target_os = "windows", target_os = "macos"))]
     _xr_graphics: Option<crate::xr_device::Graphics>,
-    pub device: wgpu::Device,
+    device: wgpu::Device,
+    palette_buffer: wgpu::Buffer,
+    /// The palettes as the last frame drew them (the motion vectors): the
+    /// renderer copies `palette_buffer` into it at the end of each frame
+    /// (`motion_history.rs`). The same size, unless video memory was full
+    /// when the palettes grew.
+    prev_palette_buffer: wgpu::Buffer,
+    skin_bind_buffer: wgpu::Buffer,
+    /// Frame pacing (pacing.rs, on unless AURORA_FRAME_PACING=0): what the
+    /// GPU has finished, as the backend tells it; the last wait.
+    gpu_frames: Arc<crate::pacing::GpuFrames<wgpu::SubmissionIndex>>,
+    /// AURORA_DEMO_GPU_HANG: the frame a real GPU hang is submitted at, and
+    /// the queue it goes on.
+    demo_hang: Option<(u64, wgpu::Queue)>,
+}
+
+enum RendererBackend {
+    /// First field on `Renderer` so the active render thread or GL context
+    /// shuts down before the scene's stores drop.
+    Wgpu(Box<WgpuBackend>),
+    Glow(Box<crate::glow_backend::GlowRenderer>),
+}
+
+pub struct Renderer {
+    backend: RendererBackend,
+    vr: Arc<crate::vr_control::Control>,
     pub info: GpuInfo,
     pub geometry: GeometryArena,
     /// Copies of the streamed data staged by background jobs (upload.rs),
@@ -201,12 +226,6 @@ pub struct Renderer {
     pub cull: CullTables,
     /// Queue writes of the frame being built (writes.rs).
     writes: GpuWrites,
-    palette_buffer: wgpu::Buffer,
-    /// The palettes as the last frame drew them (the motion vectors): the
-    /// renderer copies `palette_buffer` into it at the end of each frame
-    /// (`motion_history.rs`). The same size, unless video memory was full
-    /// when the palettes grew.
-    prev_palette_buffer: wgpu::Buffer,
     /// The next frame starts the motion history again (`cut_motion_history`).
     motion_cut: bool,
     /// `shift_world`'s moves not yet sent with a frame.
@@ -218,7 +237,6 @@ pub struct Renderer {
     /// Bytes of geometry written into the arena since the start (vertices,
     /// skin weights, indices): what the profile reports per second.
     pub geometry_uploaded: u64,
-    skin_bind_buffer: wgpu::Buffer,
     /// Bumped when the palette or skin binding buffer is reallocated (the
     /// render thread rebuilds the records bind group).
     bind_generation: u64,
@@ -256,9 +274,7 @@ pub struct Renderer {
     /// since the last `render` returned.
     last_stats: RenderStats,
     fresh: bool,
-    /// Frame pacing (pacing.rs, on unless AURORA_FRAME_PACING=0): what the
-    /// GPU has finished, as the backend tells it; the last wait.
-    gpu_frames: Arc<crate::pacing::GpuFrames<wgpu::SubmissionIndex>>,
+    /// The last wait on GPU pacing.
     gpu_waited: Duration,
     /// When the frame being built began reading its input.
     input_at: Option<Instant>,
@@ -302,9 +318,6 @@ pub struct Renderer {
     lost: DeviceLost,
     /// AURORA_DEMO_GPU_LOST: the frame the device is taken as lost at.
     demo_lost: Option<u64>,
-    /// AURORA_DEMO_GPU_HANG: the frame a real GPU hang is submitted at, and
-    /// the queue it goes on.
-    demo_hang: Option<(u64, wgpu::Queue)>,
 }
 
 impl Renderer {
@@ -329,6 +342,31 @@ impl Renderer {
         W: wgpu::rwh::HasWindowHandle + wgpu::rwh::HasDisplayHandle + Send + Sync + 'static,
     {
         crate::start_progress::enter(crate::start_progress::Phase::GpuDevice);
+        let gl_compiled = crate::glow_backend::is_compiled_in();
+        let wanted_backend = crate::backend_choice::GraphicsBackend::from_env();
+        let platform_native = crate::backend_choice::ActiveBackend::platform_native();
+        log::info!(
+            "Graphics backend preference: {wanted_backend:?} (native: {})",
+            platform_native.label()
+        );
+        if wanted_backend == crate::backend_choice::GraphicsBackend::OpenGl {
+            let decision = crate::backend_choice::decide(
+                wanted_backend,
+                platform_native,
+                crate::backend_choice::NativeProbeOutcome::Ready,
+                gl_compiled,
+            )
+            .map_err(|e| RenderError::NoAdapter(e.into()))?;
+            log::info!("Graphics backend selected: {}", decision.selected.label());
+            return Self::new_glow(window, width, height, vsync, decision.fallback);
+        } else if let Err(msg) = crate::backend_choice::decide(
+            wanted_backend,
+            platform_native,
+            crate::backend_choice::NativeProbeOutcome::Ready,
+            gl_compiled,
+        ) {
+            return Err(RenderError::NoAdapter(msg.into()));
+        }
         let desc = || {
             let mut desc = wgpu::InstanceDescriptor::new_without_display_handle();
             desc.backends = crate::BACKENDS;
@@ -442,8 +480,22 @@ impl Renderer {
                 std::env::var_os(crate::vulkan_layers::AMD_SWITCHABLE_DISABLE_VARIABLE).is_some(),
                 crate::vulkan_layers::physical_device_count_probe()
             );
-            // The raw count above says whether the call failed or found none
-            return Err(RenderError::NoAdapter(no_adapter_listed().into()));
+            let decision = crate::backend_choice::decide(
+                wanted_backend,
+                platform_native,
+                crate::backend_choice::NativeProbeOutcome::NoAdapters,
+                gl_compiled,
+            );
+            match decision {
+                Ok(d) => {
+                    log::info!("Graphics backend fallback selected: {} ({:?})", d.selected.label(), d.fallback);
+                    return Self::new_glow(window, width, height, vsync, d.fallback);
+                }
+                Err(_) => {
+                    // The raw count above says whether the call failed or found none
+                    return Err(RenderError::NoAdapter(no_adapter_listed().into()));
+                }
+            }
         }
         // SAFETY: `window` goes to the host with the backend that owns the
         // surface and drops after it (`Host`'s field order and join), or
@@ -524,7 +576,23 @@ impl Renderer {
                 }
             }
         }
-        let (index, o) = opened.ok_or(failure)?;
+        let (index, o) = match opened {
+            Some(pair) => pair,
+            None => {
+                match crate::backend_choice::decide(
+                    wanted_backend,
+                    platform_native,
+                    crate::backend_choice::NativeProbeOutcome::IncompatibleAdapters,
+                    gl_compiled,
+                ) {
+                    Ok(d) => {
+                        log::info!("Graphics backend fallback selected: {} ({:?})", d.selected.label(), d.fallback);
+                        return Self::new_glow(window, width, height, vsync, d.fallback);
+                    }
+                    Err(_) => return Err(failure),
+                }
+            }
+        };
         let adapter = adapters.swap_remove(index);
         let (dedicated_mb, shared_mb) = memories[index];
         let vram_mb = candidates[index].vram_mb;
@@ -590,6 +658,8 @@ impl Renderer {
         let info = GpuInfo {
             name: ainfo.name.clone(),
             backend: format!("{:?}", ainfo.backend),
+            active_backend: crate::backend_choice::ActiveBackend::from_wgpu(ainfo.backend)
+                .unwrap_or_else(crate::backend_choice::ActiveBackend::platform_native),
             driver: format!("{} {}", ainfo.driver, ainfo.driver_info),
             bindless,
             timestamps,
@@ -691,7 +761,7 @@ impl Renderer {
             timestamps,
             adapter_specific,
             gpu_cull,
-            tex_layout: textures.layout.clone(),
+            tex_layout: textures.layout().clone(),
             tex_layout_entries: textures.layout_entries.clone(),
             instance_flags: desc().flags,
             scene: scene_gpu(
@@ -727,11 +797,18 @@ impl Renderer {
         crate::start_progress::enter(crate::start_progress::Phase::Ready);
         crate::pipeline_cache::log_start();
         Ok(Renderer {
-            host,
+            backend: RendererBackend::Wgpu(Box::new(WgpuBackend {
+                host,
+                #[cfg(any(target_os = "linux", target_os = "windows", target_os = "macos"))]
+                _xr_graphics: xr_graphics,
+                device,
+                palette_buffer,
+                prev_palette_buffer,
+                skin_bind_buffer,
+                gpu_frames,
+                demo_hang,
+            })),
             vr,
-            #[cfg(any(target_os = "linux", target_os = "windows", target_os = "macos"))]
-            _xr_graphics: xr_graphics,
-            device,
             info,
             geometry,
             uploads,
@@ -741,14 +818,11 @@ impl Renderer {
             table_backoff: Default::default(),
             cull,
             writes,
-            palette_buffer,
-            prev_palette_buffer,
             motion_cut: false,
             world_shift: [0.0; 2],
             palettes_uploaded: 0,
             vertices_uploaded: 0,
             geometry_uploaded: 0,
-            skin_bind_buffer,
             bind_generation: 0,
             gpu_cull,
             size: (width.max(1), height.max(1)),
@@ -772,7 +846,6 @@ impl Renderer {
             frames: 0,
             last_stats: RenderStats::default(),
             fresh: false,
-            gpu_frames,
             gpu_waited: Duration::ZERO,
             input_at: None,
             frame_began: None,
@@ -798,20 +871,124 @@ impl Renderer {
                 std::env::var("AURORA_DEMO_GPU_LOST").ok().as_deref(),
                 crate::device_lost::DEMO_RENDERERS.fetch_add(1, std::sync::atomic::Ordering::Relaxed),
             ),
-            demo_hang,
+        })
+    }
+
+    /// Initializes the OpenGL (`glow`) compatibility-tier renderer.
+    fn new_glow<W>(
+        window: Arc<W>,
+        width: u32,
+        height: u32,
+        vsync: bool,
+        fallback: crate::backend_choice::FallbackReason,
+    ) -> Result<Renderer, RenderError>
+    where
+        W: wgpu::rwh::HasWindowHandle + wgpu::rwh::HasDisplayHandle + Send + Sync + 'static,
+    {
+        let glow = crate::glow_backend::GlowRenderer::new(window, width, height, vsync).map_err(RenderError::NoAdapter)?;
+        let gl_info = glow.info().clone();
+        log::info!(
+            "OpenGL compatibility renderer ready: {} ({}, OpenGL {}, max_tex={}, fallback={fallback:?})",
+            gl_info.renderer,
+            gl_info.vendor,
+            gl_info.version,
+            gl_info.max_texture_size
+        );
+        let slots = crate::textures::slot_capacity(std::env::var("AURORA_TEXTURE_SLOTS").ok().as_deref());
+        let info = GpuInfo {
+            name: gl_info.renderer.clone(),
+            backend: crate::backend_choice::ActiveBackend::OpenGl.label().to_owned(),
+            active_backend: crate::backend_choice::ActiveBackend::OpenGl,
+            driver: format!("{} OpenGL {}", gl_info.vendor, gl_info.version),
+            bindless: false,
+            timestamps: false,
+            max_textures: 1,
+            vram_mb: None,
+            dedicated_mb: None,
+            shared_mb: None,
+            integrated: false,
+            vendor_id: 0,
+            max_texture_size: gl_info.max_texture_size,
+            adapters: vec![gl_info.renderer],
+            notice: None,
+            vulkan: None,
+        };
+        crate::start_progress::enter(crate::start_progress::Phase::Ready);
+        Ok(Renderer {
+            backend: RendererBackend::Glow(Box::new(glow)),
+            vr: Arc::new(crate::vr_control::Control::new(false)),
+            info,
+            geometry: GeometryArena::new_cpu(256 << 20),
+            uploads: UploadQueue::new_compat(),
+            records: RecordStore::new_cpu(),
+            textures: TextureTable::new_compat(slots, gl_info.max_texture_size),
+            video_memory: crate::vram::VideoMemoryProbe::new_compat(),
+            table_backoff: Default::default(),
+            cull: CullTables::new_cpu(),
+            writes: GpuWrites::default(),
+            motion_cut: false,
+            world_shift: [0.0; 2],
+            palettes_uploaded: 0,
+            vertices_uploaded: 0,
+            geometry_uploaded: 0,
+            bind_generation: 0,
+            gpu_cull: false,
+            size: (width.max(1), height.max(1)),
+            vsync,
+            settings: RenderSettings::default(),
+            msaa_supported: Vec::new(),
+            blend_exact_supported: false,
+            can_capture: true,
+            output_format: wgpu::TextureFormat::Rgba8Unorm,
+            anim_clock: crate::tex_anim::AnimClock::new(Instant::now()),
+            last_inv_vp: Mat4::IDENTITY,
+            last_view: Mat4::IDENTITY,
+            hover_request: None,
+            hover_latest: None,
+            pick_requests: Vec::new(),
+            pick_answers: Vec::new(),
+            pick_ticket: 0,
+            drawn_requests: Vec::new(),
+            drawn_answers: Vec::new(),
+            part_pick: None,
+            frames: 0,
+            last_stats: RenderStats::default(),
+            fresh: false,
+            gpu_waited: Duration::ZERO,
+            input_at: None,
+            frame_began: None,
+            pace_gate: crate::pacing::Gate::default(),
+            spare: Vec::new(),
+            failed: false,
+            stalled: false,
+            held_textures: HeldTextures::default(),
+            capture_request: false,
+            capture_scene: false,
+            captured: None,
+            snapshot_request: None,
+            snapshot: None,
+            snapshot_sent: false,
+            snapshot_dropped: false,
+            histogram_request: None,
+            histogram: None,
+            lost: DeviceLost::default(),
+            demo_lost: None,
         })
     }
 
     /// The scene's buffers as they are now, for a frame packet.
     fn scene_gpu(&self) -> SceneGpu {
+        let RendererBackend::Wgpu(w) = &self.backend else {
+            unreachable!("scene_gpu is only called on the Wgpu backend");
+        };
         scene_gpu(
             &self.records,
             &self.cull,
             &self.textures,
             &self.geometry,
-            &self.palette_buffer,
-            &self.prev_palette_buffer,
-            &self.skin_bind_buffer,
+            &w.palette_buffer,
+            &w.prev_palette_buffer,
+            &w.skin_bind_buffer,
             self.bind_generation,
         )
     }
@@ -833,11 +1010,14 @@ impl Renderer {
     /// memory is full: the caller keeps the one it has and writes what fits
     /// in it, and the growth is tried again a little later.
     fn grow_table(&mut self, desc: &wgpu::BufferDescriptor) -> Option<wgpu::Buffer> {
+        let RendererBackend::Wgpu(w) = &self.backend else {
+            return None;
+        };
         let now = std::time::Instant::now();
         if !self.table_backoff.ready(now) {
             return None;
         }
-        match crate::gpu_alloc::try_buffer(&self.device, desc) {
+        match crate::gpu_alloc::try_buffer(&w.device, desc) {
             Ok(b) => {
                 self.table_backoff.succeeded();
                 Some(b)
@@ -865,23 +1045,35 @@ impl Renderer {
     pub fn set_skin_binds(&mut self, binds: &[SkinBind], dirty: std::ops::Range<usize>) {
         let size = std::mem::size_of::<SkinBind>();
         let mut dirty = skin_binds_range(dirty, binds.len());
-        if std::mem::size_of_val(binds) as u64 > self.skin_bind_buffer.size() {
-            let mut n = (self.skin_bind_buffer.size() as usize / size).max(1);
+        let current_size = match &mut self.backend {
+            RendererBackend::Wgpu(w) => w.skin_bind_buffer.size(),
+            RendererBackend::Glow(glow) => {
+                glow.set_skin_binds(binds);
+                return;
+            }
+        };
+        if std::mem::size_of_val(binds) as u64 > current_size {
+            let mut n = (current_size as usize / size).max(1);
             while n < binds.len() {
                 n *= 2;
             }
-            if let Some(b) = self.grow_table(&Self::skin_bind_desc(n)) {
-                self.skin_bind_buffer = b;
+            if let Some(b) = self.grow_table(&Self::skin_bind_desc(n))
+                && let RendererBackend::Wgpu(w) = &mut self.backend
+            {
+                w.skin_bind_buffer = b;
                 self.bind_generation += 1;
                 dirty = 0..binds.len();
             }
         }
+        let RendererBackend::Wgpu(w) = &self.backend else {
+            return;
+        };
         // (what the buffer has no room for waits for its growth)
-        let fits = self.skin_bind_buffer.size() as usize / size;
+        let fits = w.skin_bind_buffer.size() as usize / size;
         let dirty = dirty.start.min(fits)..dirty.end.min(fits);
         if !dirty.is_empty() {
             self.writes.write_buffer(
-                &self.skin_bind_buffer,
+                &w.skin_bind_buffer,
                 (dirty.start * size) as u64,
                 bytemuck::cast_slice(&binds[dirty]),
             );
@@ -916,11 +1108,14 @@ impl Renderer {
     /// pose, or it would seem to come from the last owner's (or from
     /// nothing).
     pub fn seed_palette_slots(&mut self, mats: &[[[f32; 4]; 4]], slots: &[usize], per: usize) {
-        let fits = mats.len().min(self.palette_buffer.size() as usize / 64);
-        let prev_fits = fits.min(self.prev_palette_buffer.size() as usize / 64);
+        let RendererBackend::Wgpu(w) = &self.backend else {
+            return;
+        };
+        let fits = mats.len().min(w.palette_buffer.size() as usize / 64);
+        let prev_fits = fits.min(w.prev_palette_buffer.size() as usize / 64);
         for &slot in slots {
             let a = slot * per;
-            for (buffer, end) in [(&self.palette_buffer, fits), (&self.prev_palette_buffer, prev_fits)] {
+            for (buffer, end) in [(&w.palette_buffer, fits), (&w.prev_palette_buffer, prev_fits)] {
                 let b = ((slot + 1) * per).min(end);
                 if a < b {
                     self.writes.write_buffer(buffer, (a * 64) as u64, bytemuck::cast_slice(&mats[a..b]));
@@ -954,37 +1149,61 @@ impl Renderer {
         if mats.is_empty() {
             return;
         }
+        let current_size = match &mut self.backend {
+            RendererBackend::Wgpu(w) => w.palette_buffer.size(),
+            RendererBackend::Glow(glow) => {
+                glow.set_palettes(mats);
+                self.palettes_uploaded += (mats.len() * 64) as u64;
+                return;
+            }
+        };
         let bytes = (mats.len() * 64) as u64;
-        if bytes > self.palette_buffer.size() {
-            let mut n = (self.palette_buffer.size() / 64) as usize;
+        if bytes > current_size {
+            let mut n = (current_size / 64) as usize;
             while n * 64 < bytes as usize {
                 n *= 2;
             }
-            if let Some(b) = self.grow_table(&Self::palette_desc(n)) {
-                self.palette_buffer = b;
+            if let Some(b) = self.grow_table(&Self::palette_desc(n))
+                && let RendererBackend::Wgpu(w) = &mut self.backend
+            {
+                w.palette_buffer = b;
                 self.bind_generation += 1;
                 // (the whole set is written below: the previous palettes
                 // start from it, no skeleton moves in this frame)
-                match crate::gpu_alloc::try_buffer(&self.device, &Self::prev_palette_desc(n)) {
-                    Ok(prev) => self.prev_palette_buffer = prev,
+                match crate::gpu_alloc::try_buffer(&w.device, &Self::prev_palette_desc(n)) {
+                    Ok(prev) => w.prev_palette_buffer = prev,
                     Err(e) => log::warn!("previous joint palettes not grown ({e}): the skeletons past them get no motion"),
                 }
-                let prev = &mats[..mats.len().min(self.prev_palette_buffer.size() as usize / 64)];
-                self.writes.write_buffer(&self.prev_palette_buffer, 0, bytemuck::cast_slice(prev));
+                let prev = &mats[..mats.len().min(w.prev_palette_buffer.size() as usize / 64)];
+                self.writes.write_buffer(&w.prev_palette_buffer, 0, bytemuck::cast_slice(prev));
             }
         }
-        let mats = &mats[..mats.len().min(self.palette_buffer.size() as usize / 64)];
-        self.writes.write_buffer(&self.palette_buffer, 0, bytemuck::cast_slice(mats));
+        let RendererBackend::Wgpu(w) = &self.backend else {
+            return;
+        };
+        let mats = &mats[..mats.len().min(w.palette_buffer.size() as usize / 64)];
+        self.writes.write_buffer(&w.palette_buffer, 0, bytemuck::cast_slice(mats));
         self.palettes_uploaded += (mats.len() * 64) as u64;
     }
 
     /// Upload only some palettes (`per` matrices each, by slot index): the
     /// skeletons posed this frame. Everything when the buffer must grow.
     pub fn set_palette_slots(&mut self, mats: &[[[f32; 4]; 4]], slots: &[usize], per: usize) {
-        if (mats.len() * 64) as u64 > self.palette_buffer.size() {
+        let palette_size = match &mut self.backend {
+            RendererBackend::Wgpu(w) => w.palette_buffer.size(),
+            RendererBackend::Glow(glow) => {
+                glow.set_palettes(mats);
+                self.palettes_uploaded += (mats.len() * 64) as u64;
+                return;
+            }
+        };
+        if (mats.len() * 64) as u64 > palette_size {
             self.set_palettes(mats);
             return;
         }
+        let RendererBackend::Wgpu(w) = &self.backend else {
+            return;
+        };
         let mut sorted = slots.to_vec();
         sorted.sort_unstable();
         sorted.dedup();
@@ -1001,7 +1220,7 @@ impl Renderer {
             let (a, b) = (first * per, ((last + 1) * per).min(mats.len()));
             if a < b {
                 self.writes
-                    .write_buffer(&self.palette_buffer, (a * 64) as u64, bytemuck::cast_slice(&mats[a..b]));
+                    .write_buffer(&w.palette_buffer, (a * 64) as u64, bytemuck::cast_slice(&mats[a..b]));
                 self.palettes_uploaded += ((b - a) * 64) as u64;
             }
         }
@@ -1011,14 +1230,25 @@ impl Renderer {
     /// an avatar wears, when its joints were not posed again). Everything
     /// when the buffer must grow.
     pub fn set_palette_range(&mut self, mats: &[[[f32; 4]; 4]], range: std::ops::Range<usize>) {
-        if (mats.len() * 64) as u64 > self.palette_buffer.size() {
+        let palette_size = match &mut self.backend {
+            RendererBackend::Wgpu(w) => w.palette_buffer.size(),
+            RendererBackend::Glow(glow) => {
+                glow.set_palettes(mats);
+                self.palettes_uploaded += (mats.len() * 64) as u64;
+                return;
+            }
+        };
+        if (mats.len() * 64) as u64 > palette_size {
             self.set_palettes(mats);
             return;
         }
+        let RendererBackend::Wgpu(w) = &self.backend else {
+            return;
+        };
         let (a, b) = (range.start.min(mats.len()), range.end.min(mats.len()));
         if a < b {
             self.writes
-                .write_buffer(&self.palette_buffer, (a * 64) as u64, bytemuck::cast_slice(&mats[a..b]));
+                .write_buffer(&w.palette_buffer, (a * 64) as u64, bytemuck::cast_slice(&mats[a..b]));
             self.palettes_uploaded += ((b - a) * 64) as u64;
         }
     }
@@ -1038,12 +1268,26 @@ impl Renderer {
     /// places probes in those only, a capture for a slot beyond them would
     /// overwrite the last one.
     pub fn fitted_probe_slots(&self, slots: u32) -> u32 {
-        crate::probes::Probes::fitted_slots(&self.device, slots)
+        match &self.backend {
+            RendererBackend::Wgpu(w) => crate::probes::Probes::fitted_slots(&w.device, slots),
+            RendererBackend::Glow(_) => 0,
+        }
     }
 
     /// The largest side a photo can be drawn at in one pass.
     pub fn max_texture_dimension(&self) -> u32 {
-        self.device.limits().max_texture_dimension_2d
+        match &self.backend {
+            RendererBackend::Wgpu(w) => w.device.limits().max_texture_dimension_2d,
+            RendererBackend::Glow(_) => self.info.max_texture_size,
+        }
+    }
+
+    /// Reads the driver's video-memory usage and budget when supported by the active backend.
+    pub fn read_video_memory(&self) -> Option<crate::vram::VideoMemory> {
+        match &self.backend {
+            RendererBackend::Wgpu(w) => self.video_memory.read(&w.device),
+            RendererBackend::Glow(_) => None,
+        }
     }
 
     /// The window was resized: the swapchain and the render targets follow
@@ -1053,11 +1297,17 @@ impl Renderer {
             return;
         }
         self.size = (width, height);
+        if let RendererBackend::Glow(glow) = &mut self.backend {
+            glow.resize(width, height);
+        }
     }
 
     /// The draw lists can be culled on the GPU (`DrawLists::gpu`).
     pub fn gpu_culling(&self) -> bool {
-        self.gpu_cull && GpuCull::fits(&self.device, self.records.faces.len(), self.cull.objects.len())
+        let RendererBackend::Wgpu(w) = &self.backend else {
+            return false;
+        };
+        self.gpu_cull && GpuCull::fits(&w.device, self.records.faces.len(), self.cull.objects.len())
     }
 
     /// Supported MSAA sample counts (besides 1).
@@ -1073,7 +1323,10 @@ impl Renderer {
 
     /// Frames are drawn by the render thread (false: AURORA_RENDER_THREAD=0).
     pub fn threaded(&self) -> bool {
-        self.host.threaded()
+        match &self.backend {
+            RendererBackend::Wgpu(w) => w.host.threaded(),
+            RendererBackend::Glow(_) => false,
+        }
     }
 
     /// The render thread is gone (it panicked): nothing can be drawn any
@@ -1092,7 +1345,10 @@ impl Renderer {
     /// once that is past [`STALL_AFTER`]: no frame is drawn meanwhile, the
     /// window keeps answering. None while frames come.
     pub fn stalled_for(&self) -> Option<Duration> {
-        let Host::Thread { owner, .. } = &self.host else {
+        let RendererBackend::Wgpu(w) = &self.backend else {
+            return None;
+        };
+        let Host::Thread { owner, .. } = &w.host else {
             return None;
         };
         self.stalled.then(|| owner.held_for()).flatten()
@@ -1105,7 +1361,10 @@ impl Renderer {
     /// twice. Never waits on the GPU without a bound: a tester's window
     /// stayed white and frozen after login, its main thread parked here.
     fn render_thread_free(&mut self) -> bool {
-        let Host::Thread { owner, .. } = &self.host else {
+        let RendererBackend::Wgpu(w) = &self.backend else {
+            return true;
+        };
+        let Host::Thread { owner, .. } = &w.host else {
             return true;
         };
         let wait = if self.stalled { STALL_POLL } else { STALL_AFTER };
@@ -1142,8 +1401,10 @@ impl Renderer {
     /// Apply quality settings: pipelines and targets are rebuilt by the
     /// backend with the next frame, only when needed.
     pub fn apply_settings(&mut self, s: RenderSettings) {
-        if s.anisotropy != self.settings.anisotropy {
-            self.textures.set_anisotropy(&self.device, s.anisotropy);
+        if s.anisotropy != self.settings.anisotropy
+            && let RendererBackend::Wgpu(w) = &self.backend
+        {
+            self.textures.set_anisotropy(&w.device, s.anisotropy);
         }
         self.settings = s;
     }
@@ -1156,6 +1417,9 @@ impl Renderer {
 
     pub fn set_vsync(&mut self, vsync: bool) {
         self.vsync = vsync;
+        if let RendererBackend::Glow(glow) = &mut self.backend {
+            glow.set_vsync(vsync);
+        }
     }
 
     pub fn vsync(&self) -> bool {
@@ -1186,14 +1450,22 @@ impl Renderer {
 
     pub fn upload_mesh(&mut self, vertices: &[Vertex], indices: &[u16]) -> Option<MeshAlloc> {
         self.geometry_uploaded += (std::mem::size_of_val(vertices) + std::mem::size_of_val(indices)) as u64;
-        self.geometry
-            .alloc(&self.device, &mut self.writes, &mut self.uploads, vertices, None, indices)
+        match &self.backend {
+            RendererBackend::Wgpu(w) => self
+                .geometry
+                .alloc(&w.device, &mut self.writes, &mut self.uploads, vertices, None, indices),
+            RendererBackend::Glow(_) => self.geometry.alloc_cpu(vertices, None, indices),
+        }
     }
 
     pub fn upload_skinned_mesh(&mut self, vertices: &[Vertex], skin: &[SkinVertex], indices: &[u16]) -> Option<MeshAlloc> {
         self.geometry_uploaded += (std::mem::size_of_val(vertices) + std::mem::size_of_val(skin) + std::mem::size_of_val(indices)) as u64;
-        self.geometry
-            .alloc(&self.device, &mut self.writes, &mut self.uploads, vertices, Some(skin), indices)
+        match &self.backend {
+            RendererBackend::Wgpu(w) => self
+                .geometry
+                .alloc(&w.device, &mut self.writes, &mut self.uploads, vertices, Some(skin), indices),
+            RendererBackend::Glow(_) => self.geometry.alloc_cpu(vertices, Some(skin), indices),
+        }
     }
 
     /// Upload a mesh staged by a background job (`mesh.data.ready()` must
@@ -1202,7 +1474,10 @@ impl Renderer {
         let skin = if mesh.skinned { std::mem::size_of::<SkinVertex>() } else { 0 };
         self.geometry_uploaded +=
             (mesh.vertex_count as usize * (std::mem::size_of::<Vertex>() + skin) + mesh.index_count as usize * 2) as u64;
-        self.geometry.alloc_staged(&self.device, &mut self.writes, &mut self.uploads, mesh)
+        match &self.backend {
+            RendererBackend::Wgpu(w) => self.geometry.alloc_staged(&w.device, &mut self.writes, &mut self.uploads, mesh),
+            RendererBackend::Glow(_) => None,
+        }
     }
 
     pub fn free_mesh(&mut self, m: MeshAlloc) {
@@ -1214,12 +1489,15 @@ impl Renderer {
     /// the growth costs the GPU, and within what the video memory budget
     /// leaves free (another program or viewer may hold the rest).
     pub fn grow_geometry_ahead(&mut self, vertices: u32, indices: u32) -> bool {
+        let RendererBackend::Wgpu(w) = &self.backend else {
+            return true;
+        };
         let allowance = self
             .video_memory
-            .read(&self.device)
+            .read(&w.device)
             .map(|m| crate::gpu_alloc::ahead_allowance(m.budget, m.usage));
         self.geometry
-            .grow_ahead(&self.device, &mut self.writes, &mut self.uploads, vertices, indices, allowance)
+            .grow_ahead(&w.device, &mut self.writes, &mut self.uploads, vertices, indices, allowance)
     }
 
     /// Deform an existing allocation without touching indices or draw records.
@@ -1228,21 +1506,39 @@ impl Renderer {
         if vertices.len() != mesh.vertex_count as usize {
             return false;
         }
-        self.writes.write_buffer(
-            &self.geometry.vertex_buffer,
-            mesh.vertex_offset as u64 * std::mem::size_of::<Vertex>() as u64,
-            bytemuck::cast_slice(vertices),
-        );
-        self.vertices_uploaded += std::mem::size_of_val(vertices) as u64;
-        true
+        match &self.backend {
+            RendererBackend::Wgpu(_) => {
+                self.writes.write_buffer(
+                    self.geometry.vertex_buffer(),
+                    mesh.vertex_offset as u64 * std::mem::size_of::<Vertex>() as u64,
+                    bytemuck::cast_slice(vertices),
+                );
+                self.vertices_uploaded += std::mem::size_of_val(vertices) as u64;
+                true
+            }
+            RendererBackend::Glow(_) => {
+                if self.geometry.update_vertices_cpu(mesh, vertices) {
+                    self.vertices_uploaded += std::mem::size_of_val(vertices) as u64;
+                    true
+                } else {
+                    false
+                }
+            }
+        }
     }
 
     pub fn create_texture(&mut self, mips: &[MipLevel]) -> Option<u32> {
-        self.textures.create(&self.device, &mut self.writes, mips)
+        match &self.backend {
+            RendererBackend::Wgpu(w) => self.textures.create(&w.device, &mut self.writes, mips),
+            RendererBackend::Glow(_) => self.textures.create_compat(mips),
+        }
     }
 
     pub fn replace_texture(&mut self, slot: u32, mips: &[MipLevel]) -> bool {
-        self.textures.replace(&self.device, &mut self.writes, slot, mips)
+        match &self.backend {
+            RendererBackend::Wgpu(w) => self.textures.replace(&w.device, &mut self.writes, slot, mips),
+            RendererBackend::Glow(_) => self.textures.replace_compat(slot, mips),
+        }
     }
 
     /// Staging memory shared with the background jobs (upload.rs).
@@ -1260,7 +1556,10 @@ impl Renderer {
     /// (`staged.data.ready()` must hold): the main thread only records the
     /// copies. False when refused (size), as `replace_texture`.
     pub fn replace_texture_staged(&mut self, slot: u32, staged: &StagedTexture) -> bool {
-        self.textures.replace_staged(&self.device, &mut self.uploads, slot, staged)
+        match &self.backend {
+            RendererBackend::Wgpu(w) => self.textures.replace_staged(&w.device, &mut self.uploads, slot, staged),
+            RendererBackend::Glow(_) => false,
+        }
     }
 
     /// Overwrite part of a texture's level 0 in place (media frames).
@@ -1389,7 +1688,10 @@ impl Renderer {
     /// Offline integration check of the complete world pass into an owned
     /// texture. Used only on a requested demo capture, not every frame.
     pub fn render_world_texture_capture(&mut self, params: FrameParams, lists: &DrawLists) -> RenderStats {
-        let texture = self.device.create_texture(&wgpu::TextureDescriptor {
+        let RendererBackend::Wgpu(w) = &self.backend else {
+            return RenderStats::default();
+        };
+        let texture = w.device.create_texture(&wgpu::TextureDescriptor {
             label: Some("world output integration capture"),
             size: wgpu::Extent3d {
                 width: self.size.0,
@@ -1416,12 +1718,55 @@ impl Renderer {
         ui: Option<crate::EguiFrame>,
         output: Option<wgpu::Texture>,
     ) -> RenderStats {
+        if let RendererBackend::Glow(glow) = &mut self.backend {
+            if output.is_some() {
+                return RenderStats::default();
+            }
+            self.writes.clear();
+            let capture = self.capture_request && self.can_capture;
+            let hover = self.hover_request.take();
+            let picks = std::mem::take(&mut self.pick_requests);
+            let (mut stats, hover_hit, pick_hits, captured) = glow.render_frame(
+                &params,
+                lists,
+                &self.records,
+                &mut self.geometry,
+                &mut self.textures,
+                hover,
+                &picks,
+                ui,
+                capture,
+            );
+            if hover.is_some() {
+                self.hover_latest = hover_hit;
+            }
+            self.pick_answers.extend(pick_hits);
+            for (ticket, _, _, _) in std::mem::take(&mut self.drawn_requests) {
+                self.drawn_answers.push((ticket, Default::default()));
+            }
+            if let Some(img) = captured {
+                self.captured = Some(img);
+                self.capture_request = false;
+            }
+            if self.snapshot_request.take().is_some() {
+                self.snapshot = Some(None);
+            }
+            self.snapshot_sent = false;
+            self.snapshot_dropped = false;
+            self.last_inv_vp = (params.proj * params.view).inverse();
+            self.last_view = params.view;
+            self.frames += 1;
+            stats.settings = Some(self.settings);
+            self.last_stats = stats;
+            return stats;
+        }
         let t0 = Instant::now();
         let mut ui = ui;
-        if let Some((frame, queue)) = &self.demo_hang
+        if let RendererBackend::Wgpu(w) = &self.backend
+            && let Some((frame, queue)) = &w.demo_hang
             && *frame == self.frames
         {
-            crate::device_lost::demo_hang(&self.device, queue);
+            crate::device_lost::demo_hang(&w.device, queue);
         }
         if self.demo_lost == Some(self.frames) && !self.lost.get() {
             self.lost.set_by("demo");
@@ -1439,7 +1784,7 @@ impl Renderer {
             self.snapshot_sent = false;
             self.snapshot_dropped = false;
             return RenderStats {
-                render_thread: self.host.threaded(),
+                render_thread: self.threaded(),
                 ..Default::default()
             };
         }
@@ -1465,11 +1810,15 @@ impl Renderer {
             held.append(std::mem::take(&mut ui.textures_delta));
             ui.textures_delta = held;
         }
+        let wgpu_device = match &self.backend {
+            RendererBackend::Wgpu(w) => &w.device,
+            RendererBackend::Glow(_) => unreachable!("Glow handled at top of render_output"),
+        };
         // ---- the scene's mirrors join the journal of this frame
-        self.records.flush(&self.device, &mut self.writes);
-        self.cull.objects.flush(&self.device, &mut self.writes);
-        self.cull.boxes.flush(&self.device, &mut self.writes);
-        self.textures.maintain(&self.device, &mut self.writes, &mut self.uploads, false);
+        self.records.flush(wgpu_device, &mut self.writes);
+        self.cull.objects.flush(wgpu_device, &mut self.writes);
+        self.cull.boxes.flush(wgpu_device, &mut self.writes);
+        self.textures.maintain(wgpu_device, &mut self.writes, &mut self.uploads, false);
         let uploads = self.uploads.take_frame();
         let mut stats = RenderStats {
             records_uploaded: self.records.uploaded,
@@ -1483,7 +1832,7 @@ impl Renderer {
             texture_page_bytes: self.textures.page_bytes(),
             geometry_bytes: self.geometry.bytes(),
             records: self.records.live(),
-            render_thread: self.host.threaded(),
+            render_thread: self.threaded(),
             ..Default::default()
         };
         (stats.vertex_used, stats.index_used) = self.geometry.used();
@@ -1539,7 +1888,10 @@ impl Renderer {
         let mut results: [Option<Box<FrameResult>>; 2] = [None, None];
         let mut waited = free_wait;
         let mut gone = false;
-        match &mut self.host {
+        let RendererBackend::Wgpu(w) = &mut self.backend else {
+            unreachable!("Glow handled at top of render_output");
+        };
+        match &mut w.host {
             Host::Inline(backend, _) => results[0] = Some(Box::new(backend.render(packet))),
             Host::Thread { owner, .. } => {
                 match owner.submit(Job::Frame(Box::new(packet))) {
@@ -1649,7 +2001,9 @@ impl Renderer {
             let main = ms(began.elapsed().saturating_sub(waited));
             let render = stats.thread_ms - stats.cpu_phases[0];
             let on = self.pace_gate.update(main, render, stats.gpu_ms);
-            self.gpu_frames.set_active(on);
+            if let RendererBackend::Wgpu(w) = &self.backend {
+                w.gpu_frames.set_active(on);
+            }
         }
         stats
     }
@@ -1667,7 +2021,10 @@ impl Renderer {
     /// limit, or with AURORA_FRAME_PACING=0).
     pub fn wait_for_gpu(&mut self) -> Duration {
         self.gpu_waited = Duration::ZERO;
-        if !self.gpu_frames.active() || self.failed || self.stalled || self.lost.get() {
+        let RendererBackend::Wgpu(w) = &self.backend else {
+            return Duration::ZERO;
+        };
+        if !w.gpu_frames.active() || self.failed || self.stalled || self.lost.get() {
             return Duration::ZERO;
         }
         // the frame handed over last, and the one before it
@@ -1675,12 +2032,12 @@ impl Renderer {
             return Duration::ZERO;
         };
         let t = Instant::now();
-        match &self.host {
+        match &w.host {
             // the render thread waits on the device and sends the news; a
             // timeout is a GPU that fell behind: the frames go on, the stall
             // notice is the render thread's (`stalled_for`)
             Host::Thread { .. } => {
-                self.gpu_frames.wait_finished(before, t + GPU_WAIT);
+                w.gpu_frames.wait_finished(before, t + GPU_WAIT);
             }
             // alone on the device: the wait is this thread's
             Host::Inline(backend, _) => backend.finish_frames_before(before + 1, GPU_WAIT),
@@ -1724,7 +2081,10 @@ impl Renderer {
     /// Take in the result of the frame handed over if the render thread is
     /// done with it, without waiting for it.
     fn collect(&mut self) {
-        let Host::Thread { owner, .. } = &mut self.host else {
+        let RendererBackend::Wgpu(w) = &mut self.backend else {
+            return;
+        };
+        let Host::Thread { owner, .. } = &mut w.host else {
             return;
         };
         match owner.take_ready() {
@@ -1738,6 +2098,12 @@ impl Renderer {
     pub fn forget_pick(&mut self, ticket: u64) {
         self.pick_requests.retain(|(t, _, _)| *t != ticket);
         self.pick_answers.retain(|(t, _)| *t != ticket);
+    }
+
+    /// Whether this backend runs the per-click drawn-face pass (`request_drawn`).
+    /// The OpenGL compatibility backend only provides depth-buffer picking.
+    pub fn supports_drawn_pick(&self) -> bool {
+        matches!(self.backend, RendererBackend::Wgpu(_))
     }
 
     /// Ask what the next frame draws under a pixel: the draw record and
@@ -1793,9 +2159,16 @@ impl Renderer {
         if x < 0.0 || y < 0.0 || x >= w as f32 || y >= h as f32 || self.failed {
             return None;
         }
+        let inv_vp = self.last_inv_vp;
+        let RendererBackend::Wgpu(w) = &mut self.backend else {
+            if let RendererBackend::Glow(glow) = &self.backend {
+                return glow.pick_world(x as u32, y as u32, inv_vp);
+            }
+            return None;
+        };
         let mut frame = None;
         let mut gone = false;
-        let hit = match &mut self.host {
+        let hit = match &mut w.host {
             Host::Inline(backend, _) => backend.pick_world(x, y),
             Host::Thread { owner, .. } => {
                 match owner.submit(Job::Pick { x, y }) {

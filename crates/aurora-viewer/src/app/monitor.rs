@@ -155,7 +155,7 @@ impl App {
             .last_second()
             .map_or((0, None), |(serial, p)| (serial, Some(p.clone())));
         let memory = crate::sys_probe::process_memory();
-        let video = renderer.video_memory.read(&renderer.device);
+        let video = renderer.read_video_memory();
         let r = &self.last_render;
         let vram = Vram {
             pages: r.texture_page_bytes,

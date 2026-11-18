@@ -243,6 +243,20 @@ impl StagingPool {
         })
     }
 
+    /// Empty staging pool for compatibility backends without `wgpu::Device`.
+    /// Every `stage`/`try_stage` call returns `None` so callers fall back to CPU data.
+    pub fn new_compat() -> Arc<Self> {
+        static NEXT: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(1);
+        Arc::new(StagingPool {
+            id: NEXT.fetch_add(1, Ordering::Relaxed),
+            state: Mutex::new(PoolState::default()),
+            total: 0,
+            chunk_bytes: 0,
+            returned: Default::default(),
+            write_turn: Mutex::new(()),
+        })
+    }
+
     fn lock(&self) -> std::sync::MutexGuard<'_, PoolState> {
         // a panic in a job while holding the lock leaves plain data behind
         self.state.lock().unwrap_or_else(|e| e.into_inner())
@@ -686,6 +700,14 @@ impl UploadQueue {
     pub fn sized(device: &wgpu::Device, size: PoolSize) -> Self {
         UploadQueue {
             pool: StagingPool::sized(device, size),
+            encoder: None,
+        }
+    }
+
+    /// Compatibility upload queue without `wgpu::Device`.
+    pub fn new_compat() -> Self {
+        UploadQueue {
+            pool: StagingPool::new_compat(),
             encoder: None,
         }
     }

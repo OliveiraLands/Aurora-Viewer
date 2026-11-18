@@ -83,7 +83,7 @@ impl App {
     }
 
     pub(super) fn egui_state_for(&self, window: &Window, renderer: &Renderer) -> egui_winit::State {
-        let max_tex = renderer.device.limits().max_texture_dimension_2d as usize;
+        let max_tex = renderer.max_texture_dimension() as usize;
         egui_winit::State::new(
             self.egui_ctx.clone(),
             egui::ViewportId::ROOT,

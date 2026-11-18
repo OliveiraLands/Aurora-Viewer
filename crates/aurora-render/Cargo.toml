@@ -13,6 +13,9 @@ bytemuck = { version = "1.25.2", features = ["derive"] }
 flate2 = "1.1.10"
 egui = { version = "0.37.0", features = ["monochrome_emoji_fonts"] }
 egui-wgpu = "0.37.0"
+egui_glow = "0.37.0"
+glow = "0.17.0"
+glutin = "0.32.3"
 glam = { version = "0.34.1", features = ["bytemuck"] }
 log = "0.4.34"
 parking_lot = "0.13.0"

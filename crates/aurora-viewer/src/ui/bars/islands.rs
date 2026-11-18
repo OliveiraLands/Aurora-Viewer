@@ -1914,6 +1914,7 @@ mod tests {
         let gpu = aurora_render::GpuInfo {
             name: String::new(),
             backend: String::new(),
+            active_backend: aurora_render::ActiveBackend::platform_native(),
             driver: String::new(),
             bindless: false,
             timestamps: false,

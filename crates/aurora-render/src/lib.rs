@@ -9,6 +9,7 @@ pub mod adapter_choice;
 #[cfg(test)]
 mod alpha_mask_tests;
 pub mod arena;
+pub mod backend_choice;
 pub mod bc7;
 mod blend_exact;
 #[cfg(test)]
@@ -28,6 +29,7 @@ mod drawn_pick;
 mod exposure;
 pub mod frame_priority;
 mod fsr;
+pub mod glow_backend;
 pub mod gpu_alloc;
 pub mod gpu_cull;
 mod gtao;
@@ -113,6 +115,7 @@ pub use water_effects::{RAIN_GROUND_SIZE, RainGround, WaterEffects, WaterEvent, 
 pub use arena::MeshAlloc;
 // What a tile of a photo draws around what it keeps, for the bloom, the
 // depth of field and the contact shadows (snapshot tiles in the viewer).
+pub use backend_choice::{ActiveBackend, GraphicsBackend};
 pub use bloom::tile_reach as bloom_tile_reach;
 pub use contact_shadows::tile_reach as contact_tile_reach;
 pub use dof::tile_reach as dof_tile_reach;

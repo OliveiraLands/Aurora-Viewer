@@ -450,7 +450,7 @@ impl App {
         now: Instant,
         live: Live,
     ) -> crate::crash::State {
-        let video = renderer.video_memory.read(&renderer.device);
+        let video = renderer.read_video_memory();
         let size = window.inner_size();
         let mut state = crate::crash::State {
             screen: match self.screen {

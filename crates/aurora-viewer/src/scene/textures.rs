@@ -3685,7 +3685,7 @@ impl TextureStreamer {
         }
         self.last_budget = now;
         let (used, live) = (renderer.textures.page_bytes(), renderer.textures.bytes());
-        let video = renderer.video_memory.read(&renderer.device);
+        let video = renderer.read_video_memory();
         self.video_usage = video.map_or(0, |v| v.usage);
         if self.card_sharing && !self.card_asked {
             self.card_asked = true;

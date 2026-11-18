@@ -252,6 +252,12 @@ impl PageWorker {
         }
     }
 
+    /// Inert page worker for compatibility backends without `wgpu::Device`.
+    fn new_compat() -> Self {
+        let (_tx, made) = std::sync::mpsc::channel();
+        PageWorker { tx: None, made }
+    }
+
     /// Ask for a page; false when the thread is not there to make it.
     fn make(&self, key: PageKey, layers: u32) -> bool {
         self.tx.as_ref().is_some_and(|tx| tx.send(PageJob::Make { key, layers }).is_ok())
@@ -1208,15 +1214,150 @@ impl PageStore {
     }
 }
 
-pub struct TextureTable {
-    pub layout: wgpu::BindGroupLayout,
-    /// its entries (the stochastic transparency's sample mask shader is
-    /// written against them, oit_stochastic.rs)
-    pub(crate) layout_entries: Vec<wgpu::BindGroupLayoutEntry>,
-    pub bind_group: wgpu::BindGroup,
+/// CPU-side RGBA8 texture data for compatibility backends (`glow`).
+#[derive(Clone)]
+pub struct CompatTexture {
+    pub width: u32,
+    pub height: u32,
+    pub rgba: Vec<u8>,
+}
+
+struct CompatTextures {
+    slots: Vec<Option<CompatTexture>>,
+    free_list: Vec<u32>,
+    dirty: Vec<u32>,
+    capacity: u32,
+    max_texture_size: u32,
+    live: u32,
+    bytes: u64,
+}
+
+impl CompatTextures {
+    fn new(capacity: u32, max_texture_size: u32) -> Self {
+        let mut me = Self {
+            slots: vec![None; RESERVED as usize],
+            free_list: Vec::new(),
+            dirty: Vec::new(),
+            capacity: capacity.max(RESERVED + 1),
+            max_texture_size,
+            live: 0,
+            bytes: 0,
+        };
+        for (slot, rgba) in [
+            (WHITE, [255u8, 255, 255, 255]),
+            (FLAT_NORMAL, [128, 128, 255, 255]),
+            (BLACK, [0, 0, 0, 255]),
+            (TRANSPARENT, [0, 0, 0, 0]),
+            (PLACEHOLDER, [148, 148, 156, 255]),
+            (MISSING, [127, 127, 127, 255]),
+        ] {
+            me.slots[slot as usize] = Some(CompatTexture {
+                width: 1,
+                height: 1,
+                rgba: rgba.to_vec(),
+            });
+            me.dirty.push(slot);
+        }
+        let ramp: Vec<u8> = TERRAIN_RAMP_PIXELS.iter().flat_map(|&v| [v, v, v, 255]).collect();
+        me.slots[TERRAIN_RAMP as usize] = Some(CompatTexture {
+            width: 256,
+            height: 256,
+            rgba: ramp,
+        });
+        me.dirty.push(TERRAIN_RAMP);
+        me
+    }
+
+    fn alloc_slot(&mut self, tex: CompatTexture) -> Option<u32> {
+        let slot = if let Some(s) = self.free_list.pop() {
+            s
+        } else {
+            let next = self.slots.len() as u32;
+            if next >= self.capacity {
+                return None;
+            }
+            self.slots.push(None);
+            next
+        };
+        self.live += 1;
+        self.bytes += tex.rgba.len() as u64;
+        self.slots[slot as usize] = Some(tex);
+        self.dirty.push(slot);
+        Some(slot)
+    }
+
+    fn create(&mut self, mips: &[MipLevel]) -> Option<u32> {
+        let l0 = mips.first()?;
+        if l0.width == 0
+            || l0.height == 0
+            || l0.width > self.max_texture_size
+            || l0.height > self.max_texture_size
+            || l0.data.len() < l0.width as usize * l0.height as usize * 4
+        {
+            return None;
+        }
+        let need = l0.width as usize * l0.height as usize * 4;
+        self.alloc_slot(CompatTexture {
+            width: l0.width,
+            height: l0.height,
+            rgba: l0.data[..need].to_vec(),
+        })
+    }
+
+    fn replace(&mut self, slot: u32, mips: &[MipLevel]) -> bool {
+        if slot < RESERVED || slot as usize >= self.slots.len() {
+            return false;
+        }
+        let Some(l0) = mips.first() else {
+            return false;
+        };
+        let need = l0.width as usize * l0.height as usize * 4;
+        if l0.width == 0 || l0.height == 0 || l0.width > self.max_texture_size || l0.height > self.max_texture_size || l0.data.len() < need
+        {
+            return false;
+        }
+        if let Some(old) = &self.slots[slot as usize] {
+            self.bytes = self.bytes.saturating_sub(old.rgba.len() as u64);
+        } else {
+            self.live += 1;
+        }
+        self.bytes += need as u64;
+        self.slots[slot as usize] = Some(CompatTexture {
+            width: l0.width,
+            height: l0.height,
+            rgba: l0.data[..need].to_vec(),
+        });
+        self.dirty.push(slot);
+        true
+    }
+
+    fn free(&mut self, slot: u32) {
+        if slot < RESERVED || slot as usize >= self.slots.len() {
+            return;
+        }
+        if let Some(old) = self.slots[slot as usize].take() {
+            self.live = self.live.saturating_sub(1);
+            self.bytes = self.bytes.saturating_sub(old.rgba.len() as u64);
+            self.free_list.push(slot);
+            self.dirty.push(slot);
+        }
+    }
+}
+
+struct TextureWgpu {
+    layout: wgpu::BindGroupLayout,
+    bind_group: wgpu::BindGroup,
     sampler: wgpu::Sampler,
     /// Packed location of every slot (`tex_loc` in common.wgsl).
     loc_buffer: wgpu::Buffer,
+}
+
+pub struct TextureTable {
+    wgpu: Option<TextureWgpu>,
+    compat: Option<CompatTextures>,
+    /// its entries (the stochastic transparency's sample mask shader is
+    /// written against them, oit_stochastic.rs)
+    pub(crate) layout_entries: Vec<wgpu::BindGroupLayoutEntry>,
     store: PageStore,
     /// The device allows a bind group shorter than the layout's array
     /// (PARTIALLY_BOUND_BINDING_ARRAY); else every page element is bound.
@@ -1349,11 +1490,14 @@ impl TextureTable {
         writes.write_buffer(&loc_buffer, 4, bytemuck::cast_slice(&store.loc));
         let bind_group = Self::build(device, &layout, &sampler, &loc_buffer, &store, bound);
         Self {
-            layout,
+            wgpu: Some(TextureWgpu {
+                layout,
+                bind_group,
+                sampler,
+                loc_buffer,
+            }),
+            compat: None,
             layout_entries,
-            bind_group,
-            sampler,
-            loc_buffer,
             store,
             partial,
             bound,
@@ -1368,6 +1512,46 @@ impl TextureTable {
             shrinks: Vec::new(),
             compacting: false,
         }
+    }
+
+    /// CPU/compatibility texture table without `wgpu::Device`.
+    pub fn new_compat(capacity: u32, max_texture_size: u32) -> Self {
+        let capacity = capacity.max(RESERVED + 1);
+        let store = PageStore::new_with_integrated(capacity, 1, 1, max_texture_size, false);
+        Self {
+            wgpu: None,
+            compat: Some(CompatTextures::new(capacity, max_texture_size)),
+            layout_entries: Vec::new(),
+            store,
+            partial: false,
+            bound: 0,
+            rebuild_now: false,
+            dirty: false,
+            last_rebuild: Instant::now(),
+            last_compact: Instant::now(),
+            doomed: Default::default(),
+            worker: PageWorker::new_compat(),
+            requests: PageRequests::default(),
+            last_destroy: Instant::now(),
+            shrinks: Vec::new(),
+            compacting: false,
+        }
+    }
+
+    pub fn layout(&self) -> &wgpu::BindGroupLayout {
+        &self
+            .wgpu
+            .as_ref()
+            .expect("TextureTable::layout called on a compatibility table")
+            .layout
+    }
+
+    pub fn bind_group(&self) -> &wgpu::BindGroup {
+        &self
+            .wgpu
+            .as_ref()
+            .expect("TextureTable::bind_group called on a compatibility table")
+            .bind_group
     }
 
     fn make_sampler(device: &wgpu::Device, anisotropy: u16) -> wgpu::Sampler {
@@ -1390,7 +1574,10 @@ impl TextureTable {
     /// Change the anisotropic filtering level (1 = off, up to 16); applied
     /// by the next `maintain`, before the next draw.
     pub fn set_anisotropy(&mut self, device: &wgpu::Device, anisotropy: u16) {
-        self.sampler = Self::make_sampler(device, anisotropy);
+        let Some(wgpu) = &mut self.wgpu else {
+            return;
+        };
+        wgpu.sampler = Self::make_sampler(device, anisotropy);
         self.dirty = true;
         self.rebuild_now = true;
     }
@@ -1538,15 +1725,47 @@ impl TextureTable {
         self.store.create(device, writes, mips)
     }
 
+    /// Create a texture from a full mip chain (level 0 first) for compatibility backends.
+    pub fn create_compat(&mut self, mips: &[MipLevel]) -> Option<u32> {
+        self.compat.as_mut()?.create(mips)
+    }
+
+    /// Replace an existing slot's level 0 texels for compatibility backends.
+    pub fn replace_compat(&mut self, slot: u32, mips: &[MipLevel]) -> bool {
+        self.compat.as_mut().is_some_and(|c| c.replace(slot, mips))
+    }
+
+    /// Drains pending compatibility texture uploads/removals for `glow`.
+    pub fn take_compat_updates(&mut self) -> Vec<(u32, Option<CompatTexture>)> {
+        let Some(c) = &mut self.compat else {
+            return Vec::new();
+        };
+        let mut dirty = std::mem::take(&mut c.dirty);
+        dirty.sort_unstable();
+        dirty.dedup();
+        dirty
+            .into_iter()
+            .map(|slot| (slot, c.slots.get(slot as usize).and_then(Clone::clone)))
+            .collect()
+    }
+
     /// A slot for a texture still loading: it shows the shared grey
     /// placeholder ([`PLACEHOLDER`]) until `replace` / `replace_staged`
     /// gives it texels. Costs no GPU work.
     pub fn create_placeholder(&mut self) -> Option<u32> {
+        if let Some(c) = &mut self.compat {
+            let ph = c.slots[PLACEHOLDER as usize].clone()?;
+            return c.alloc_slot(ph);
+        }
         self.store.create_placeholder()
     }
 
     /// A streamed derived normal, flat until ready, without allocating texels.
     pub fn create_normal_placeholder(&mut self) -> Option<u32> {
+        if let Some(c) = &mut self.compat {
+            let n = c.slots[FLAT_NORMAL as usize].clone()?;
+            return c.alloc_slot(n);
+        }
         self.store.create_shared(FLAT_NORMAL)
     }
 
@@ -1554,6 +1773,17 @@ impl TextureTable {
     /// loading placeholder, shows the missing grey ([`MISSING`]). Costs no
     /// GPU work. False for a slot with texels of its own.
     pub fn show_missing(&mut self, slot: u32) -> bool {
+        if let Some(c) = &mut self.compat {
+            if slot < RESERVED || slot as usize >= c.slots.len() {
+                return false;
+            }
+            if let Some(m) = c.slots[MISSING as usize].clone() {
+                c.slots[slot as usize] = Some(m);
+                c.dirty.push(slot);
+                return true;
+            }
+            return false;
+        }
         self.store.show_missing(slot)
     }
 
@@ -1577,6 +1807,10 @@ impl TextureTable {
 
     /// Size of the texture in a slot (level 0).
     pub fn size_of(&self, slot: u32) -> Option<(u32, u32)> {
+        if let Some(c) = &self.compat {
+            let s = c.slots.get(slot as usize)?.as_ref()?;
+            return Some((s.width, s.height));
+        }
         let s = self.store.slots.get(slot as usize)?.as_ref()?;
         Some((s.key.width, s.key.height))
     }
@@ -1638,6 +1872,10 @@ impl TextureTable {
     }
 
     pub fn free(&mut self, slot: u32) {
+        if let Some(c) = &mut self.compat {
+            c.free(slot);
+            return;
+        }
         self.store.free(slot);
     }
 
@@ -1718,9 +1956,12 @@ impl TextureTable {
             self.last_compact = Instant::now();
             self.compacting = self.store.compact(device, uploads) && eager;
         }
+        let Some(wgpu) = &mut self.wgpu else {
+            return;
+        };
         if let Some((lo, hi)) = self.store.loc_dirty.take() {
             writes.write_buffer(
-                &self.loc_buffer,
+                &wgpu.loc_buffer,
                 loc_buffer_offset(lo),
                 bytemuck::cast_slice(&self.store.loc[lo..hi]),
             );
@@ -1735,8 +1976,8 @@ impl TextureTable {
         if self.dirty && (force || self.rebuild_now || self.last_rebuild.elapsed() >= REBUILD_THROTTLE) {
             self.bound = bound_len(&self.store, self.partial);
             debug_assert!(page_locations_fit(&self.store.loc, self.bound));
-            writes.write_buffer(&self.loc_buffer, 0, bytemuck::bytes_of(&self.bound));
-            self.bind_group = Self::build(device, &self.layout, &self.sampler, &self.loc_buffer, &self.store, self.bound);
+            writes.write_buffer(&wgpu.loc_buffer, 0, bytemuck::bytes_of(&self.bound));
+            wgpu.bind_group = Self::build(device, &wgpu.layout, &wgpu.sampler, &wgpu.loc_buffer, &self.store, self.bound);
             self.dirty = false;
             self.rebuild_now = false;
             self.last_rebuild = Instant::now();
@@ -3391,7 +3632,7 @@ mod tests {
         });
         let layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: None,
-            bind_group_layouts: &[Some(&table.layout)],
+            bind_group_layouts: &[Some(table.layout())],
             immediate_size: 0,
         });
         let pipeline = device.create_render_pipeline_cached(&wgpu::RenderPipelineDescriptor {
@@ -3456,7 +3697,7 @@ mod tests {
                     multiview_mask: None,
                 });
                 pass.set_pipeline(&pipeline);
-                pass.set_bind_group(0, &table.bind_group, &[]);
+                pass.set_bind_group(0, table.bind_group(), &[]);
                 pass.draw(0..3, 0..1);
             }
             enc.copy_texture_to_buffer(
@@ -3561,7 +3802,7 @@ mod tests {
                 let saved_loc = table.store.loc[slot as usize];
                 let invalid_page = table.bound << 16;
                 queue.write_buffer(
-                    &table.loc_buffer,
+                    &table.wgpu.as_ref().expect("wgpu table").loc_buffer,
                     loc_buffer_offset(slot as usize),
                     bytemuck::bytes_of(&invalid_page),
                 );
@@ -3571,7 +3812,11 @@ mod tests {
                     &[255, 255, 255, 255],
                     "an out-of-range page must fall back to reserved page 0"
                 );
-                queue.write_buffer(&table.loc_buffer, loc_buffer_offset(slot as usize), bytemuck::bytes_of(&saved_loc));
+                queue.write_buffer(
+                    &table.wgpu.as_ref().expect("wgpu table").loc_buffer,
+                    loc_buffer_offset(slot as usize),
+                    bytemuck::bytes_of(&saved_loc),
+                );
             }
             for (&slot, &(id, (w, h))) in &live {
                 let at = |row: u32| &px[(row * SLOTS + slot) as usize * 4..][..4];

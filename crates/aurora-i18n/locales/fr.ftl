@@ -15239,3 +15239,4 @@ joystick-layout-positional = Positionnelle
 
 joystick-layout-auto = Automatique
 joystick-layout-xinput = XInput
+ui-perf-compatibility-backend = OpenGL (compatibilité glow)

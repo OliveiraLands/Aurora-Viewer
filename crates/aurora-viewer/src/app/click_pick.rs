@@ -122,20 +122,23 @@ pub(super) struct Picked {
     /// for the depth. Camera/avatar motion cannot move its hit rectangle.
     pub tag: Option<(Uuid, Vec3)>,
     pub particles: Option<std::sync::Arc<[crate::scene::particles::ParticleHit]>>,
+    /// True when the pick has only depth-buffer information (no drawn-face pass).
+    pub depth_only: bool,
 }
 
 impl Picked {
-    /// The diagnostic synchronous read has no drawn-face identity.
+    /// Whether this pick has no drawn-face identity (synchronous diagnostic
+    /// read or a backend without a drawn-face pass).
     pub(super) fn depth_only(&self) -> bool {
-        pick_mode() == PickMode::Wait
+        self.depth_only
     }
 
     pub(super) fn visible_point(&self) -> Option<Vec3> {
         match self.drawn.blend.or(self.drawn.opaque) {
             Some(face) => Some(face.point),
-            // The old diagnostic read has no drawn-face pass. Otherwise an
-            // empty answer means sky, not an older depth's phantom surface.
-            None if pick_mode() == PickMode::Wait => self.depth,
+            // Depth-only reads have no drawn-face pass. Otherwise an empty
+            // answer means sky, not an older depth's phantom surface.
+            None if self.depth_only => self.depth,
             None => None,
         }
     }
@@ -456,6 +459,7 @@ impl App {
                 drawn: Default::default(),
                 tag: super::plate_click::visible_tag(&self.name_tag_candidates(ray), depth, ray),
                 particles,
+                depth_only: true,
             };
             return self.rlva_filter_pick(picked);
         };
@@ -479,7 +483,7 @@ impl App {
             (false, false) => aurora_render::DrawnMode::Left,
         };
         self.hover_drawn.cancel(&mut g.renderer);
-        let drawn = Some(g.renderer.request_drawn(x, y, mode));
+        let drawn = g.renderer.supports_drawn_pick().then(|| g.renderer.request_drawn(x, y, mode));
         let tags = self.name_tag_candidates(ray);
         let check = check.map(|(depth, waited)| Check {
             depth,
@@ -516,7 +520,7 @@ impl App {
             .or(picked.drawn.opaque)
             .and_then(|face| self.scene.record_object(face.record).map(|(idx, _)| idx))
             .or_else(|| {
-                if pick_mode() == PickMode::Wait {
+                if picked.depth_only() {
                     picked
                         .depth
                         .zip(picked.ray)
@@ -588,6 +592,7 @@ impl App {
                     drawn,
                     tag,
                     particles: p.particles,
+                    depth_only: p.drawn.is_none(),
                 });
                 if p.click != Click::Press || !self.camera.mouselook() {
                     self.with_ordered_input(|app| app.run_click(p.click));
@@ -1378,5 +1383,25 @@ mod tests {
         assert!(places.iter().all(|(u, v)| (0.0..1.0).contains(u) && (0.0..1.0).contains(v)));
         let cells: std::collections::HashSet<(u32, u32)> = places.iter().map(|(u, v)| ((u * 8.0) as u32, (v * 8.0) as u32)).collect();
         assert!(cells.len() > 56, "{} of 64 cells", cells.len());
+    }
+
+    #[test]
+    fn visible_point_uses_depth_only_when_drawn_pass_is_unavailable() {
+        let depth = Some(Vec3::new(128.0, 128.0, 24.0));
+        let drawn_missing = Picked {
+            ray: None,
+            depth,
+            drawn: Default::default(),
+            tag: None,
+            particles: None,
+            depth_only: false,
+        };
+        assert_eq!(drawn_missing.visible_point(), None);
+
+        let depth_only = Picked {
+            depth_only: true,
+            ..drawn_missing
+        };
+        assert_eq!(depth_only.visible_point(), depth);
     }
 }

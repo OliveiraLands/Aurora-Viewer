@@ -453,9 +453,14 @@ pub fn show(
         } else {
             ("player-pause-filled", aurora_i18n::tr!("monitor-pause"))
         };
+        let backend_label = if v.gpu.active_backend.is_compatibility_tier() {
+            aurora_i18n::tr!("ui-perf-compatibility-backend")
+        } else {
+            v.gpu.backend.as_str()
+        };
         let device = super::monitor::Device {
             name: &v.gpu.name,
-            backend: &v.gpu.backend,
+            backend: backend_label,
             vram_mb: v.gpu.vram_mb,
         };
         let mut floater = Floater::new(
@@ -794,6 +799,7 @@ mod tests {
         let gpu = GpuInfo {
             name: "Test GPU".into(),
             backend: "Vulkan".into(),
+            active_backend: aurora_render::ActiveBackend::Vulkan,
             driver: String::new(),
             bindless: true,
             timestamps: true,

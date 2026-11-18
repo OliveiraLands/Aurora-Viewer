@@ -286,7 +286,7 @@ pub struct VideoMemoryProbe {
     sampler: BudgetSampler,
     /// For the card's identity, read once on demand (`card`).
     #[cfg(not(target_os = "macos"))]
-    adapter: wgpu::Adapter,
+    adapter: Option<wgpu::Adapter>,
 }
 
 const PROBE_INTERVAL: Duration = Duration::from_millis(250);
@@ -299,6 +299,13 @@ struct BudgetSampler {
 }
 
 impl BudgetSampler {
+    fn new_inert() -> Self {
+        Self {
+            latest: Arc::new(parking_lot::Mutex::new(None)),
+            stopped: Arc::new(AtomicBool::new(true)),
+        }
+    }
+
     fn new(mut query: impl FnMut() -> Option<(u64, u64, u64, u64)> + Send + 'static, interval: Duration) -> Self {
         let latest = Arc::new(parking_lot::Mutex::new(None));
         let stopped = Arc::new(AtomicBool::new(false));
@@ -417,7 +424,16 @@ impl VideoMemoryProbe {
         VideoMemoryProbe {
             sampler,
             #[cfg(not(target_os = "macos"))]
-            adapter: card,
+            adapter: Some(card),
+        }
+    }
+
+    /// Inert probe for compatibility backends without `wgpu::Adapter`.
+    pub fn new_compat() -> Self {
+        VideoMemoryProbe {
+            sampler: BudgetSampler::new_inert(),
+            #[cfg(not(target_os = "macos"))]
+            adapter: None,
         }
     }
 
@@ -459,7 +475,8 @@ impl VideoMemoryProbe {
     pub fn card(&self) -> Option<(u64, u64, bool)> {
         // SAFETY: the hal adapter is only borrowed for this call; the queries
         // read properties and change no state.
-        let hal = unsafe { self.adapter.as_hal::<wgpu::hal::api::Vulkan>() }?;
+        let adapter = self.adapter.as_ref()?;
+        let hal = unsafe { adapter.as_hal::<wgpu::hal::api::Vulkan>() }?;
         let shared = hal.shared_instance();
         if shared.instance_api_version() < vk::API_VERSION_1_1 {
             return None;

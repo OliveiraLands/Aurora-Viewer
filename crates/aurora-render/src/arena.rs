@@ -189,10 +189,15 @@ fn ahead_within(vertices: (u32, u32), indices: (u32, u32), allowance: u64) -> (u
 /// at once to what the region needed at the last visit, or ahead of need
 /// (`grow_ahead`, driven by the viewer's scene/geometry_need.rs).
 pub struct GeometryArena {
-    pub vertex_buffer: wgpu::Buffer,
+    vertex_buffer: Option<wgpu::Buffer>,
     /// Parallel stream of `SkinVertex` (same element offsets as vertices).
-    pub skin_buffer: wgpu::Buffer,
-    pub index_buffer: wgpu::Buffer,
+    skin_buffer: Option<wgpu::Buffer>,
+    index_buffer: Option<wgpu::Buffer>,
+    /// CPU-side backing used only in compatibility mode (`vertex_buffer.is_none()`).
+    cpu_vertices: Vec<Vertex>,
+    cpu_skin: Vec<SkinVertex>,
+    cpu_indices: Vec<u16>,
+    cpu_dirty: bool,
     vertices: RangeAllocator,
     indices: RangeAllocator,
     max_buffer_size: u64,
@@ -210,15 +215,77 @@ impl GeometryArena {
         let vcap: u32 = 2 * 1024 * 1024; // 48 MB
         let icap: u32 = 8 * 1024 * 1024; // 16 MB
         Self {
-            vertex_buffer: Self::make(device, "vertex arena", vcap as u64 * VERTEX_SIZE, wgpu::BufferUsages::VERTEX),
-            skin_buffer: Self::make(device, "skin arena", vcap as u64 * SKIN_SIZE, wgpu::BufferUsages::VERTEX),
-            index_buffer: Self::make(device, "index arena", icap as u64 * 2, wgpu::BufferUsages::INDEX),
+            vertex_buffer: Some(Self::make(
+                device,
+                "vertex arena",
+                vcap as u64 * VERTEX_SIZE,
+                wgpu::BufferUsages::VERTEX,
+            )),
+            skin_buffer: Some(Self::make(
+                device,
+                "skin arena",
+                vcap as u64 * SKIN_SIZE,
+                wgpu::BufferUsages::VERTEX,
+            )),
+            index_buffer: Some(Self::make(device, "index arena", icap as u64 * 2, wgpu::BufferUsages::INDEX)),
+            cpu_vertices: Vec::new(),
+            cpu_skin: Vec::new(),
+            cpu_indices: Vec::new(),
+            cpu_dirty: false,
             vertices: RangeAllocator::new(vcap),
             indices: RangeAllocator::new(icap),
             max_buffer_size,
             full: false,
             backoff: Backoff::default(),
         }
+    }
+
+    /// CPU-backed geometry arena for compatibility backends without `wgpu::Device`.
+    pub fn new_cpu(max_buffer_size: u64) -> Self {
+        let vcap: u32 = 64 * 1024;
+        let icap: u32 = 256 * 1024;
+        Self {
+            vertex_buffer: None,
+            skin_buffer: None,
+            index_buffer: None,
+            cpu_vertices: Vec::new(),
+            cpu_skin: Vec::new(),
+            cpu_indices: Vec::new(),
+            cpu_dirty: false,
+            vertices: RangeAllocator::new(vcap),
+            indices: RangeAllocator::new(icap),
+            max_buffer_size,
+            full: false,
+            backoff: Backoff::default(),
+        }
+    }
+
+    pub fn vertex_buffer(&self) -> &wgpu::Buffer {
+        self.vertex_buffer
+            .as_ref()
+            .expect("GeometryArena::vertex_buffer called on a CPU-only compatibility arena")
+    }
+
+    pub fn skin_buffer(&self) -> &wgpu::Buffer {
+        self.skin_buffer
+            .as_ref()
+            .expect("GeometryArena::skin_buffer called on a CPU-only compatibility arena")
+    }
+
+    pub fn index_buffer(&self) -> &wgpu::Buffer {
+        self.index_buffer
+            .as_ref()
+            .expect("GeometryArena::index_buffer called on a CPU-only compatibility arena")
+    }
+
+    /// CPU-side geometry slices populated in compatibility mode.
+    pub fn cpu_slices(&self) -> (&[Vertex], &[SkinVertex], &[u16]) {
+        (&self.cpu_vertices, &self.cpu_skin, &self.cpu_indices)
+    }
+
+    /// Returns and clears whether CPU-side geometry changed since the last sync.
+    pub fn take_cpu_dirty(&mut self) -> bool {
+        std::mem::take(&mut self.cpu_dirty)
     }
 
     fn make(device: &wgpu::Device, label: &str, size: u64, usage: wgpu::BufferUsages) -> wgpu::Buffer {
@@ -239,7 +306,14 @@ impl GeometryArena {
     }
 
     pub fn bytes(&self) -> u64 {
-        self.vertex_buffer.size() + self.skin_buffer.size() + self.index_buffer.size()
+        match (&self.vertex_buffer, &self.skin_buffer, &self.index_buffer) {
+            (Some(v), Some(s), Some(i)) => v.size() + s.size() + i.size(),
+            _ => {
+                (self.cpu_vertices.len() as u64 * VERTEX_SIZE)
+                    + (self.cpu_skin.len() as u64 * SKIN_SIZE)
+                    + (self.cpu_indices.len() as u64 * 2)
+            }
+        }
     }
 
     pub fn used(&self) -> (u64, u64) {
@@ -319,13 +393,13 @@ impl GeometryArena {
         let nb = Self::try_make(device, "vertex arena", new_cap as u64 * VERTEX_SIZE, wgpu::BufferUsages::VERTEX)?;
         let ns = Self::try_make(device, "skin arena", new_cap as u64 * SKIN_SIZE, wgpu::BufferUsages::VERTEX)?;
         let mut enc = device.create_command_encoder(&wgpu::CommandEncoderDescriptor { label: Some("grow vb") });
-        enc.copy_buffer_to_buffer(&self.vertex_buffer, 0, &nb, 0, old as u64 * VERTEX_SIZE);
-        enc.copy_buffer_to_buffer(&self.skin_buffer, 0, &ns, 0, old as u64 * SKIN_SIZE);
+        enc.copy_buffer_to_buffer(self.vertex_buffer(), 0, &nb, 0, old as u64 * VERTEX_SIZE);
+        enc.copy_buffer_to_buffer(self.skin_buffer(), 0, &ns, 0, old as u64 * SKIN_SIZE);
         // the writes and the copies already recorded into the old buffers
         // come first: the journal keeps the growth at this point of the frame
         uploads.flush(writes, Some(enc));
-        self.vertex_buffer = nb;
-        self.skin_buffer = ns;
+        self.vertex_buffer = Some(nb);
+        self.skin_buffer = Some(ns);
         self.vertices.grow(new_cap);
         log::info!("vertex arena grown to {} MB", new_cap as u64 * VERTEX_SIZE / (1024 * 1024));
         Ok(())
@@ -365,9 +439,9 @@ impl GeometryArena {
         let old = self.indices.capacity();
         let nb = Self::try_make(device, "index arena", new_cap as u64 * 2, wgpu::BufferUsages::INDEX)?;
         let mut enc = device.create_command_encoder(&wgpu::CommandEncoderDescriptor { label: Some("grow ib") });
-        enc.copy_buffer_to_buffer(&self.index_buffer, 0, &nb, 0, old as u64 * 2);
+        enc.copy_buffer_to_buffer(self.index_buffer(), 0, &nb, 0, old as u64 * 2);
         uploads.flush(writes, Some(enc));
-        self.index_buffer = nb;
+        self.index_buffer = Some(nb);
         self.indices.grow(new_cap);
         log::info!("index arena grown to {} MB", new_cap as u64 * 2 / (1024 * 1024));
         Ok(())
@@ -481,21 +555,96 @@ impl GeometryArena {
         let icount = indices.len() as u32;
         let m = self.reserve(device, writes, uploads, vertices.len() as u32, icount)?;
         let (voff, ioff) = (m.vertex_offset, m.index_offset);
-        writes.write_buffer(&self.vertex_buffer, voff as u64 * VERTEX_SIZE, bytemuck::cast_slice(vertices));
+        writes.write_buffer(self.vertex_buffer(), voff as u64 * VERTEX_SIZE, bytemuck::cast_slice(vertices));
         if let Some(sk) = skin
             && sk.len() == vertices.len()
         {
-            writes.write_buffer(&self.skin_buffer, voff as u64 * SKIN_SIZE, bytemuck::cast_slice(sk));
+            writes.write_buffer(self.skin_buffer(), voff as u64 * SKIN_SIZE, bytemuck::cast_slice(sk));
         }
         if icount % 2 == 1 {
             let mut padded = Vec::with_capacity(m.index_alloc_len() as usize);
             padded.extend_from_slice(indices);
             padded.push(*indices.last().unwrap_or(&0));
-            writes.write_buffer(&self.index_buffer, ioff as u64 * 2, bytemuck::cast_slice(&padded));
+            writes.write_buffer(self.index_buffer(), ioff as u64 * 2, bytemuck::cast_slice(&padded));
         } else {
-            writes.write_buffer(&self.index_buffer, ioff as u64 * 2, bytemuck::cast_slice(indices));
+            writes.write_buffer(self.index_buffer(), ioff as u64 * 2, bytemuck::cast_slice(indices));
         }
         Some(m)
+    }
+
+    /// CPU-side mesh allocation for compatibility backends without `wgpu::Device`.
+    pub fn alloc_cpu(&mut self, vertices: &[Vertex], skin: Option<&[SkinVertex]>, indices: &[u16]) -> Option<MeshAlloc> {
+        if vertices.is_empty() || indices.is_empty() || vertices.len() > u32::MAX as usize / 2 {
+            return None;
+        }
+        let vcount = vertices.len() as u32;
+        let icount = indices.len() as u32;
+        let ialloc = (icount + 1) & !1;
+        let voff = match self.vertices.alloc(vcount) {
+            Some(o) => o,
+            None => {
+                let cap = grown_capacity(self.vertices.capacity(), vcount, self.max_vertices())?;
+                self.vertices.grow(cap);
+                self.vertices.alloc(vcount)?
+            }
+        };
+        let ioff = match self.indices.alloc(ialloc) {
+            Some(o) => o,
+            None => {
+                let Some(cap) = grown_capacity(self.indices.capacity(), ialloc, self.max_indices()) else {
+                    self.vertices.free(voff, vcount);
+                    return None;
+                };
+                self.indices.grow(cap);
+                match self.indices.alloc(ialloc) {
+                    Some(o) => o,
+                    None => {
+                        self.vertices.free(voff, vcount);
+                        return None;
+                    }
+                }
+            }
+        };
+        let vend = voff as usize + vertices.len();
+        if vend > self.cpu_vertices.len() {
+            self.cpu_vertices.resize(vend, bytemuck::Zeroable::zeroed());
+        }
+        self.cpu_vertices[voff as usize..vend].copy_from_slice(vertices);
+        if let Some(sk) = skin
+            && sk.len() == vertices.len()
+        {
+            if vend > self.cpu_skin.len() {
+                self.cpu_skin.resize(vend, bytemuck::Zeroable::zeroed());
+            }
+            self.cpu_skin[voff as usize..vend].copy_from_slice(sk);
+        }
+        let iend = ioff as usize + indices.len();
+        if iend > self.cpu_indices.len() {
+            self.cpu_indices.resize(iend, 0);
+        }
+        self.cpu_indices[ioff as usize..iend].copy_from_slice(indices);
+        self.cpu_dirty = true;
+        Some(MeshAlloc {
+            vertex_offset: voff,
+            vertex_count: vcount,
+            index_offset: ioff,
+            index_count: icount,
+        })
+    }
+
+    /// Updates vertex positions/attributes in CPU-side storage for compatibility backends.
+    pub fn update_vertices_cpu(&mut self, mesh: MeshAlloc, vertices: &[Vertex]) -> bool {
+        if vertices.len() != mesh.vertex_count as usize {
+            return false;
+        }
+        let start = mesh.vertex_offset as usize;
+        let end = start + vertices.len();
+        if end > self.cpu_vertices.len() {
+            return false;
+        }
+        self.cpu_vertices[start..end].copy_from_slice(vertices);
+        self.cpu_dirty = true;
+        true
     }
 
     /// Upload a mesh staged by a background job (its region must be
@@ -510,9 +659,9 @@ impl GeometryArena {
         let m = self.reserve(device, writes, uploads, mesh.vertex_count, mesh.index_count)?;
         let [vertices, skin, indices] = mesh.ranges();
         let voff = m.vertex_offset as u64;
-        uploads.copy_to_buffer(device, &mesh.data, vertices, &self.vertex_buffer, voff * VERTEX_SIZE);
-        uploads.copy_to_buffer(device, &mesh.data, skin, &self.skin_buffer, voff * SKIN_SIZE);
-        uploads.copy_to_buffer(device, &mesh.data, indices, &self.index_buffer, m.index_offset as u64 * 2);
+        uploads.copy_to_buffer(device, &mesh.data, vertices, self.vertex_buffer(), voff * VERTEX_SIZE);
+        uploads.copy_to_buffer(device, &mesh.data, skin, self.skin_buffer(), voff * SKIN_SIZE);
+        uploads.copy_to_buffer(device, &mesh.data, indices, self.index_buffer(), m.index_offset as u64 * 2);
         Some(m)
     }
 
@@ -589,14 +738,14 @@ impl<T> Blocks<T> {
 /// Each record also has a `CullFace` (GPU draw lists, gpu_cull.rs), reset
 /// when the record is allocated or freed: only object faces set one.
 pub struct RecordStore {
-    pub buffer: wgpu::Buffer,
+    buffer: Option<wgpu::Buffer>,
     /// Each record's model matrix as the last frame drew it (one matrix per
     /// record slot, the same capacity as `buffer`): the motion vectors
     /// compare it with the current one. The renderer gathers it from the
     /// records at the end of each frame (`motion_history.rs`); a record
     /// handed out (a new slot or a freed one) starts with its own model, so
     /// it does not seem to come from where the slot's last record was.
-    pub prev_models: wgpu::Buffer,
+    prev_models: Option<wgpu::Buffer>,
     /// Records handed out since the last `flush` (their `prev_models` seed).
     fresh: Vec<u32>,
     /// GPU culling entry of each record (its face, when it is an object's).
@@ -617,8 +766,8 @@ impl RecordStore {
     pub fn new(device: &wgpu::Device) -> Self {
         let cap = 16384usize;
         Self {
-            buffer: Self::make(device, cap),
-            prev_models: device.create_buffer(&Self::prev_desc(cap)),
+            buffer: Some(Self::make(device, cap)),
+            prev_models: Some(device.create_buffer(&Self::prev_desc(cap))),
             fresh: Vec::new(),
             faces: GpuTable::new(device, "cull faces", cap, CullFace::NONE),
             mirror: Blocks::new(),
@@ -629,6 +778,36 @@ impl RecordStore {
             uploaded: 0,
             backoff: Backoff::default(),
         }
+    }
+
+    /// CPU-only record store for compatibility backends without `wgpu::Device`.
+    pub fn new_cpu() -> Self {
+        let cap = 16384usize;
+        Self {
+            buffer: None,
+            prev_models: None,
+            fresh: Vec::new(),
+            faces: GpuTable::new_cpu("cull faces", cap, CullFace::NONE),
+            mirror: Blocks::new(),
+            free: Vec::new(),
+            dirty: DirtyChunks::default(),
+            live: 0,
+            generation: 0,
+            uploaded: 0,
+            backoff: Backoff::default(),
+        }
+    }
+
+    pub fn buffer(&self) -> &wgpu::Buffer {
+        self.buffer
+            .as_ref()
+            .expect("RecordStore::buffer called on a CPU-only compatibility store")
+    }
+
+    pub fn prev_models(&self) -> &wgpu::Buffer {
+        self.prev_models
+            .as_ref()
+            .expect("RecordStore::prev_models called on a CPU-only compatibility store")
     }
 
     fn make(device: &wgpu::Device, cap: usize) -> wgpu::Buffer {
@@ -668,7 +847,7 @@ impl RecordStore {
             return Err(format!("{needed} records exceed the storage binding capacity of {max_cap}"));
         }
         let cap = needed.checked_next_power_of_two().unwrap_or(max_cap).min(max_cap);
-        let old = (self.buffer.size() as usize / size) as u32;
+        let old = (self.buffer().size() as usize / size) as u32;
         let mut failure = String::new();
         for cap in fallback_capacities(old, needed as u32 - old, cap as u32, 1) {
             match try_buffer(device, &Self::desc(cap as usize))
@@ -802,31 +981,30 @@ impl RecordStore {
     /// reallocates the buffer when it is too small.
     pub fn flush(&mut self, device: &wgpu::Device, writes: &mut GpuWrites) {
         self.faces.flush(device, writes);
+        if self.buffer.is_none() || self.prev_models.is_none() {
+            self.fresh.clear();
+            self.dirty.clear();
+            self.uploaded = 0;
+            return;
+        }
         let rec_size = std::mem::size_of::<DrawRecord>();
         self.uploaded = 0;
         let needed = self.mirror.len() * rec_size;
         let now = Instant::now();
-        if needed as u64 > self.buffer.size() && self.backoff.ready(now) {
-            let old_size = self.buffer.size();
-            // The records the old buffer holds move on the GPU: a submit
-            // recorded at this point of the frame's journal, so that the
-            // writes of the frames before it are in the old buffer when it
-            // is copied, and this frame's writes (recorded below) land
-            // after the copy; the new records are all dirty. Writing the
-            // whole mirror again through the queue copied 8 to 32 MB on
-            // the main thread each time a region outgrew the buffer.
-            // (the previous models grow with them, or neither does)
+        let buf_size = self.buffer().size();
+        if needed as u64 > buf_size && self.backoff.ready(now) {
+            let old_size = buf_size;
             match self.grown_buffers(device) {
                 Ok((grown, prev)) => {
                     self.backoff.succeeded();
                     let mut enc = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
                         label: Some("grow draw records"),
                     });
-                    enc.copy_buffer_to_buffer(&self.buffer, 0, &grown, 0, old_size);
-                    enc.copy_buffer_to_buffer(&self.prev_models, 0, &prev, 0, self.prev_models.size());
+                    enc.copy_buffer_to_buffer(self.buffer(), 0, &grown, 0, old_size);
+                    enc.copy_buffer_to_buffer(self.prev_models(), 0, &prev, 0, self.prev_models().size());
                     writes.submit(vec![enc]);
-                    self.buffer = grown;
-                    self.prev_models = prev;
+                    self.buffer = Some(grown);
+                    self.prev_models = Some(prev);
                     self.generation += 1;
                 }
                 Err(e) => {
@@ -847,7 +1025,8 @@ impl RecordStore {
         }
         // (records past the buffer wait for its growth, which copies the
         // old ones and keeps the rest dirty)
-        let fits = self.buffer.size() as usize / rec_size;
+        let buf = self.buffer.as_ref().expect("RecordStore::flush called on CPU-only store");
+        let fits = buf.size() as usize / rec_size;
         let mut waiting = Vec::new();
         for range in self.dirty.take_ranges(self.mirror.len()) {
             if range.end > fits {
@@ -855,7 +1034,7 @@ impl RecordStore {
             }
             let range = range.start.min(fits)..range.end.min(fits);
             for (first, records) in self.mirror.runs(range.start, range.end) {
-                writes.write_buffer(&self.buffer, (first * rec_size) as u64, bytemuck::cast_slice(records));
+                writes.write_buffer(buf, (first * rec_size) as u64, bytemuck::cast_slice(records));
                 self.uploaded += std::mem::size_of_val(records) as u64;
             }
         }
@@ -873,7 +1052,11 @@ impl RecordStore {
         if self.fresh.is_empty() {
             return;
         }
-        let fits = self.prev_models.size() as usize / 64;
+        let Some(prev_models) = self.prev_models.as_ref() else {
+            self.fresh.clear();
+            return;
+        };
+        let fits = prev_models.size() as usize / 64;
         let mut ids = std::mem::take(&mut self.fresh);
         ids.sort_unstable();
         ids.dedup();
@@ -893,7 +1076,7 @@ impl RecordStore {
                 next += 1;
                 i += 1;
             }
-            writes.write_buffer(&self.prev_models, first as u64 * 64, bytemuck::cast_slice(&models));
+            writes.write_buffer(prev_models, first as u64 * 64, bytemuck::cast_slice(&models));
         }
     }
 }
@@ -1019,21 +1202,21 @@ mod tests {
         for (i, m, skinned) in live {
             let (v, sk, idx) = mesh(i, m.vertex_count, m.index_count);
             let got = read(
-                &arena.vertex_buffer,
+                arena.vertex_buffer(),
                 m.vertex_offset as u64 * VERTEX_SIZE,
                 m.vertex_count as u64 * VERTEX_SIZE,
             );
             assert!(got == bytemuck::cast_slice::<_, u8>(&v), "mesh {i} vertices");
             if skinned {
                 let got = read(
-                    &arena.skin_buffer,
+                    arena.skin_buffer(),
                     m.vertex_offset as u64 * SKIN_SIZE,
                     m.vertex_count as u64 * SKIN_SIZE,
                 );
                 assert!(got == bytemuck::cast_slice::<_, u8>(&sk), "mesh {i} skin");
             }
             // the padded allocation: an odd count repeats its last index
-            let got = read(&arena.index_buffer, m.index_offset as u64 * 2, m.index_alloc_len() as u64 * 2);
+            let got = read(arena.index_buffer(), m.index_offset as u64 * 2, m.index_alloc_len() as u64 * 2);
             let mut padded = idx.clone();
             padded.resize(m.index_alloc_len() as usize, idx[idx.len() - 1]);
             assert!(got == bytemuck::cast_slice::<_, u8>(&padded), "mesh {i} indices");
@@ -1058,15 +1241,15 @@ mod tests {
         let (old_vertices, old_indices) = arena.capacity();
         let wish = old_vertices + 1;
         let allowance = wish as u64 * (VERTEX_SIZE + SKIN_SIZE);
-        let old = arena.vertex_buffer.clone();
+        let old = arena.vertex_buffer().clone();
         assert!(!arena.grow_ahead(&device, &mut writes, &mut uploads, wish, old_indices, Some(allowance)));
-        assert_eq!(arena.vertex_buffer, old, "the rounded wish cannot fit this allowance");
+        assert_eq!(arena.vertex_buffer(), &old, "the rounded wish cannot fit this allowance");
         let allowance = 80 << 20;
         assert!(arena.grow_ahead(&device, &mut writes, &mut uploads, wish, old_indices, Some(allowance)));
         let (vertices, indices) = arena.capacity();
         assert!(vertices > old_vertices && vertices < (3 << 20));
         assert_eq!(indices, old_indices);
-        assert!(arena.vertex_buffer.size() + arena.skin_buffer.size() <= allowance);
+        assert!(arena.vertex_buffer().size() + arena.skin_buffer().size() <= allowance);
         // Replay while the journal still owns the previous buffers: both
         // generations coexist until the copy is submitted and completed.
         writes.replay(&mut crate::writes::QueueSink(&queue));
@@ -1104,8 +1287,8 @@ mod tests {
         writes.replay(&mut crate::writes::QueueSink(&queue));
         queue.submit([]);
         let size = std::mem::size_of::<DrawRecord>() as u64;
-        assert_eq!(store.buffer.size(), (8 << 20) / size * size);
-        assert_eq!(store.prev_models.size() / 64, store.buffer.size() / size);
+        assert_eq!(store.buffer().size(), (8 << 20) / size * size);
+        assert_eq!(store.prev_models().size() / 64, store.buffer().size() / size);
         assert_eq!(store.generation, 1);
         // Read the last newly added record: growth must copy the old
         // records and upload the new ones after that copy in the journal.
@@ -1116,7 +1299,7 @@ mod tests {
             mapped_at_creation: false,
         });
         let mut encoder = device.create_command_encoder(&Default::default());
-        encoder.copy_buffer_to_buffer(&store.buffer, 19_999 * size, &out, 0, size);
+        encoder.copy_buffer_to_buffer(store.buffer(), 19_999 * size, &out, 0, size);
         queue.submit([encoder.finish()]);
         out.map_async(wgpu::MapMode::Read, .., |r| r.expect("map"));
         device.poll(wgpu::PollType::wait_indefinitely()).expect("poll");
@@ -1125,14 +1308,14 @@ mod tests {
             assert_eq!(crate::readback::pods::<DrawRecord>(&bytes)[0].base_color[0], 19_999.0);
         }
         out.unmap();
-        let previous = (store.buffer.clone(), store.prev_models.clone());
+        let previous = (store.buffer().clone(), store.prev_models().clone());
         while store.slot_count() < 30_000 {
             store.alloc(DrawRecord::default());
         }
         store.flush(&device, &mut writes);
         writes.replay(&mut crate::writes::QueueSink(&queue));
         queue.submit([]);
-        assert_eq!((&store.buffer, &store.prev_models), (&previous.0, &previous.1));
+        assert_eq!((store.buffer(), store.prev_models()), (&previous.0, &previous.1));
         assert_eq!(store.generation, 1);
         let entries: Vec<_> = (0..2)
             .map(|binding| wgpu::BindGroupLayoutEntry {
@@ -1156,11 +1339,11 @@ mod tests {
             entries: &[
                 wgpu::BindGroupEntry {
                     binding: 0,
-                    resource: store.buffer.as_entire_binding(),
+                    resource: store.buffer().as_entire_binding(),
                 },
                 wgpu::BindGroupEntry {
                     binding: 1,
-                    resource: store.prev_models.as_entire_binding(),
+                    resource: store.prev_models().as_entire_binding(),
                 },
             ],
         });
@@ -1189,7 +1372,7 @@ mod tests {
             tex: [i, i + 1, i + 2, i + 3],
             ..Default::default()
         };
-        let first_size = store.buffer.size();
+        let first_size = store.buffer().size();
         let mut ids = Vec::new();
         // three frames: within the first buffer, across one growth, across two
         for count in [10_000u32, 20_000, 70_000] {
@@ -1207,7 +1390,7 @@ mod tests {
             writes.replay(&mut crate::writes::QueueSink(&queue));
             queue.submit([]);
         }
-        assert!(store.buffer.size() >= first_size * 4 && store.generation == 2);
+        assert!(store.buffer().size() >= first_size * 4 && store.generation == 2);
         let size = (ids.len() * std::mem::size_of::<DrawRecord>()) as u64;
         let out = device.create_buffer(&wgpu::BufferDescriptor {
             label: None,
@@ -1216,7 +1399,7 @@ mod tests {
             mapped_at_creation: false,
         });
         let mut enc = device.create_command_encoder(&Default::default());
-        enc.copy_buffer_to_buffer(&store.buffer, 0, &out, 0, size);
+        enc.copy_buffer_to_buffer(store.buffer(), 0, &out, 0, size);
         queue.submit([enc.finish()]);
         out.map_async(wgpu::MapMode::Read, .., |r| r.expect("map"));
         device.poll(wgpu::PollType::wait_indefinitely()).expect("poll");
