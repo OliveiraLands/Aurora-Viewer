@@ -50,10 +50,82 @@ pub fn store_entries(grid: &str, username: &str) -> [(&'static str, String); 2] 
     [(SERVICE, account.clone()), (MFA_SERVICE, account)]
 }
 
+#[cfg(target_os = "android")]
+mod android_store {
+    use std::collections::BTreeMap;
+    use std::path::PathBuf;
+    use std::sync::Mutex;
+
+    static LOCK: Mutex<()> = Mutex::new(());
+
+    fn path() -> PathBuf {
+        crate::android::data_dir().join("config").join("credentials.json")
+    }
+
+    fn key(service: &str, grid: &str, username: &str) -> String {
+        format!("{service}|{}", super::account(grid, username))
+    }
+
+    fn read_map() -> BTreeMap<String, String> {
+        let Ok(bytes) = std::fs::read(path()) else {
+            return BTreeMap::new();
+        };
+        serde_json::from_slice(&bytes).unwrap_or_default()
+    }
+
+    fn write_map(map: &BTreeMap<String, String>) -> bool {
+        let p = path();
+        if let Some(parent) = p.parent()
+            && std::fs::create_dir_all(parent).is_err()
+        {
+            return false;
+        }
+        let Ok(json) = serde_json::to_vec(map) else {
+            return false;
+        };
+        std::fs::write(&p, json).is_ok()
+    }
+
+    pub fn get(service: &str, grid: &str, username: &str) -> Option<String> {
+        if username.trim().is_empty() {
+            return None;
+        }
+        let _guard = LOCK.lock().ok()?;
+        read_map().remove(&key(service, grid, username))
+    }
+
+    pub fn set(service: &str, grid: &str, username: &str, value: &str) -> bool {
+        if username.trim().is_empty() {
+            return false;
+        }
+        let Ok(_guard) = LOCK.lock() else {
+            return false;
+        };
+        let mut map = read_map();
+        map.insert(key(service, grid, username), value.to_owned());
+        write_map(&map)
+    }
+
+    pub fn remove(service: &str, grid: &str, username: &str) {
+        if username.trim().is_empty() {
+            return;
+        }
+        let Ok(_guard) = LOCK.lock() else {
+            return;
+        };
+        let mut map = read_map();
+        if map.remove(&key(service, grid, username)).is_some() {
+            let _ = write_map(&map);
+        }
+    }
+}
+
+#[cfg(not(target_os = "android"))]
 fn entry(grid: &str, username: &str) -> Option<keyring::Entry> {
     service_entry(SERVICE, grid, username)
 }
 
+#[cfg(not(target_os = "android"))]
 fn service_entry(service: &str, grid: &str, username: &str) -> Option<keyring::Entry> {
     if aurora_updater::test_environment().is_some() {
         return None;
@@ -98,6 +170,7 @@ trait MfaStore {
 struct SystemStore;
 
 impl MfaStore for SystemStore {
+    #[cfg(not(target_os = "android"))]
     fn read(&self, grid: &str, username: &str) -> Option<String> {
         let entry = service_entry(MFA_SERVICE, grid, username)?;
         match entry.get_password() {
@@ -110,6 +183,12 @@ impl MfaStore for SystemStore {
         }
     }
 
+    #[cfg(target_os = "android")]
+    fn read(&self, grid: &str, username: &str) -> Option<String> {
+        android_store::get(MFA_SERVICE, grid, username)
+    }
+
+    #[cfg(not(target_os = "android"))]
     fn write(&self, grid: &str, username: &str, value: &str) {
         if let Some(entry) = service_entry(MFA_SERVICE, grid, username)
             && entry.set_password(value).is_err()
@@ -118,6 +197,14 @@ impl MfaStore for SystemStore {
         }
     }
 
+    #[cfg(target_os = "android")]
+    fn write(&self, grid: &str, username: &str, value: &str) {
+        if !android_store::set(MFA_SERVICE, grid, username, value) {
+            log::warn!("MFA authorization not remembered");
+        }
+    }
+
+    #[cfg(not(target_os = "android"))]
     fn remove(&self, grid: &str, username: &str) {
         if let Some(entry) = service_entry(MFA_SERVICE, grid, username) {
             match entry.delete_credential() {
@@ -125,6 +212,11 @@ impl MfaStore for SystemStore {
                 Err(_) => log::warn!("MFA authorization not removed"),
             }
         }
+    }
+
+    #[cfg(target_os = "android")]
+    fn remove(&self, grid: &str, username: &str) {
+        android_store::remove(MFA_SERVICE, grid, username);
     }
 }
 
@@ -171,6 +263,7 @@ fn is_hash(s: &str) -> bool {
 }
 
 /// The remembered login hash of this user on this grid.
+#[cfg(not(target_os = "android"))]
 pub fn load(grid: &str, username: &str) -> Option<String> {
     let e = entry(grid, username)?;
     match e.get_password() {
@@ -184,8 +277,15 @@ pub fn load(grid: &str, username: &str) -> Option<String> {
     }
 }
 
+/// The remembered login hash of this user on this grid.
+#[cfg(target_os = "android")]
+pub fn load(grid: &str, username: &str) -> Option<String> {
+    android_store::get(SERVICE, grid, username).filter(|h| is_hash(h))
+}
+
 /// Keep `hash` for this user on this grid; false when it was not kept (Linux
 /// without a running Secret Service, a refused write).
+#[cfg(not(target_os = "android"))]
 #[must_use]
 pub fn store(grid: &str, username: &str, hash: &str) -> bool {
     if !is_hash(hash) {
@@ -203,6 +303,13 @@ pub fn store(grid: &str, username: &str, hash: &str) -> bool {
     }
 }
 
+/// Keep `hash` for this user on this grid; false when it was not kept.
+#[cfg(target_os = "android")]
+#[must_use]
+pub fn store(grid: &str, username: &str, hash: &str) -> bool {
+    is_hash(hash) && android_store::set(SERVICE, grid, username, hash)
+}
+
 /// Whether "Remember password" stays on after a login: a password that was
 /// typed must have reached the store, or the account would claim a password
 /// it does not have; the one read back from the store is already there.
@@ -210,6 +317,7 @@ pub fn stays_remembered(typed: bool, stored: impl FnOnce() -> bool) -> bool {
     !typed || stored()
 }
 
+#[cfg(not(target_os = "android"))]
 pub fn forget(grid: &str, username: &str) {
     if let Some(e) = entry(grid, username) {
         match e.delete_credential() {
@@ -217,6 +325,11 @@ pub fn forget(grid: &str, username: &str) {
             Err(err) => log::warn!("remembered password not removed: {err}"),
         }
     }
+}
+
+#[cfg(target_os = "android")]
+pub fn forget(grid: &str, username: &str) {
+    android_store::remove(SERVICE, grid, username);
 }
 
 #[cfg(test)]

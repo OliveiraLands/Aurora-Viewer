@@ -324,7 +324,7 @@ mod tests {
         let simulator = UdpSocket::bind("127.0.0.1:0").await.expect("local simulator");
         let address = simulator.local_addr().expect("simulator address");
         let (events, received) = crossbeam_channel::unbounded();
-        let http = reqwest::Client::builder()
+        let http = crate::http_client_builder()
             .no_proxy()
             .timeout(Duration::from_secs(5))
             .build()

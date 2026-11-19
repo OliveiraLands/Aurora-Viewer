@@ -69,6 +69,23 @@ pub(crate) fn client_config() -> Result<rustls::ClientConfig, Error> {
     Ok(config)
 }
 
+/// Standard public-root + Linden bundle client config without the Android
+/// Java `CertificateVerifier` dependency (for pure `NativeActivity` APKs).
+#[cfg(target_os = "android")]
+pub(crate) fn public_client_config() -> Result<rustls::ClientConfig, Error> {
+    let (linden, mut roots) = bundled_roots();
+    for cert in CertificateDer::pem_slice_iter(LINDEN_BUNDLE).flatten() {
+        let _ = roots.add(cert);
+    }
+    let _ = linden;
+    let mut config = rustls::ClientConfig::builder_with_provider(provider())
+        .with_safe_default_protocol_versions()?
+        .with_root_certificates(roots)
+        .with_no_client_auth();
+    config.alpn_protocols = vec![b"http/1.1".to_vec()];
+    Ok(config)
+}
+
 /// The process's crypto provider if one was installed, else aws-lc-rs, the
 /// one reqwest itself falls back on.
 fn provider() -> Arc<CryptoProvider> {

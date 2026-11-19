@@ -454,7 +454,7 @@ fn list(st: &mut GroupProfileUi, ui: &mut egui::Ui, c: &mut Ctx, env: &Env, v: &
         let title = aurora_i18n::tr!("ui-group-admin-export");
         // the save dialog off the frame, as the other file pickers
         std::thread::spawn(move || {
-            if let Some(path) = rfd::FileDialog::new()
+            if let Some(path) = crate::file_dialog::FileDialog::new()
                 .set_title(title)
                 .set_file_name(&file)
                 .add_filter("CSV", &["csv"])

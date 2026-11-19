@@ -159,7 +159,7 @@ fn request(http: &reqwest::Client, method: reqwest::Method, url: &str, web: &Web
 /// getOpenIDCookieCoro: the web profile with the OpenID cookie, redirects
 /// followed; its Set-Cookie, path stripped, is the auth cookie of the posts.
 pub async fn auth_cookie(web: &Web) -> Result<String, Error> {
-    let http = reqwest::Client::builder()
+    let http = aurora_net::http_client_builder()
         .redirect(reqwest::redirect::Policy::limited(10))
         .build()
         .map_err(|_| Error::Network)?;
@@ -189,7 +189,7 @@ pub async fn auth_cookie(web: &Web) -> Result<String, Error> {
 /// then the 303's address.
 pub async fn post(web: &Web, auth: &str, png: Vec<u8>, caption: &str, add_location: bool) -> Result<(), Error> {
     // setFollowRedirects(false): the 303 is read, then followed by hand
-    let http = reqwest::Client::builder()
+    let http = aurora_net::http_client_builder()
         .redirect(reqwest::redirect::Policy::none())
         .build()
         .map_err(|_| Error::Network)?;

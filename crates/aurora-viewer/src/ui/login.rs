@@ -705,7 +705,13 @@ pub fn show(
     let ctx = ui.ctx().clone();
     let screen = ctx.content_rect();
     let wide = screen.width() >= 1100.0;
-    let card_w = 380.0f32.min(screen.width() - 32.0);
+    let compact = screen.width() < 600.0;
+    let card_w = if compact {
+        300.0f32.min(screen.width() - 48.0)
+    } else {
+        380.0f32.min(screen.width() - 32.0)
+    };
+    let card_margin: i8 = if compact { 16 } else { 24 };
 
     // ---- brand + login card (center)
     let mut login_card = egui::Rect::NOTHING;
@@ -737,19 +743,34 @@ pub fn show(
             ui.set_width(card_w);
             ui.vertical_centered(|ui| {
                 if let Some(l) = logo {
-                    let r = ui.add(egui::Image::new(l).fit_to_exact_size(Vec2::splat(logo_size))).rect;
+                    let drawn_logo = if compact { logo_size.min(68.0) } else { logo_size };
+                    let r = ui.add(egui::Image::new(l).fit_to_exact_size(Vec2::splat(drawn_logo))).rect;
                     // soft light behind the logo (additive)
                     let painter = ctx.layer_painter(egui::LayerId::new(egui::Order::Background, egui::Id::unique("halo")));
                     super::aurora_bg::radial_glow(&painter, r.center(), 150.0, p.violet, 0.42);
                 }
                 ui.add_space(2.0);
-                ui.label(RichText::new("Aurora Viewer").size(34.0).strong().color(p.ink));
-                ui.label(RichText::new(client_tagline()).size(13.0).color(p.violet_pale));
-                ui.add_space(18.0);
+                ui.label(
+                    RichText::new("Aurora Viewer")
+                        .size(if compact { 24.0 } else { 34.0 })
+                        .strong()
+                        .color(p.ink),
+                );
+                ui.label(
+                    RichText::new(client_tagline())
+                        .size(if compact { 11.5 } else { 13.0 })
+                        .color(p.violet_pale),
+                );
+                ui.add_space(if compact { 10.0 } else { 18.0 });
             });
-            login_card = card(ui, p, 24, true, |ui| {
-                ui.set_width(card_w - 48.0);
-                ui.spacing_mut().item_spacing.y = 6.0;
+            login_card = card(ui, p, card_margin, true, |ui| {
+                ui.set_width(card_w - f32::from(card_margin) * 2.0);
+                if compact {
+                    ui.spacing_mut().interact_size.y = ui.spacing().interact_size.y.min(32.0);
+                    ui.spacing_mut().item_spacing.y = 4.0;
+                } else {
+                    ui.spacing_mut().item_spacing.y = 6.0;
+                }
                 let enabled = !form.busy && !super::grids::is_open(&ctx);
                 ui.add_enabled_ui(enabled, |ui| {
                     ui.label(RichText::new(aurora_i18n::tr!("ui-login-login")).size(18.0).strong().color(p.ink));

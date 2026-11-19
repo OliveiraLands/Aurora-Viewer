@@ -101,7 +101,7 @@ impl State {
         };
         let left_out = snapshot.left_out();
         self.spawn(ctx, world, true, move || {
-            let Some(path) = rfd::FileDialog::new()
+            let Some(path) = crate::file_dialog::FileDialog::new()
                 .set_title(aurora_i18n::tr!("appearance-xml-export"))
                 .add_filter(aurora_i18n::tr!("appearance-xml-file-type"), &["xml"])
                 .set_file_name("appearance.xml")
@@ -236,8 +236,8 @@ impl State {
     }
 }
 
-fn dialog(title: &str) -> rfd::FileDialog {
-    rfd::FileDialog::new()
+fn dialog(title: &str) -> crate::file_dialog::FileDialog {
+    crate::file_dialog::FileDialog::new()
         .set_title(title)
         .add_filter(aurora_i18n::tr!("outfit-json-file-type"), &["json"])
 }

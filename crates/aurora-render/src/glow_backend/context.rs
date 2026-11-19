@@ -158,13 +158,16 @@ fn display_preference(_raw_window: wgpu::rwh::RawWindowHandle) -> DisplayApiPref
 }
 
 fn pick_config(display: &Display, raw_window: wgpu::rwh::RawWindowHandle) -> Result<Config, String> {
-    let mut builder = ConfigTemplateBuilder::new().with_alpha_size(8).with_depth_size(24);
     #[cfg(target_os = "windows")]
-    {
-        builder = builder.compatible_with_native_window(raw_window);
-    }
+    let builder = ConfigTemplateBuilder::new()
+        .with_alpha_size(8)
+        .with_depth_size(24)
+        .compatible_with_native_window(raw_window);
     #[cfg(not(target_os = "windows"))]
-    let _ = raw_window;
+    let builder = {
+        let _ = raw_window;
+        ConfigTemplateBuilder::new().with_alpha_size(8).with_depth_size(24)
+    };
 
     let template = builder.build();
     // SAFETY: `template` is valid for `display`.

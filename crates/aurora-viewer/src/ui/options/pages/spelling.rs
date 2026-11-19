@@ -342,7 +342,7 @@ fn lists(ui: &mut egui::Ui, p: &Palette, st: &mut SpellingPage) {
                 let list = current[i].clone();
                 let title = tr!("ui-options-auto-replace-export");
                 dialog(st, move || {
-                    let path = rfd::FileDialog::new()
+                    let path = crate::file_dialog::FileDialog::new()
                         .set_title(title)
                         .set_file_name(crate::autoreplace::export_name(&list.name))
                         .add_filter("XML", &["xml"])
@@ -398,7 +398,10 @@ fn lists(ui: &mut egui::Ui, p: &Palette, st: &mut SpellingPage) {
             {
                 let title = tr!("ui-options-auto-replace-import");
                 dialog(st, move || {
-                    let path = rfd::FileDialog::new().set_title(title).add_filter("XML", &["xml"]).pick_file()?;
+                    let path = crate::file_dialog::FileDialog::new()
+                        .set_title(title)
+                        .add_filter("XML", &["xml"])
+                        .pick_file()?;
                     let list = std::fs::read(&path)
                         .map_err(|e| format!("{}: {e}", path.display()))
                         .and_then(|bytes| crate::autoreplace::parse_exported(&bytes).map_err(|e| format!("{}: {e}", path.display())));

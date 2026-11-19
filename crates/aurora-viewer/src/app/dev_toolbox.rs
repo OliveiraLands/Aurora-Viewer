@@ -186,7 +186,7 @@ impl App {
                     let title = tr!("dev-toolbox-save").to_string();
                     // the dialog waits for the user: never on the frame's thread
                     std::thread::spawn(move || {
-                        if let Some(path) = rfd::FileDialog::new()
+                        if let Some(path) = crate::file_dialog::FileDialog::new()
                             .set_title(title)
                             .set_file_name(&name)
                             .add_filter("Text", &["txt"])

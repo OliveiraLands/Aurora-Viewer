@@ -731,7 +731,21 @@ impl App {
         if !d.recycle.is_empty() {
             let files = d.recycle.clone();
             spawn(&self.snapshots.reel.tx, move || {
-                Done::Recycled(trash::delete_all(&files).map_err(|e| e.to_string()))
+                #[cfg(not(target_os = "android"))]
+                {
+                    Done::Recycled(trash::delete_all(&files).map_err(|e| e.to_string()))
+                }
+                #[cfg(target_os = "android")]
+                {
+                    let mut err = Ok(());
+                    for file in &files {
+                        if let Err(e) = std::fs::remove_file(file) {
+                            err = Err(e.to_string());
+                            break;
+                        }
+                    }
+                    Done::Recycled(err)
+                }
             });
         }
         log::info!(

@@ -168,7 +168,7 @@ impl Source {
     }
 
     async fn fetch(&self, language: &str) -> anyhow::Result<Vec<NewsItem>> {
-        let builder = reqwest::Client::builder()
+        let builder = aurora_net::http_client_builder()
             .user_agent(aurora_version::user_agent())
             .https_only(!self.loopback)
             .timeout(Duration::from_secs(8));

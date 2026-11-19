@@ -41,6 +41,9 @@ pub fn bytes() -> u64 {
 /// A texture in memory of its own. None when this path does not apply (the
 /// caller creates the texture through wgpu), Err when the driver refused it.
 pub fn texture(device: &wgpu::Device, desc: &wgpu::TextureDescriptor, integrated: bool) -> Option<Result<wgpu::Texture, String>> {
+    if cfg!(target_os = "android") {
+        return None;
+    }
     let format = vk_format(desc.format)?;
     let (usage, hal_usage) = usages(desc.usage)?;
     if desc.dimension != wgpu::TextureDimension::D2 || desc.sample_count != 1 || !desc.view_formats.is_empty() {

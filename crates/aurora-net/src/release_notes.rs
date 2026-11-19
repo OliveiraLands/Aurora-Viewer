@@ -20,7 +20,7 @@ pub fn page_of(location: Option<&str>) -> Option<String> {
 /// GET the capability without following its redirect; the page it points
 /// to, or why there is none (ErrorFetchingServerReleaseNotesURL).
 pub async fn fetch(cap_url: &str) -> Result<String, String> {
-    let http = reqwest::Client::builder()
+    let http = crate::http_client_builder()
         .user_agent(aurora_version::user_agent())
         .redirect(reqwest::redirect::Policy::none())
         .tls_backend_preconfigured(crate::simulator_tls().map_err(|e| e.to_string())?)

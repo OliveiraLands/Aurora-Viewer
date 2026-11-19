@@ -25,7 +25,7 @@ impl ContactsUi {
         let filter = aurora_i18n::tr!("contacts-import-file-type").to_owned();
         let _ = std::thread::Builder::new().name("aurora-contact-import".into()).spawn(move || {
             let result = (|| {
-                let Some(path) = rfd::FileDialog::new()
+                let Some(path) = crate::file_dialog::FileDialog::new()
                     .set_title(title)
                     .set_file_name(contact_sets::CONTACT_SETS_FILE)
                     .add_filter(filter, &["xml"])

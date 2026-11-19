@@ -52,7 +52,7 @@ impl LibraryUi {
             self.export_folder = Some(receiver);
             let wake = ctx.clone();
             std::thread::spawn(move || {
-                let folder = rfd::FileDialog::new()
+                let folder = crate::file_dialog::FileDialog::new()
                     .set_title(aurora_i18n::tr!("inventory-save-selected-textures"))
                     .pick_folder();
                 let _ = sender.send(folder);

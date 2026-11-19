@@ -715,7 +715,7 @@ fn client() -> Option<reqwest::Client> {
             attempt.follow()
         }
     });
-    reqwest::Client::builder()
+    aurora_net::http_client_builder()
         .user_agent(aurora_version::user_agent())
         .https_only(true)
         .connect_timeout(Duration::from_secs(10))

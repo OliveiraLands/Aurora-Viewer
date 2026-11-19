@@ -227,7 +227,7 @@ impl App {
         let (tx, rx) = std::sync::mpsc::channel();
         self.env_import = Some(rx);
         std::thread::spawn(move || {
-            let file = rfd::FileDialog::new()
+            let file = crate::file_dialog::FileDialog::new()
                 .set_title(aurora_i18n::tr!("ui-env-editor-import-tip"))
                 .add_filter("XML", &["xml"])
                 .pick_file()

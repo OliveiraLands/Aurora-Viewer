@@ -400,7 +400,7 @@ pub(crate) mod tests {
             crate::test_http::finish(socket);
         });
         let refusal = send_detailed(
-            reqwest::Client::builder()
+            crate::http_client_builder()
                 .no_proxy()
                 .build()
                 .expect("client")

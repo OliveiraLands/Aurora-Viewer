@@ -197,7 +197,7 @@ pub fn parse_info(address: &str, bytes: &[u8]) -> Result<Grid, Error> {
 
 pub async fn discover(address: &str) -> Result<Grid, Error> {
     let grid = Grid::manual(address)?;
-    let client = reqwest::Client::builder()
+    let client = aurora_net::http_client_builder()
         .timeout(std::time::Duration::from_secs(15))
         .user_agent(aurora_version::user_agent())
         .build()

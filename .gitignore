@@ -56,3 +56,9 @@ Thumbs.db
 
 # Python's bytecode caches (scripts/*.py)
 __pycache__/
+
+# Android Gradle & native library build outputs
+/packaging/android/.gradle/
+/packaging/android/app/build/
+/packaging/android/app/src/main/jniLibs/
+/packaging/android/local.properties

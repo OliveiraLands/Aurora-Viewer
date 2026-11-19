@@ -131,6 +131,20 @@ pub(crate) fn simulator_tls() -> Result<rustls::ClientConfig, NetError> {
     sim_tls::client_config().map_err(|e| NetError::Http(format!("simulator TLS: {e}")))
 }
 
+/// A `reqwest::ClientBuilder` configured for public HTTPS hosts. On Android,
+/// uses the bundled root certificates (`webpki-root-certs`) instead of
+/// `rustls-platform-verifier`, which requires Java classes absent in a pure
+/// `NativeActivity` APK.
+pub fn http_client_builder() -> reqwest::ClientBuilder {
+    #[cfg(target_os = "android")]
+    {
+        if let Ok(tls) = sim_tls::public_client_config() {
+            return reqwest::Client::builder().tls_backend_preconfigured(tls);
+        }
+    }
+    reqwest::Client::builder()
+}
+
 /// How many asset downloads may be under way at once.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum AssetConnections {
@@ -186,22 +200,44 @@ impl NetClient {
             .enable_all()
             .build()?;
         // Login (public host): standard verification, plus Linden Lab's own CA.
-        let ll_ca = reqwest::Certificate::from_pem_bundle(include_bytes!("../lindenlab.pem")).unwrap_or_default();
-        let http = reqwest::Client::builder()
-            .user_agent(aurora_version::user_agent())
-            .connect_timeout(std::time::Duration::from_secs(15))
-            .tls_certs_merge(ll_ca.clone())
-            .build()
-            .map_err(|e| NetError::Http(e.to_string()))?;
-        // The login request itself: the same, with redirects to the same
-        // server only (login::next_server decides on the others).
-        let login_http = reqwest::Client::builder()
-            .user_agent(aurora_version::user_agent())
-            .connect_timeout(std::time::Duration::from_secs(15))
-            .tls_certs_merge(ll_ca)
-            .redirect(login::redirect_policy())
-            .build()
-            .map_err(|e| NetError::Http(e.to_string()))?;
+        #[cfg(not(target_os = "android"))]
+        let (http, login_http) = {
+            let ll_ca = reqwest::Certificate::from_pem_bundle(include_bytes!("../lindenlab.pem")).unwrap_or_default();
+            let http = reqwest::Client::builder()
+                .user_agent(aurora_version::user_agent())
+                .connect_timeout(std::time::Duration::from_secs(15))
+                .tls_certs_merge(ll_ca.clone())
+                .build()
+                .map_err(|e| NetError::Http(e.to_string()))?;
+            // The login request itself: the same, with redirects to the same
+            // server only (login::next_server decides on the others).
+            let login_http = reqwest::Client::builder()
+                .user_agent(aurora_version::user_agent())
+                .connect_timeout(std::time::Duration::from_secs(15))
+                .tls_certs_merge(ll_ca)
+                .redirect(login::redirect_policy())
+                .build()
+                .map_err(|e| NetError::Http(e.to_string()))?;
+            (http, login_http)
+        };
+        #[cfg(target_os = "android")]
+        let (http, login_http) = {
+            let tls = sim_tls::public_client_config().map_err(|e| NetError::Http(format!("public TLS: {e}")))?;
+            let http = reqwest::Client::builder()
+                .user_agent(aurora_version::user_agent())
+                .connect_timeout(std::time::Duration::from_secs(15))
+                .tls_backend_preconfigured(tls.clone())
+                .build()
+                .map_err(|e| NetError::Http(e.to_string()))?;
+            let login_http = reqwest::Client::builder()
+                .user_agent(aurora_version::user_agent())
+                .connect_timeout(std::time::Duration::from_secs(15))
+                .tls_backend_preconfigured(tls)
+                .redirect(login::redirect_policy())
+                .build()
+                .map_err(|e| NetError::Http(e.to_string()))?;
+            (http, login_http)
+        };
         // Capabilities / assets: Linden Lab's CA for any simulator name (as
         // llcorehttp, mVerifyHost = false), public authorities only for the
         // host's own name (sim_tls.rs).

@@ -26,12 +26,15 @@ pub(super) fn report(error: &str, automated: bool) {
     if automated {
         return;
     }
+    #[cfg(not(target_os = "android"))]
     let _ = rfd::MessageDialog::new()
         .set_level(rfd::MessageLevel::Error)
         .set_title(title)
         .set_description(body)
         .set_buttons(rfd::MessageButtons::Ok)
         .show();
+    #[cfg(target_os = "android")]
+    log::error!("{title}: {body}");
 }
 
 #[cfg(test)]

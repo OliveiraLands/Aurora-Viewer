@@ -1864,7 +1864,7 @@ impl App {
                 let name = name.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();
                 let (tx, rx) = crossbeam_channel::bounded(1);
                 std::thread::spawn(move || {
-                    let dialog = rfd::FileDialog::new().set_directory(&folder);
+                    let dialog = crate::file_dialog::FileDialog::new().set_directory(&folder);
                     let path = if save_as {
                         dialog
                             .set_title(aurora_i18n::tr!("photo-save-dialog"))
@@ -1904,7 +1904,7 @@ impl App {
                 let dir = self.photo_luts().dir().to_path_buf();
                 let (tx, rx) = crossbeam_channel::bounded(1);
                 std::thread::spawn(move || {
-                    let picked = rfd::FileDialog::new()
+                    let picked = crate::file_dialog::FileDialog::new()
                         .set_title(aurora_i18n::tr!("photo-lut-dialog"))
                         .add_filter(aurora_i18n::tr!("photo-lut-files"), &["cube", "CUBE"])
                         .pick_files();

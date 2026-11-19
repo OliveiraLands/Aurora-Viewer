@@ -183,7 +183,7 @@ impl ImageView {
                         Ok(()) => aurora_i18n::tr!("resource-preview-exported").to_owned(),
                         Err(reason) => aurora_i18n::tr!("resource-preview-export-error", reason = reason.to_string()),
                     }
-                } else if let Some(path) = rfd::FileDialog::new()
+                } else if let Some(path) = crate::file_dialog::FileDialog::new()
                     .set_title(aurora_i18n::tr!("common-save-as"))
                     .set_file_name(format!("{asset}.{extension}"))
                     .add_filter(extension, &[extension])

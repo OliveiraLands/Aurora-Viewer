@@ -403,7 +403,7 @@ impl App {
         let (tx, rx) = crossbeam_channel::bounded(1);
         let wake = ctx.clone();
         let spawned = std::thread::Builder::new().name("object-export-dialog".into()).spawn(move || {
-            let path = rfd::FileDialog::new()
+            let path = crate::file_dialog::FileDialog::new()
                 .set_title(title)
                 .add_filter(filter, &[format.extension()])
                 .set_file_name(name)

@@ -39,19 +39,27 @@ impl System for Computer {
     }
 
     fn delete_secret(&mut self, service: &str, account: &str) -> Result<bool, String> {
-        // the isolated update tests never reach the user's store
-        // (credentials.rs, cache_key.rs)
-        if aurora_updater::test_environment().is_some() {
-            return Ok(false);
-        }
-        let entry = keyring::Entry::new(service, account).map_err(|e| e.to_string())?;
-        match entry.delete_credential() {
-            Ok(()) => {
-                log::info!("removal from this computer: credential store entry \"{service}\" deleted");
-                Ok(true)
+        #[cfg(not(target_os = "android"))]
+        {
+            // the isolated update tests never reach the user's store
+            // (credentials.rs, cache_key.rs)
+            if aurora_updater::test_environment().is_some() {
+                return Ok(false);
             }
-            Err(keyring::Error::NoEntry) => Ok(false),
-            Err(e) => Err(e.to_string()),
+            let entry = keyring::Entry::new(service, account).map_err(|e| e.to_string())?;
+            match entry.delete_credential() {
+                Ok(()) => {
+                    log::info!("removal from this computer: credential store entry \"{service}\" deleted");
+                    Ok(true)
+                }
+                Err(keyring::Error::NoEntry) => Ok(false),
+                Err(e) => Err(e.to_string()),
+            }
+        }
+        #[cfg(target_os = "android")]
+        {
+            let _ = (service, account);
+            Ok(false)
         }
     }
 

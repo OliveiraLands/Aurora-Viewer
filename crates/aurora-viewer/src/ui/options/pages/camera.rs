@@ -465,7 +465,7 @@ fn pick_image(
             let (tx, rx) = mpsc::channel();
             let title = tr!("ui-options-crosshair-image");
             let spawned = std::thread::Builder::new().name("aurora-crosshair-dialog".into()).spawn(move || {
-                let picked = rfd::FileDialog::new()
+                let picked = crate::file_dialog::FileDialog::new()
                     .set_title(title)
                     .add_filter(title, &["png", "jpg", "jpeg", "tga", "bmp", "gif", "webp"])
                     .pick_file();

@@ -693,7 +693,7 @@ impl App {
         let (tx, rx) = std::sync::mpsc::channel();
         self.day_import = Some(rx);
         std::thread::spawn(move || {
-            let result = rfd::FileDialog::new()
+            let result = crate::file_dialog::FileDialog::new()
                 .set_title(aurora_i18n::tr!("ui-day-editor-import-tip"))
                 .add_filter("XML", &["xml"])
                 .pick_file()

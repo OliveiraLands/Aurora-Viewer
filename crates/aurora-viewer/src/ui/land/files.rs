@@ -24,7 +24,7 @@ pub(crate) fn save(file_name: &str, text: String) -> Job {
     let (tx, rx) = mpsc::channel();
     let file_name = file_name.to_owned();
     std::thread::spawn(move || {
-        let done = match rfd::FileDialog::new()
+        let done = match crate::file_dialog::FileDialog::new()
             .set_file_name(&file_name)
             .add_filter("CSV", &["csv"])
             .save_file()
@@ -47,7 +47,7 @@ pub(crate) fn save(file_name: &str, text: String) -> Job {
 pub(crate) fn open(kind: u32) -> Job {
     let (tx, rx) = mpsc::channel();
     std::thread::spawn(move || {
-        let done = match rfd::FileDialog::new()
+        let done = match crate::file_dialog::FileDialog::new()
             .add_filter("CSV", &["csv"])
             .add_filter(aurora_i18n::tr!("ui-land-files-all-files"), &["*"])
             .pick_file()

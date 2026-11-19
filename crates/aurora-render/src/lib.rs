@@ -184,10 +184,15 @@ pub(crate) fn common_shader_source() -> std::borrow::Cow<'static, str> {
 /// transparency, the impostors) takes it from here (#3751).
 pub(crate) fn object_shader_source(features: wgpu::Features) -> String {
     let source = water_shader_source(&["object.wgsl"], include_str!("shaders/object.wgsl"));
-    if features.contains(blend_exact::EARLY_TEST) {
+    let source = if features.contains(blend_exact::EARLY_TEST) {
         source.into_owned()
     } else {
         source.replace("@early_depth_test(force)", "")
+    };
+    // (TEMPORARY Android diagnostic: `DIAG_BLEND`, zero elsewhere)
+    match renderer::android_blend_diag() {
+        0 => source,
+        mask => source.replace("const DIAG_BLEND: u32 = 0u;", &format!("const DIAG_BLEND: u32 = {mask}u;")),
     }
 }
 

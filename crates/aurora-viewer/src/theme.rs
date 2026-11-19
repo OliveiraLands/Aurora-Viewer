@@ -301,6 +301,8 @@ impl Theme {
         if let Some(h) = style.text_styles.get_mut(&egui::TextStyle::Heading) {
             h.size = 15.0;
         }
+        let rect = ctx.content_rect();
+        crate::touch::apply_touch_style(&mut style, crate::touch::FormFactor::from_viewport(rect.width(), rect.height()));
         crate::ui::fonts::set_scale(ctx, self.font_scale.clamp(0.6, 2.0) * extra_font_scale.clamp(0.5, 2.0));
         ctx.set_theme(egui::ThemePreference::Dark);
         ctx.all_styles_mut(|s| *s = style.clone());

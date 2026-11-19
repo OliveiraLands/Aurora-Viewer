@@ -45,6 +45,7 @@ fn parse(bytes: &[u8]) -> Option<Key> {
     <[u8; 32]>::try_from(bytes).ok().map(Key::from_bytes)
 }
 
+#[cfg(not(target_os = "android"))]
 fn from_store() -> Option<Key> {
     let entry = keyring::Entry::new(SERVICE, ACCOUNT)
         .map_err(|e| log::warn!("cache key: credential store unavailable: {e}"))
@@ -68,6 +69,11 @@ fn from_store() -> Option<Key> {
     // read back: another viewer starting at the same time may have stored
     // its own key first, and both must seal with the same one
     entry.get_secret().ok().and_then(|b| parse(&b))
+}
+
+#[cfg(target_os = "android")]
+fn from_store() -> Option<Key> {
+    None
 }
 
 fn from_file(path: &Path) -> Option<Key> {
