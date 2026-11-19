@@ -30,6 +30,7 @@ use crate::writes::{GpuWrites, TexelDst};
 use std::cmp::Reverse;
 use std::collections::{BinaryHeap, HashMap};
 use std::num::{NonZeroU32, NonZeroU64};
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::{Duration, Instant};
 
 /// Reserved slots.
@@ -549,6 +550,10 @@ struct Slot {
     layer: u32,
     /// Shows the shared placeholder layer: the slot owns no layer yet.
     shared: bool,
+    /// Taken from the store's counter whenever the slot's texels are
+    /// written ([`PageStore::stamp`]): a reader that cached something made
+    /// from them tells a same-size reload from no change.
+    revision: AtomicU64,
 }
 
 /// Slots, pages and the CPU copy of the location buffer (no bind group).
@@ -570,6 +575,8 @@ struct PageStore {
     /// Location of each slot, uploaded by range in `TextureTable::maintain`.
     loc: Vec<u32>,
     loc_dirty: Option<(usize, usize)>,
+    /// Last revision handed out ([`Slot::revision`]).
+    stamps: AtomicU64,
     /// Texel bytes of the live textures (the streamer's memory budget, as
     /// before pages) and bytes of the allocated pages.
     bytes: u64,
@@ -636,6 +643,7 @@ impl PageStore {
             bc7: false,
             loc: vec![WHITE_LOC; capacity as usize],
             loc_dirty: None,
+            stamps: AtomicU64::new(0),
             bytes: 0,
             live: 0,
             page_bytes: 0,
@@ -865,6 +873,18 @@ impl PageStore {
         self.dropped = true;
     }
 
+    /// A new revision number (never 0).
+    fn stamp(&self) -> u64 {
+        self.stamps.fetch_add(1, Ordering::Relaxed) + 1
+    }
+
+    /// `slot`'s texels were written: a new revision.
+    fn touch(&self, slot: u32) {
+        if let Some(Some(s)) = self.slots.get(slot as usize) {
+            s.revision.store(self.stamp(), Ordering::Relaxed);
+        }
+    }
+
     fn upload(&self, writes: &mut GpuWrites, page: u32, layer: u32, mips: &[MipLevel], count: u32) {
         let Some(p) = self.page(page) else {
             return;
@@ -905,6 +925,7 @@ impl PageStore {
             page,
             layer,
             shared: false,
+            revision: AtomicU64::new(self.stamp()),
         });
         self.bytes += key.layer_bytes();
         self.live += 1;
@@ -942,6 +963,7 @@ impl PageStore {
             page,
             layer,
             shared: true,
+            revision: AtomicU64::new(self.stamp()),
         });
         self.live += 1;
         self.set_loc(slot, pack(page, layer));
@@ -963,6 +985,7 @@ impl PageStore {
         if slot < RESERVED {
             return false;
         }
+        let stamp = self.stamp();
         let Some(Some(s)) = self.slots.get_mut(slot as usize) else {
             return false;
         };
@@ -974,6 +997,7 @@ impl PageStore {
             page,
             layer,
             shared: true,
+            revision: AtomicU64::new(stamp),
         };
         self.set_loc(slot, pack(page, layer));
         true
@@ -988,6 +1012,7 @@ impl PageStore {
             return false;
         };
         self.upload(writes, page, layer, mips, key.mips);
+        self.touch(slot);
         true
     }
 
@@ -1008,6 +1033,7 @@ impl PageStore {
             return false;
         };
         uploads.copy_to_layer(device, staged, &p.texture, layer, key.mips);
+        self.touch(slot);
         true
     }
 
@@ -1027,11 +1053,13 @@ impl PageStore {
             return Some((s.page, s.layer));
         }
         let (page, layer) = self.place(device, key, slot)?;
+        let revision = AtomicU64::new(self.stamp());
         match self.slots[slot as usize].replace(Slot {
             key,
             page,
             layer,
             shared: false,
+            revision,
         }) {
             // (the placeholder layer stays: other slots show it)
             Some(old) if old.shared => {}
@@ -1133,6 +1161,7 @@ impl PageStore {
             page: dst,
             layer: dst_layer,
             shared: false,
+            revision: AtomicU64::new(self.stamp()),
         });
         self.bytes = self.bytes.saturating_sub(key.layer_bytes()) + small.layer_bytes();
         self.set_loc(slot, pack(dst, dst_layer));
@@ -1815,6 +1844,14 @@ impl TextureTable {
         Some((s.key.width, s.key.height))
     }
 
+    /// How many times the texels of a slot were written (a number that
+    /// changes with every `create`, `replace`, `replace_staged` and
+    /// `write_region`), for a cache made from them. `None` for a free slot.
+    pub fn revision_of(&self, slot: u32) -> Option<u64> {
+        let s = self.store.slots.get(slot as usize)?.as_ref()?;
+        Some(s.revision.load(Ordering::Relaxed))
+    }
+
     /// Diagnostic: where a slot lives (page, layer, size and levels).
     pub fn describe(&self, slot: u32) -> String {
         match self.store.slots.get(slot as usize).and_then(Option::as_ref) {
@@ -1868,6 +1905,7 @@ impl TextureTable {
             height: h,
         };
         writes.write_texture(&page.texture, dst, &data[..need]);
+        self.store.touch(slot);
         true
     }
 
@@ -2462,6 +2500,7 @@ mod tests {
                 page: 0,
                 layer: 0,
                 shared: false,
+                revision: AtomicU64::new(0),
             }));
         }
         store
@@ -2484,6 +2523,18 @@ mod tests {
         // the reserved slots are never handed out nor freed
         store.free(WHITE);
         assert_eq!(store.create_placeholder(), None);
+    }
+
+    #[test]
+    fn every_write_to_a_slot_gives_it_a_new_revision() {
+        let mut store = bare_store(64, 64);
+        let (a, b) = (store.create_placeholder().unwrap(), store.create_placeholder().unwrap());
+        let rev = |s: &PageStore, slot: u32| s.slots[slot as usize].as_ref().unwrap().revision.load(Ordering::Relaxed);
+        let (ra, rb) = (rev(&store, a), rev(&store, b));
+        assert_ne!(ra, rb, "two slots never share one");
+        store.touch(a);
+        assert!(rev(&store, a) > ra, "a same-size reload changes it");
+        assert_eq!(rev(&store, b), rb, "another slot's does not");
     }
 
     #[test]

@@ -172,6 +172,11 @@ pub struct BuildSettings {
     pub scale_stretch_textures: bool,
     /// Keep the camera attached to the focused object while editing it.
     pub follow_edit_object: bool,
+    /// Aurora: the wheel steps a number field while the pointer is over it,
+    /// as LLSpinCtrl::handleScrollWheel does. Off by default: the wheel
+    /// steps only the field being typed in, and scrolls the panel over the
+    /// others, so scrolling down the window edits nothing by accident.
+    pub wheel_on_hover: bool,
     /// RenderHighlightSelections.
     pub show_highlight: bool,
     /// RenderHiddenSelections (off): the outline edges on the far side of
@@ -742,6 +747,7 @@ impl Default for BuildSettings {
             scale_uniform: false,
             scale_stretch_textures: true,
             follow_edit_object: false,
+            wheel_on_hover: false,
             show_highlight: true,
             show_hidden_selection: false,
             show_light_radius: false,
@@ -972,6 +978,14 @@ pub struct BuildTool {
     new_defaults_pending: u32,
     /// Selection rectangle being dragged (start, current in pixels, extend).
     pub rect: Option<((f32, f32), (f32, f32), bool)>,
+    /// The press behind `rect`, until it is known to be a click: the object
+    /// under it, selected on release (LLToolSelect::handleMouseUp). A drag
+    /// past the slop drops it, so the object it started on has to be taken
+    /// by the rectangle like any other (LLToolSelectRect::handleHover).
+    press: Option<Option<ObjKey>>,
+    /// The rectangle being dragged started in HUD space, which it keeps
+    /// after the drag has cleared the selection that said so.
+    rect_hud: bool,
     /// Compact section (Rights, Transform, Features, Materials, Contents, Shape).
     pub tab: usize,
     /// Last message for the floater's status line.
@@ -1028,6 +1042,8 @@ impl Default for BuildTool {
             pending_create: None,
             new_defaults_pending: 0,
             rect: None,
+            press: None,
+            rect_hud: false,
             tab: 6,
             status: String::new(),
             last_frame: None,
@@ -1159,6 +1175,11 @@ pub fn family(world: &World, root: usize) -> Vec<usize> {
         i += 1;
     }
     out
+}
+
+/// Whether a press moved from `a` to `b` is a rectangle and not a click.
+fn rect_dragged(a: (f32, f32), b: (f32, f32)) -> bool {
+    (a.0 - b.0).abs() >= 3.0 || (a.1 - b.1).abs() >= 3.0
 }
 
 /// Object indices of a selection with their highlight (true = root color):
@@ -1303,6 +1324,8 @@ impl BuildTool {
         self.manip.cancel();
         self.land.cancel();
         self.grab_up();
+        self.rect = None;
+        self.press = None;
         self.deselect_all(world);
         self.faces.clear();
         self.sync_hud_zoom(world);
@@ -1582,6 +1605,9 @@ impl BuildTool {
     }
 
     pub fn hud_selected(&self, world: &World) -> bool {
+        if self.rect.is_some() && self.rect_hud {
+            return true;
+        }
         self.selection
             .first()
             .and_then(|key| world.objects.index_of(key))
@@ -2077,8 +2103,8 @@ impl BuildTool {
     /// Without `scene` (tests) or geometry yet, a prim across the edge is
     /// taken only without "Select by surrounding".
     fn rect_select(&mut self, world: &mut World, s: &BuildSettings, scene: Option<&Scene>, a: (f32, f32), b: (f32, f32), extend: bool) {
-        if (a.0 - b.0).abs() < 3.0 && (a.1 - b.1).abs() < 3.0 {
-            return; // a click, already handled
+        if !rect_dragged(a, b) {
+            return; // a click, handled by `mouse_up`
         }
         let rect = egui::Rect::from_two_pos(egui::pos2(a.0, a.1), egui::pos2(b.0, b.1));
         let now = Instant::now();
@@ -2245,9 +2271,7 @@ impl BuildTool {
                         self.send_stretch_materials(world, scene, idx, s.scale_stretch_textures);
                     }
                 }
-                if let Some(r) = self.rect.as_mut() {
-                    r.1 = cursor;
-                }
+                self.drag_rect(world, cursor);
             }
             Tool::Grab => self.grab_hover(world, cursor, mods),
             Tool::Land => {
@@ -2257,11 +2281,35 @@ impl BuildTool {
                     self.send(c);
                 }
             }
-            Tool::Create | Tool::Focus => {
-                if let Some(r) = self.rect.as_mut() {
-                    r.1 = cursor;
-                }
+            Tool::Create | Tool::Focus => self.drag_rect(world, cursor),
+        }
+    }
+
+    /// LLToolSelectRect::handleHover: a press that leaves the slop is a
+    /// rectangle and not a click; without Shift or Ctrl it starts from an
+    /// empty selection. With them it keeps the selection, unless the press
+    /// is in another space: a selection never mixes them, as
+    /// LLToolSelect::handleObjectSelection's click would have decided.
+    fn drag_rect(&mut self, world: &World, cursor: (f32, f32)) {
+        let Some(r) = self.rect.as_mut() else { return };
+        r.1 = cursor;
+        let (dragged, extend) = (rect_dragged(r.0, r.1), r.2);
+        if dragged && let Some(pick) = self.press.take() {
+            let other_space = pick
+                .and_then(|key| world.objects.index_of(&key))
+                .is_some_and(|idx| select_type(world, idx) != self.select_type(world));
+            if !extend || other_space {
+                self.deselect_all(world);
             }
+        }
+    }
+
+    /// The press is abandoned without its release, as the focus going ends
+    /// the mouse capture (LLToolSelect::onMouseCaptureLost): it selects
+    /// nothing. A rectangle already dragged is left to its release.
+    pub fn drop_press(&mut self) {
+        if self.press.take().is_some() {
+            self.rect = None;
         }
     }
 
@@ -2338,7 +2386,8 @@ impl BuildTool {
                         // not on a handle: select, or drag a selection rectangle
                         // (LLToolCompTranslate -> LLToolSelectRect)
                         let extend = mods.shift || mods.ctrl;
-                        self.click_select(world, s, pick, extend);
+                        self.press = Some(pick.and_then(|idx| world.objects.get(idx)).map(|o| o.key));
+                        self.rect_hud = pick.is_some_and(|idx| select_type(world, idx) == SelectType::Hud);
                         self.rect = Some((cursor, cursor, extend));
                         true
                     }
@@ -2470,7 +2519,13 @@ impl BuildTool {
     /// `scene` gives the selection rectangle the drawn vertices of the prims.
     pub fn mouse_up(&mut self, world: &mut World, s: &BuildSettings, scene: Option<&Scene>) {
         if let Some((a, b, extend)) = self.rect.take() {
-            self.rect_select(world, s, scene, a, b, extend);
+            match self.press.take() {
+                Some(pick) => {
+                    let pick = pick.and_then(|key| world.objects.index_of(&key));
+                    self.click_select(world, s, pick, extend);
+                }
+                None => self.rect_select(world, s, scene, a, b, extend),
+            }
         }
         let mut cmds = Vec::new();
         self.manip.release(world, s, self.selection_linked, &mut cmds);
@@ -2763,13 +2818,34 @@ impl BuildTool {
         }
     }
 
-    fn face_mode(&self) -> bool {
+    /// The Edit tool in Select face mode (LLSelectMgr::getTEMode).
+    pub fn face_mode(&self) -> bool {
         self.open && self.tool == Tool::Edit && self.edit_mode == EditMode::Face
     }
 
     /// LLSelectMgr's TE mode: the selected surfaces, not whole-object outlines.
+    /// (The frame gathers the picks once and calls `halo_faces` itself.)
+    #[cfg(test)]
     pub fn face_selection(&self, world: &World, s: &BuildSettings) -> HashMap<usize, u64> {
-        if !self.face_mode() || !s.show_highlight {
+        Self::halo_faces(|| self.face_picks(world), s)
+    }
+
+    /// The faces of `picks` (`face_picks`) that get the selection halo:
+    /// none while "Show highlight" is off. `picks` is called only when
+    /// needed, so a caller that already has the picks can clone them.
+    pub fn halo_faces(picks: impl FnOnce() -> HashMap<usize, u64>, s: &BuildSettings) -> HashMap<usize, u64> {
+        if !s.show_highlight {
+            return HashMap::new();
+        }
+        picks()
+    }
+
+    /// The faces picked in Select face mode, whatever "Show highlight" says:
+    /// the face-select pattern is drawn for them anyway
+    /// (LLPipeline::renderHighlights draws renderSelectedFaces in TE mode;
+    /// RenderHighlightSelections gates only the silhouettes, llselectmgr.cpp).
+    pub fn face_picks(&self, world: &World) -> HashMap<usize, u64> {
+        if !self.face_mode() {
             return HashMap::new();
         }
         self.sel_prims(world)
