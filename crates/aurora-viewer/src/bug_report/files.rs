@@ -104,7 +104,7 @@ pub struct Attachment {
 }
 
 pub fn choose_image() -> Result<Option<Attachment>, &'static str> {
-    rfd::FileDialog::new()
+    crate::file_dialog::FileDialog::new()
         .set_title(aurora_i18n::tr!("bug-choose-image"))
         .add_filter(aurora_i18n::tr!("bug-images"), &["png", "jpg", "jpeg", "bmp", "tga"])
         .pick_file()

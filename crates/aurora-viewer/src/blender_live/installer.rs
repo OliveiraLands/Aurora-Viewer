@@ -220,7 +220,7 @@ impl Installer {
         let ctx = ctx.clone();
         jobs.execute(move || {
             let completed = (|| {
-                let picker = rfd::FileDialog::new().set_title(aurora_i18n::tr!("blender-live-choose-executable"));
+                let picker = crate::file_dialog::FileDialog::new().set_title(aurora_i18n::tr!("blender-live-choose-executable"));
                 #[cfg(windows)]
                 let picker = picker.add_filter("Blender", &["exe"]);
                 let Some(path) = picker.pick_file() else {

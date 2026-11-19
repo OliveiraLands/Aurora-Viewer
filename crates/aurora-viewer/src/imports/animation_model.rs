@@ -314,7 +314,7 @@ impl Imports {
         let tx = self.tx.clone();
         let wake = ctx.clone();
         jobs.execute(move || {
-            let result = rfd::FileDialog::new()
+            let result = crate::file_dialog::FileDialog::new()
                 .set_title(aurora_i18n::tr!("import-animation-model-choose"))
                 .add_filter(aurora_i18n::tr!("import-mesh"), &["dae", "gltf", "glb"])
                 .pick_file()

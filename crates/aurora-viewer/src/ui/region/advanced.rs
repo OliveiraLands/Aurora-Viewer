@@ -515,7 +515,7 @@ fn poll_raw(s: &mut RegionUi, world: &mut World) {
 fn pick(save: bool) -> mpsc::Receiver<RawFile> {
     let (tx, rx) = mpsc::channel();
     std::thread::spawn(move || {
-        let dialog = rfd::FileDialog::new().add_filter("RAW", &["raw"]);
+        let dialog = crate::file_dialog::FileDialog::new().add_filter("RAW", &["raw"]);
         let done = if save {
             match dialog.set_file_name("terrain.raw").save_file() {
                 Some(path) => RawFile::Save(path.display().to_string()),

@@ -745,7 +745,7 @@ impl App {
                         let (tx, rx) = std::sync::mpsc::channel();
                         let title = aurora_i18n::tr!("director-record-choose");
                         std::thread::spawn(move || {
-                            let _ = tx.send(rfd::FileDialog::new().set_title(title).pick_file());
+                            let _ = tx.send(crate::file_dialog::FileDialog::new().set_title(title).pick_file());
                         });
                         self.director.choosing = Some(rx);
                     }

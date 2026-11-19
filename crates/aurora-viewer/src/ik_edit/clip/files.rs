@@ -106,7 +106,7 @@ pub(super) fn start(
     jobs.execute(move || {
         let work = || -> Result<Output, String> {
             if matches!(action, Action::Load) {
-                let Some(path) = rfd::FileDialog::new()
+                let Some(path) = crate::file_dialog::FileDialog::new()
                     .add_filter(aurora_i18n::tr!("anim-edit-file-filter"), &["anim"])
                     .add_filter(aurora_i18n::tr!("anim-edit-bvh-filter"), &["bvh"])
                     .pick_file()
@@ -118,7 +118,7 @@ pub(super) fn start(
                 return load_document(&bytes, extension, &rig, skeleton.as_deref()).map(Output::Loaded);
             }
             if matches!(action, Action::LoadProject) {
-                let Some(path) = rfd::FileDialog::new()
+                let Some(path) = crate::file_dialog::FileDialog::new()
                     .add_filter(aurora_i18n::tr!("anim-edit-project-filter"), &["auroraanim"])
                     .pick_file()
                 else {
@@ -132,7 +132,7 @@ pub(super) fn start(
             // every action below saves or exports the current document
             let document = document.ok_or_else(|| aurora_i18n::text("anim-edit-invalid").to_owned())?;
             if matches!(action, Action::SaveProject) {
-                let Some(path) = rfd::FileDialog::new()
+                let Some(path) = crate::file_dialog::FileDialog::new()
                     .add_filter(aurora_i18n::tr!("anim-edit-project-filter"), &["auroraanim"])
                     .set_file_name(format!("{}.auroraanim", basename(&document.name)))
                     .save_file()
@@ -162,7 +162,7 @@ pub(super) fn start(
                     animation: Arc::new(animation),
                 }),
                 Action::Save { .. } => {
-                    let Some(path) = rfd::FileDialog::new()
+                    let Some(path) = crate::file_dialog::FileDialog::new()
                         .add_filter(aurora_i18n::tr!("anim-edit-file-filter"), &["anim"])
                         .set_file_name(format!("{name}.anim"))
                         .save_file()

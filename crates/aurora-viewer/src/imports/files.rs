@@ -620,7 +620,7 @@ impl Imports {
         let wake = ctx.clone();
         jobs.execute(move || {
             let mut entries = Vec::new();
-            if let Some(path) = rfd::FileDialog::new()
+            if let Some(path) = crate::file_dialog::FileDialog::new()
                 .set_title(aurora_i18n::tr!("import-title"))
                 .add_filter(Choice::Texture.label(), &["tga", "bmp", "jpg", "jpeg", "png", "j2c", "j2k", "jp2"])
                 .pick_file()
@@ -644,7 +644,7 @@ impl Imports {
         let tx = self.tx.clone();
         let wake = ctx.clone();
         jobs.execute(move || {
-            if let Some(path) = rfd::FileDialog::new()
+            if let Some(path) = crate::file_dialog::FileDialog::new()
                 .set_title(aurora_i18n::tr!("import-choose-files"))
                 .add_filter(
                     aurora_i18n::tr!("import-texture"),
@@ -671,7 +671,7 @@ impl Imports {
         let tx = self.tx.clone();
         let wake = ctx.clone();
         jobs.execute(move || {
-            if let Some(path) = rfd::FileDialog::new()
+            if let Some(path) = crate::file_dialog::FileDialog::new()
                 .set_title(aurora_i18n::tr!("import-choose-files"))
                 .add_filter(aurora_i18n::tr!("import-mesh"), &["dae", "gltf", "glb"])
                 .pick_file()
@@ -838,7 +838,7 @@ impl Imports {
         jobs.execute(move || {
             let paths = match selection {
                 Selection::Paths(paths) => paths,
-                Selection::Folder => rfd::FileDialog::new()
+                Selection::Folder => crate::file_dialog::FileDialog::new()
                     .set_title(aurora_i18n::tr!("import-choose-folder"))
                     .pick_folder()
                     .into_iter()
@@ -855,7 +855,7 @@ impl Imports {
                         ],
                         Choice::Local => &["tga", "bmp", "jpg", "jpeg", "png", "j2c", "j2k", "jp2", "dae", "gltf", "glb"],
                     };
-                    rfd::FileDialog::new()
+                    crate::file_dialog::FileDialog::new()
                         .set_title(aurora_i18n::tr!("import-title"))
                         .add_filter(choice.label(), filter)
                         .pick_files()

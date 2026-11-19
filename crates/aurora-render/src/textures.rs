@@ -980,6 +980,10 @@ impl PageStore {
     }
 
     fn replace(&mut self, device: &wgpu::Device, writes: &mut GpuWrites, slot: u32, mips: &[MipLevel]) -> bool {
+        // TEMPORARY Android diagnostic (CRASH-ANDROID.md): no real texture
+        if crate::renderer::android_skip() & 32 != 0 {
+            return false;
+        }
         self.refused_for_memory = false;
         let Some(key) = page_key(mips, self.max_dim) else {
             return false;
@@ -994,6 +998,10 @@ impl PageStore {
     /// Like `replace`, from a mip chain staged by a background job: the
     /// copies are recorded in the frame's upload encoder.
     fn replace_staged(&mut self, device: &wgpu::Device, uploads: &mut UploadQueue, slot: u32, staged: &StagedTexture) -> bool {
+        // TEMPORARY Android diagnostic (CRASH-ANDROID.md): no real texture
+        if crate::renderer::android_skip() & 32 != 0 {
+            return false;
+        }
         self.refused_for_memory = false;
         if staged.format == TexelFormat::Bc7 && !self.bc7 {
             return false;
@@ -1404,7 +1412,9 @@ impl TextureTable {
         let limits = device.limits();
         let capacity = capacity.max(RESERVED + 1);
         let page_capacity = page_capacity(bindable, partial);
-        let max_layers = limits.max_texture_array_layers.clamp(1, MAX_LAYERS);
+        let max_layers = limits
+            .max_texture_array_layers
+            .clamp(1, if cfg!(target_os = "android") { 256 } else { MAX_LAYERS });
         let layout_entries = vec![
             wgpu::BindGroupLayoutEntry {
                 binding: 0,
@@ -1486,7 +1496,7 @@ impl TextureTable {
         let sampler = Self::make_sampler(device, anisotropy);
         let bound = bound_len(&store, partial);
         debug_assert!(page_locations_fit(&store.loc, bound));
-        writes.write_buffer(&loc_buffer, 0, bytemuck::bytes_of(&bound));
+        writes.write_buffer(&loc_buffer, 0, bytemuck::bytes_of(&shader_page_count(bound)));
         writes.write_buffer(&loc_buffer, 4, bytemuck::cast_slice(&store.loc));
         let bind_group = Self::build(device, &layout, &sampler, &loc_buffer, &store, bound);
         Self {
@@ -1976,7 +1986,7 @@ impl TextureTable {
         if self.dirty && (force || self.rebuild_now || self.last_rebuild.elapsed() >= REBUILD_THROTTLE) {
             self.bound = bound_len(&self.store, self.partial);
             debug_assert!(page_locations_fit(&self.store.loc, self.bound));
-            writes.write_buffer(&wgpu.loc_buffer, 0, bytemuck::bytes_of(&self.bound));
+            writes.write_buffer(&wgpu.loc_buffer, 0, bytemuck::bytes_of(&shader_page_count(self.bound)));
             wgpu.bind_group = Self::build(device, &wgpu.layout, &wgpu.sampler, &wgpu.loc_buffer, &self.store, self.bound);
             self.dirty = false;
             self.rebuild_now = false;
@@ -2009,6 +2019,19 @@ fn bound_for(last_live: Option<usize>, page_capacity: u32, partial: bool) -> u32
 
 fn page_locations_fit(locations: &[u32], bound: u32) -> bool {
     bound > 0 && locations.iter().all(|loc| (loc >> 16) < bound)
+}
+
+/// TEMPORARY Android diagnostic (CRASH-ANDROID.md, hypothesis "non-uniform
+/// binding_array index"): when true, the shader sees one bound page, so
+/// `texture_page_index` (common.wgsl) sends every sample to page 0 and the
+/// descriptor index is uniform. Textures look wrong, but if the Mali
+/// `GPU device lost` disappears the cause is the divergent index.
+/// Tried on the Mali-G615: the device was still lost, so it is not the cause.
+const ANDROID_FORCE_PAGE0: bool = false;
+
+/// The `page_count` word the shaders read (word 0 of the location buffer).
+fn shader_page_count(bound: u32) -> u32 {
+    if cfg!(target_os = "android") && ANDROID_FORCE_PAGE0 { 1 } else { bound }
 }
 
 fn loc_buffer_offset(slot: usize) -> u64 {

@@ -158,7 +158,7 @@ fn parse_forced(value: Option<&str>) -> Option<bool> {
 
 impl App {
     /// Before the lost renderer goes: what the scene and the app hold on it.
-    fn forget_gpu_scene(&mut self, old: &mut Renderer) {
+    pub(super) fn forget_gpu_scene(&mut self, old: &mut Renderer) {
         self.scene.forget_gpu(old);
         self.probes.reset();
         self.forget_gpu_requests();
@@ -180,7 +180,7 @@ impl App {
 
     /// On the new renderer: the textures get its slots, and what `clear`
     /// emptied that the world does not send again comes back.
-    fn adopt_gpu_scene(&mut self, new: &mut Renderer) {
+    pub(super) fn adopt_gpu_scene(&mut self, new: &mut Renderer) {
         self.scene.adopt_gpu(new);
         // what `clear` emptied that the world does not send again
         self.world.objects.particles_again();
@@ -199,6 +199,12 @@ impl App {
     /// stays on screen until the new one has presented (`retired_window`).
     /// False when no new renderer could be made: the caller closes as before.
     pub(super) fn recover_from_gpu_loss(&mut self, event_loop: &ActiveEventLoop, safe: bool) -> bool {
+        if cfg!(target_os = "android") {
+            // NativeActivity owns a single ANativeWindow and a lost Vulkan
+            // Backend leaves its surface un-dropped; creating a new surface on
+            // the same ANativeWindow fails with ERROR_NATIVE_WINDOW_IN_USE_KHR.
+            return false;
+        }
         let Some(started) = self.replace_renderer(event_loop, safe) else {
             return false;
         };

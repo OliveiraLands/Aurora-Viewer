@@ -1033,6 +1033,9 @@ impl GpuCull {
     /// The GPU lists need indirect draw counts and enough storage buffers;
     /// AURORA_CPU_CULL=1 keeps the CPU lists (comparison).
     pub fn supported(device: &wgpu::Device) -> bool {
+        if cfg!(target_os = "android") {
+            return false;
+        }
         static FORCE_CPU: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
         let force_cpu = *FORCE_CPU.get_or_init(|| std::env::var_os("AURORA_CPU_CULL").is_some_and(|v| v != "0"));
         !force_cpu

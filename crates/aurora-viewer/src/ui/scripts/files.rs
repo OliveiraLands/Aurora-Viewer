@@ -48,7 +48,7 @@ pub(super) fn open(convert_tabs: bool) -> Job {
     let (tx, rx) = mpsc::channel();
     std::thread::spawn(move || {
         // LLFilePicker's script filter: LSL and SLua (*.lsl; *.lua; *.luau)
-        let done = match rfd::FileDialog::new()
+        let done = match crate::file_dialog::FileDialog::new()
             .add_filter("LSL / SLua", &["lsl", "luau", "lua", "txt"])
             .pick_file()
         {
@@ -72,7 +72,7 @@ fn extension(lua: bool) -> &'static str {
 pub(super) fn save(name: String, source: String, lua: bool) -> Job {
     let (tx, rx) = mpsc::channel();
     std::thread::spawn(move || {
-        let done = match rfd::FileDialog::new()
+        let done = match crate::file_dialog::FileDialog::new()
             .set_file_name(format!("{}.{}", safe_name(&name), extension(lua)))
             .add_filter(if lua { "SLua" } else { "LSL" }, &[extension(lua)])
             .save_file()

@@ -1269,7 +1269,11 @@ fn legacy_local_spec(spec: vec4<f32>, env: f32, n: vec3<f32>, v: vec3<f32>, worl
     var lights = light_walk(world_pos, frag);
     var spots = projector_walk(lights);
     if (spec.a > 0.0) {
-        for (var i = next_light(&lights); i >= 0; i = next_light(&lights)) {
+        for (var step = 0u; step < 64u; step++) {
+            let i = next_light(&lights);
+            if (i < 0) {
+                break;
+            }
             let lt = frame.lights[i];
             let to_l = lt.pos_radius.xyz - world_pos;
             let dist = length(to_l);
@@ -1283,7 +1287,11 @@ fn legacy_local_spec(spec: vec4<f32>, env: f32, n: vec3<f32>, v: vec3<f32>, worl
             }
         }
     }
-    for (var i = next_light(&spots); i >= 0; i = next_light(&spots)) {
+    for (var step = 0u; step < 64u; step++) {
+        let i = next_light(&spots);
+        if (i < 0) {
+            break;
+        }
         let at = projector_at(i, world_pos, n);
         if (at.atten <= 0.0) {
             continue;
@@ -1404,8 +1412,12 @@ fn rez_hologram(col: vec3<f32>, in: VsOut, n: vec3<f32>, g: f32, h: f32, t: f32,
 
 // The effect's progress, 0 to 1, over the time held above the mode's byte
 // (ms).
+fn rez_progress_of(rez: vec4<u32>, elapsed: f32) -> f32 {
+    return clamp(elapsed * 1000.0 / max(f32((rez.y >> 8u) & 0xfffu), 1.0), 0.0, 1.0);
+}
+
 fn rez_progress(rec: DrawRecord, elapsed: f32) -> f32 {
-    return clamp(elapsed * 1000.0 / max(f32((rec.rez.y >> 8u) & 0xfffu), 1.0), 0.0, 1.0);
+    return rez_progress_of(rec.rez, elapsed);
 }
 
 // Where the line is (world height) and its half width. A derez brings it
@@ -1429,23 +1441,34 @@ fn rez_line(rec: DrawRecord, elapsed: f32) -> vec2<f32> {
 }
 
 // A derez's fading front, in heights from the bottom (above 1: none yet).
-fn rez_fade_front(rec: DrawRecord, elapsed: f32) -> f32 {
-    let t = clamp((rez_progress(rec, elapsed) - REZ_DEREZ_LINE) / (1.0 - REZ_DEREZ_LINE), 0.0, 1.0);
+fn rez_fade_front_of(rez: vec4<u32>, elapsed: f32) -> f32 {
+    let t = clamp((rez_progress_of(rez, elapsed) - REZ_DEREZ_LINE) / (1.0 - REZ_DEREZ_LINE), 0.0, 1.0);
     return 1.08 - 1.16 * t;
+}
+
+fn rez_fade_front(rec: DrawRecord, elapsed: f32) -> f32 {
+    return rez_fade_front_of(rec.rez, elapsed);
 }
 
 // Opacity of a derezzing face (drawn blended while it lasts: rez.rs): the
 // grid goes from the top down. 1 for every other face.
-fn rez_alpha(rec: DrawRecord, in: VsOut) -> f32 {
-    if ((rec.rez.y & 0xffu) != REZ_DEREZ) {
+// (`rez_alpha_of` takes what it reads, not the whole record and vertex
+// output: fs_blend calls it, and the Mali-G615 device was lost with the
+// two structs passed by value; CRASH-ANDROID.md.)
+fn rez_alpha_of(rez: vec4<u32>, world_z: f32) -> f32 {
+    if ((rez.y & 0xffu) != REZ_DEREZ) {
         return 1.0;
     }
-    let elapsed = f32(bitcast<i32>(frame.anim_clock.x - rec.rez.x)) * 0.001;
-    let bottom = bitcast<f32>(rec.rez.z);
-    let height = max(bitcast<f32>(rec.rez.w), 0.05);
-    let h = (in.world_pos.z - bottom) / height;
-    let front = rez_fade_front(rec, elapsed);
+    let elapsed = f32(bitcast<i32>(frame.anim_clock.x - rez.x)) * 0.001;
+    let bottom = bitcast<f32>(rez.z);
+    let height = max(bitcast<f32>(rez.w), 0.05);
+    let h = (world_z - bottom) / height;
+    let front = rez_fade_front_of(rez, elapsed);
     return 1.0 - smoothstep(front - 0.08, front, h);
+}
+
+fn rez_alpha(rec: DrawRecord, in: VsOut) -> f32 {
+    return rez_alpha_of(rec.rez, in.world_pos.z);
 }
 
 // Whether a face still shows the grey texel of a texture loading: its
@@ -1834,6 +1857,11 @@ override BLEND_EARLY_DISCARD: bool = true;
 // covered (writing their depth as they are drawn), 2 only the fainter ones
 // (depth tested, nothing written); 0, every other use, draws them all.
 override BLEND_SPLIT: u32 = 0u;
+// TEMPORARY Android diagnostic (CRASH-ANDROID.md): parts of fs_blend left out
+// (lib.rs object_shader_source rewrites this line on Android): 1 portal
+// surface, 2 early discard of the glare, 4 derez alpha, 8 water clip, 16 the
+// material and its lighting (a flat colour instead).
+const DIAG_BLEND: u32 = 0u;
 
 @fragment
 fn fs_blend(in: VsOut, @builtin(front_facing) front: bool) -> @location(0) vec4<f32> {
@@ -1841,7 +1869,7 @@ fn fs_blend(in: VsOut, @builtin(front_facing) front: bool) -> @location(0) vec4<
     // texture samples, keeping glTF doubleSided backs and their flipped normals.
     if (!front && (records[in.record].flags.x & FLAG_DOUBLE_SIDED) == 0u) { discard; }
     let portal_aa = max(length(fwidth(in.uv)) * 2.0 * PORTAL_SURFACE_SCALE, 0.001);
-    if ((records[in.record].flags.x & FLAG_PORTAL_EFFECT) != 0u) {
+    if ((DIAG_BLEND & 1u) == 0u && (records[in.record].flags.x & FLAG_PORTAL_EFFECT) != 0u) {
         let surface = portal_surface(records[in.record], in.uv, portal_aa);
         if (surface.alpha < 0.004) { discard; }
         let color = apply_fog(surface.color * frame.sky_cloud_pd2.w, in.world_pos);
@@ -1851,7 +1879,9 @@ fn fs_blend(in: VsOut, @builtin(front_facing) front: bool) -> @location(0) vec4<
     // stay drawn whole after it, as before. The ban lines are clipped to the
     // camera's side: the Legacy Viewer draws them after the scene, behind
     // the water's depth)
-    water_clip(in.world_pos);
+    if ((DIAG_BLEND & 8u) == 0u) {
+        water_clip(in.world_pos);
+    }
     // RiggedBlendDepth::Split: the texels at least half covered, then the
     // fainter ones, by the alpha of fs_depth_contact (the occlusion's depth
     // holds the same ones); tested before the material, which the other
@@ -1863,10 +1893,13 @@ fn fs_blend(in: VsOut, @builtin(front_facing) front: bool) -> @location(0) vec4<
             discard;
         }
     }
+    if ((DIAG_BLEND & 16u) != 0u) {
+        return vec4<f32>(0.1, 0.1, 0.1, 0.5);
+    }
     let m = eval_material(in, front);
     // a legacy material's empty texels may still glare (materialF.glsl has
     // no early test): lit first, their alpha is known after shade_material
-    if (BLEND_EARLY_DISCARD && m.color.a < 0.004 && !legacy_may_glare(records[in.record], m, in.world_pos, in.clip.xy)) {
+    if (BLEND_EARLY_DISCARD && (DIAG_BLEND & 2u) == 0u && m.color.a < 0.004 && !legacy_may_glare(records[in.record], m, in.world_pos, in.clip.xy)) {
         discard;
     }
     // Blended and alpha-tested: the hair, eyelashes and skirt of a system
@@ -1876,7 +1909,9 @@ fn fs_blend(in: VsOut, @builtin(front_facing) front: bool) -> @location(0) vec4<
         discard;
     }
     var c = shade_material(in, m).color;
-    c.a = c.a * rez_alpha(rec, in);
+    if ((DIAG_BLEND & 4u) == 0u) {
+        c.a = c.a * rez_alpha_of(rec.rez, in.world_pos.z);
+    }
     if (c.a < 0.004) {
         discard;
     }

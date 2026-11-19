@@ -166,8 +166,8 @@ impl App {
     }
 }
 
-fn file_dialog() -> rfd::FileDialog {
-    rfd::FileDialog::new()
+fn file_dialog() -> crate::file_dialog::FileDialog {
+    crate::file_dialog::FileDialog::new()
         .set_title(aurora_i18n::tr!("ui-options-backup"))
         .add_filter(aurora_i18n::tr!("ui-options-backup-file-type"), &["json"])
 }

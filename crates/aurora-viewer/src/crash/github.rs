@@ -89,6 +89,7 @@ impl Authorization {
     }
 }
 
+#[cfg(not(target_os = "android"))]
 fn entry() -> Option<keyring::Entry> {
     if aurora_updater::test_environment().is_some() {
         return None;
@@ -98,11 +99,13 @@ fn entry() -> Option<keyring::Entry> {
         .ok()
 }
 
+#[cfg(not(target_os = "android"))]
 fn load() -> Option<Authorization> {
     let secret = entry()?.get_password().ok()?;
     serde_json::from_str(&secret).ok()
 }
 
+#[cfg(not(target_os = "android"))]
 fn save(authorization: &Authorization) {
     let Some(entry) = entry() else { return };
     match serde_json::to_string(authorization) {
@@ -115,6 +118,7 @@ fn save(authorization: &Authorization) {
     }
 }
 
+#[cfg(not(target_os = "android"))]
 fn forget() {
     if let Some(entry) = entry()
         && let Err(e) = entry.delete_credential()
@@ -123,6 +127,17 @@ fn forget() {
         log::warn!("crash report: cannot forget the GitHub authorization: {e}");
     }
 }
+
+#[cfg(target_os = "android")]
+fn load() -> Option<Authorization> {
+    None
+}
+
+#[cfg(target_os = "android")]
+fn save(_authorization: &Authorization) {}
+
+#[cfg(target_os = "android")]
+fn forget() {}
 
 /// Preferences › Privacy: forget it on this PC. The tester can also revoke
 /// the app on github.com (Settings › Applications).
@@ -344,7 +359,7 @@ fn runtime() -> Result<tokio::runtime::Runtime, Failure> {
 }
 
 fn client() -> Result<reqwest::Client, Failure> {
-    reqwest::Client::builder()
+    aurora_net::http_client_builder()
         .user_agent(aurora_version::user_agent())
         .https_only(true)
         .retry(reqwest::retry::never())
@@ -574,7 +589,7 @@ mod tests {
     #[test]
     fn the_issue_is_exactly_the_previewed_text_and_replies_are_classified() {
         let rt = runtime().unwrap();
-        let client = reqwest::Client::builder()
+        let client = aurora_net::http_client_builder()
             .no_proxy()
             .retry(reqwest::retry::never())
             .timeout(Duration::from_secs(5))

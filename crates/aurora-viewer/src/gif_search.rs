@@ -597,7 +597,7 @@ pub fn client() -> Option<reqwest::Client> {
             attempt.follow()
         }
     });
-    reqwest::Client::builder()
+    aurora_net::http_client_builder()
         .user_agent(format!("{} (GIF search)", aurora_version::user_agent()))
         .connect_timeout(Duration::from_secs(10))
         .timeout(Duration::from_secs(20))

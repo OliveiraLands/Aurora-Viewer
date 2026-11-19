@@ -118,7 +118,7 @@ impl App {
         match input {
             ImageInput::File => {
                 std::thread::spawn(move || {
-                    let result = rfd::FileDialog::new()
+                    let result = crate::file_dialog::FileDialog::new()
                         .set_title(aurora_i18n::tr!("app-inventory-thumbnail-choose-inventory-image"))
                         .add_filter(
                             aurora_i18n::tr!("app-inventory-thumbnail-images"),

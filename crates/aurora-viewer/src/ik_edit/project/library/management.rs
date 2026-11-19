@@ -28,7 +28,7 @@ pub(super) fn execute(
             // A project saved by an older version may still name every asset.
             source.name_assets(|item| shared.get(item));
             return export_file(source, || {
-                rfd::FileDialog::new()
+                crate::file_dialog::FileDialog::new()
                     .add_filter("Aurora IK", &["json"])
                     .set_file_name("project.aurora-ik.json")
                     .save_file()

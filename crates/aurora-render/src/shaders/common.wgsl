@@ -771,8 +771,9 @@ fn sample_probes_pair(pos: vec3<f32>, frag: vec2<f32>, a: ProbeLookup, b: ProbeL
         if (boxes != 0u) {
             boxes &= probe_word(k, count, tiles, cell);
         }
-        for (; boxes != 0u; boxes &= boxes - 1u) {
+        for (var step = 0u; step < 32u && boxes != 0u; step++) {
             let n = k * 32u + firstTrailingBit(boxes);
+            boxes &= boxes - 1u;
             let lp = (probe_set.probes[n].box_inv * vec4<f32>(pos, 1.0)).xyz;
             if (all(abs(lp) <= vec3<f32>(1.0))) {
                 sample_automatic = false;
@@ -787,8 +788,10 @@ fn sample_probes_pair(pos: vec3<f32>, frag: vec2<f32>, a: ProbeLookup, b: ProbeL
     var w1 = 0.0;
     var dw1 = 0.0;
     for (var k = 0u; k < words; k++) {
-        for (var held = probe_word(k, count, tiles, cell); held != 0u; held &= held - 1u) {
+        var held = probe_word(k, count, tiles, cell);
+        for (var step = 0u; step < 32u && held != 0u; step++) {
             let i = k * 32u + firstTrailingBit(held);
+            held &= held - 1u;
             let kind = probe_set.probes[i].params.w;
             let manual = kind != 0.0;
             if (!manual && (!sample_automatic || (!automatic && i != 0u))) {
@@ -1812,7 +1815,11 @@ fn shade_pbr(base: vec3<f32>, metallic: f32, roughness_in: f32, mat_ao: f32, n: 
     // local lights
     var lights = light_walk(world_pos, frag);
     var spots = projector_walk(lights);
-    for (var i = next_light(&lights); i >= 0; i = next_light(&lights)) {
+    for (var step = 0u; step < 64u; step++) {
+        let i = next_light(&lights);
+        if (i < 0) {
+            break;
+        }
         let lt = frame.lights[i];
         let to_l = lt.pos_radius.xyz - world_pos;
         let dist = length(to_l);
@@ -1832,7 +1839,11 @@ fn shade_pbr(base: vec3<f32>, metallic: f32, roughness_in: f32, mat_ao: f32, n: 
             }
         }
     }
-    for (var i = next_light(&spots); i >= 0; i = next_light(&spots)) {
+    for (var step = 0u; step < 64u; step++) {
+        let i = next_light(&spots);
+        if (i < 0) {
+            break;
+        }
         col += pbr_local_light(projector_at(i, world_pos, n), n, v, f0, a, nv, diffuse_color);
     }
     // ambient: hemisphere diffuse + sky reflection
@@ -2493,7 +2504,11 @@ fn ll_local_diffuse(base: vec3<f32>, n: vec3<f32>, world_pos: vec3<f32>, frag: v
     var local = vec3<f32>(0.0);
     var lights = light_walk(world_pos, frag);
     var spots = projector_walk(lights);
-    for (var i = next_light(&lights); i >= 0; i = next_light(&lights)) {
+    for (var step = 0u; step < 64u; step++) {
+        let i = next_light(&lights);
+        if (i < 0) {
+            break;
+        }
         let lt = frame.lights[i];
         let to_l = lt.pos_radius.xyz - world_pos;
         let dist = length(to_l);
@@ -2505,7 +2520,11 @@ fn ll_local_diffuse(base: vec3<f32>, n: vec3<f32>, world_pos: vec3<f32>, frag: v
             }
         }
     }
-    for (var i = next_light(&spots); i >= 0; i = next_light(&spots)) {
+    for (var step = 0u; step < 64u; step++) {
+        let i = next_light(&spots);
+        if (i < 0) {
+            break;
+        }
         local += ll_diffuse_light(projector_at(i, world_pos, n), n, base);
     }
     return local * ll_local_scale();
@@ -2581,7 +2600,11 @@ fn ll_classic_pbr_local(base: vec3<f32>, metallic: f32, roughness_in: f32, n: ve
     var col = vec3<f32>(0.0);
     var lights = light_walk(world_pos, frag);
     var spots = projector_walk(lights);
-    for (var i = next_light(&lights); i >= 0; i = next_light(&lights)) {
+    for (var step = 0u; step < 64u; step++) {
+        let i = next_light(&lights);
+        if (i < 0) {
+            break;
+        }
         let lt = frame.lights[i];
         let to_l = lt.pos_radius.xyz - world_pos;
         let dist = length(to_l);
@@ -2599,7 +2622,11 @@ fn ll_classic_pbr_local(base: vec3<f32>, metallic: f32, roughness_in: f32, n: ve
             }
         }
     }
-    for (var i = next_light(&spots); i >= 0; i = next_light(&spots)) {
+    for (var step = 0u; step < 64u; step++) {
+        let i = next_light(&spots);
+        if (i < 0) {
+            break;
+        }
         col += ll_pbr_light(projector_at(i, world_pos, n), n, v, f0, ra, nv, diffuse_color);
     }
     return col * ll_local_scale();

@@ -341,7 +341,7 @@ fn http() -> Result<&'static reqwest::Client, String> {
             // or a public one valid for this host or another Linden name.
             // A public certificate of any other domain is refused.
             let tls = crate::simulator_tls().map_err(|_| ())?;
-            reqwest::Client::builder()
+            crate::http_client_builder()
                 .user_agent(aurora_version::user_agent())
                 .redirect(reqwest::redirect::Policy::none())
                 .tls_backend_preconfigured(tls)

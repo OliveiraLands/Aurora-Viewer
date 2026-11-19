@@ -134,7 +134,7 @@ impl Import {
         let ctx = ctx.clone();
         let spawned = std::thread::Builder::new().name("aurora-appearance-xml".into()).spawn(move || {
             let path = path.or_else(|| {
-                rfd::FileDialog::new()
+                crate::file_dialog::FileDialog::new()
                     .set_title(aurora_i18n::tr!("appearance-xml-import"))
                     .add_filter(aurora_i18n::tr!("appearance-xml-file-type"), &["xml"])
                     .pick_file()

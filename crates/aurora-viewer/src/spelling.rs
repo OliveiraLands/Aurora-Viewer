@@ -290,7 +290,11 @@ pub fn import() {
     let title = aurora_i18n::tr!("spelling-import-title");
     let filter = aurora_i18n::tr!("spelling-import-filter");
     let spawned = std::thread::Builder::new().name("aurora-dictionary-dialog".into()).spawn(move || {
-        if let Some(dic) = rfd::FileDialog::new().set_title(title).add_filter(filter, &["dic"]).pick_file() {
+        if let Some(dic) = crate::file_dialog::FileDialog::new()
+            .set_title(title)
+            .add_filter(filter, &["dic"])
+            .pick_file()
+        {
             STATE.lock().send(Job::Import { dic });
         }
     });

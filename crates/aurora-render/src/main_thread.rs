@@ -1776,6 +1776,9 @@ impl Renderer {
         if self.lost.get() {
             // nothing reaches a lost device: no frame is built, the photo
             // asked is answered as failed, the clicks as on nothing
+            if let Some(ui) = &mut ui {
+                ui.textures_delta.clear();
+            }
             self.writes.clear();
             self.fail_picks();
             if self.snapshot_request.take().is_some() {
@@ -1838,6 +1841,9 @@ impl Renderer {
         (stats.vertex_used, stats.index_used) = self.geometry.used();
         if self.failed {
             // nobody replays any more
+            if let Some(ui) = &mut ui {
+                ui.textures_delta.clear();
+            }
             self.writes.clear();
             self.fail_picks();
             return stats;
@@ -2314,7 +2320,7 @@ fn open_device(
             alim.max_storage_buffers_per_shader_stage
         )));
     }
-    let timestamps = afeat.contains(wgpu::Features::TIMESTAMP_QUERY);
+    let timestamps = !cfg!(target_os = "android") && afeat.contains(wgpu::Features::TIMESTAMP_QUERY);
     if timestamps {
         features |= wgpu::Features::TIMESTAMP_QUERY;
         // GPU time by kind of element (performance panel)
@@ -2343,7 +2349,7 @@ fn open_device(
     if afeat.contains(wgpu::Features::DEPTH_CLIP_CONTROL) && !portable_water {
         features |= wgpu::Features::DEPTH_CLIP_CONTROL;
     }
-    if afeat.contains(wgpu::Features::PARTIALLY_BOUND_BINDING_ARRAY) {
+    if !cfg!(target_os = "android") && afeat.contains(wgpu::Features::PARTIALLY_BOUND_BINDING_ARRAY) {
         features |= wgpu::Features::PARTIALLY_BOUND_BINDING_ARRAY;
     }
     // BC7 texture pages (textures.rs): a quarter of the video memory of
@@ -2361,12 +2367,16 @@ fn open_device(
         features |= wgpu::Features::MULTI_DRAW_INDIRECT_COUNT;
     }
     // The depth test before the fragment shader that files blended
-    // fragments (blend_exact.rs): only what shows is filed
-    features |= afeat & crate::blend_exact::EARLY_TEST;
-    // and their pass over the screen in one draw
-    features |= afeat & crate::blend_exact::TWO_SOURCES;
-    // and the places of their haze whole in its target
-    features |= afeat & crate::blend_exact::WIDE_RANGE;
+    // fragments (blend_exact.rs): only what shows is filed. Skip on Android
+    // tile-based GPUs (e.g. Mali) where fragment storage atomics + early depth
+    // or pass-internal timestamps can fault the driver.
+    if !cfg!(target_os = "android") {
+        features |= afeat & crate::blend_exact::EARLY_TEST;
+        // and their pass over the screen in one draw
+        features |= afeat & crate::blend_exact::TWO_SOURCES;
+        // and the places of their haze whole in its target
+        features |= afeat & crate::blend_exact::WIDE_RANGE;
+    }
     // Aurora's own pipeline cache on disk (pipeline_cache.rs)
     features |= crate::pipeline_cache::feature(afeat);
     // naga's SampleMask built-in fixed on Vulkan (spirv_fix.rs)
@@ -2573,6 +2583,9 @@ pub(crate) fn error_text(error: &wgpu::Error) -> String {
 /// 1,048,576: 16384 pages made a pool of 1,048,704 and the viewer stopped
 /// before the login screen (#1892). The pages are held to what fits.
 fn texture_page_limit(limits: &wgpu::Limits, descriptors_in_all_pools: Option<u32>) -> u32 {
+    if cfg!(target_os = "android") {
+        return limits.max_binding_array_elements_per_shader_stage.clamp(64, 512);
+    }
     let array = limits.max_binding_array_elements_per_shader_stage.clamp(64, 16384);
     // 0: a driver that did not fill the structure, not a real limit
     match descriptors_in_all_pools.filter(|&n| n > 0) {

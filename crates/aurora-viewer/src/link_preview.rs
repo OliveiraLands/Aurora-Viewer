@@ -802,7 +802,7 @@ fn builder(trusted_only: bool) -> reqwest::ClientBuilder {
             attempt.follow()
         }
     });
-    reqwest::Client::builder()
+    aurora_net::http_client_builder()
         .user_agent(format!("{} (link preview)", aurora_version::user_agent()))
         .connect_timeout(Duration::from_secs(10))
         .timeout(Duration::from_secs(20))
@@ -1903,7 +1903,7 @@ mod tests {
 
     /// A client for the test server: one connection per request.
     fn test_client() -> reqwest::Client {
-        reqwest::Client::builder()
+        aurora_net::http_client_builder()
             .no_proxy()
             .pool_max_idle_per_host(0)
             .retry(reqwest::retry::never())

@@ -1,0 +1,333 @@
+//! Android entry point (`android_main`), storage paths, and runtime permission gate.
+
+use std::ffi::{CStr, CString, c_char, c_void};
+use std::path::PathBuf;
+use std::sync::{Mutex, OnceLock};
+use std::time::{Duration, Instant};
+use winit::platform::android::activity::AndroidApp;
+
+static DATA_DIR: OnceLock<PathBuf> = OnceLock::new();
+static ANDROID_APP: OnceLock<AndroidApp> = OnceLock::new();
+
+/// Runtime (dangerous) permissions declared in `AndroidManifest.xml` that must
+/// be checked and requested before activating the main viewer.
+const RUNTIME_PERMISSIONS: &[&str] = &["android.permission.RECORD_AUDIO"];
+
+const PERMISSION_REQUEST_CODE: i32 = 1001;
+const JNI_VERSION_1_6: i32 = 0x0001_0006;
+
+#[derive(Debug, Clone, Copy)]
+enum GateState {
+    Unchecked,
+    Waiting {
+        requested_at: Instant,
+        saw_pause: bool,
+    },
+    Ready,
+}
+
+static GATE_STATE: Mutex<GateState> = Mutex::new(GateState::Unchecked);
+
+/// Base writable directory for config, cache, and logs on Android.
+pub(crate) fn data_dir() -> PathBuf {
+    DATA_DIR.get().cloned().unwrap_or_else(|| PathBuf::from("."))
+}
+
+/// Returns `true` while the viewer is waiting for the Android system permission
+/// dialog before creating the main window and renderer.
+pub(crate) fn waiting_for_permissions() -> bool {
+    GATE_STATE
+        .lock()
+        .map(|s| matches!(*s, GateState::Waiting { .. }))
+        .unwrap_or(false)
+}
+
+/// Records that the Activity paused while waiting for the system permission dialog.
+pub(crate) fn notify_suspended() {
+    if let Ok(mut state) = GATE_STATE.lock()
+        && let GateState::Waiting { saw_pause, .. } = &mut *state
+    {
+        *saw_pause = true;
+    }
+}
+
+/// Checks whether required Android runtime permissions are granted and, if not,
+/// triggers the system permission dialog before the main viewer starts.
+///
+/// Returns `true` when the viewer may proceed with window and renderer creation.
+pub(crate) fn ensure_permissions_before_start(from_resumed: bool) -> bool {
+    let Ok(mut state) = GATE_STATE.lock() else {
+        return true;
+    };
+    if matches!(*state, GateState::Ready) {
+        return true;
+    }
+    let Some(app) = ANDROID_APP.get() else {
+        *state = GateState::Ready;
+        return true;
+    };
+
+    let missing: Vec<&'static str> = RUNTIME_PERMISSIONS
+        .iter()
+        .copied()
+        .filter(|&perm| !check_self_permission(app, perm))
+        .collect();
+
+    if missing.is_empty() {
+        log::info!("Android runtime permissions granted");
+        *state = GateState::Ready;
+        return true;
+    }
+
+    match *state {
+        GateState::Unchecked => {
+            log::info!("Requesting Android runtime permissions before startup: {missing:?}");
+            if request_permissions(app, &missing) {
+                *state = GateState::Waiting {
+                    requested_at: Instant::now(),
+                    saw_pause: false,
+                };
+                false
+            } else {
+                log::warn!("Failed to invoke Activity.requestPermissions; continuing without mic permission");
+                *state = GateState::Ready;
+                true
+            }
+        }
+        GateState::Waiting {
+            requested_at,
+            saw_pause,
+        } => {
+            if from_resumed && saw_pause {
+                log::info!(
+                    "Android permission dialog completed (remaining ungranted: {missing:?}); starting viewer"
+                );
+                *state = GateState::Ready;
+                true
+            } else if !saw_pause && requested_at.elapsed() >= Duration::from_millis(1500) {
+                log::info!(
+                    "Android permission request completed without system dialog (ungranted: {missing:?}); starting viewer"
+                );
+                *state = GateState::Ready;
+                true
+            } else {
+                false
+            }
+        }
+        GateState::Ready => true,
+    }
+}
+
+#[repr(C)]
+#[derive(Clone, Copy)]
+union JValue {
+    i: i32,
+    j: i64,
+    l: *mut c_void,
+}
+
+type GetEnvFn = unsafe extern "C" fn(*mut c_void, *mut *mut c_void, i32) -> i32;
+type AttachCurrentThreadFn = unsafe extern "C" fn(*mut c_void, *mut *mut c_void, *mut c_void) -> i32;
+type FindClassFn = unsafe extern "C" fn(*mut c_void, *const c_char) -> *mut c_void;
+type ExceptionClearFn = unsafe extern "C" fn(*mut c_void);
+type DeleteLocalRefFn = unsafe extern "C" fn(*mut c_void, *mut c_void);
+type GetObjectClassFn = unsafe extern "C" fn(*mut c_void, *mut c_void) -> *mut c_void;
+type GetMethodIdFn =
+    unsafe extern "C" fn(*mut c_void, *mut c_void, *const c_char, *const c_char) -> *mut c_void;
+type CallIntMethodAFn =
+    unsafe extern "C" fn(*mut c_void, *mut c_void, *mut c_void, *const JValue) -> i32;
+type CallVoidMethodAFn =
+    unsafe extern "C" fn(*mut c_void, *mut c_void, *mut c_void, *const JValue);
+type NewStringUtfFn = unsafe extern "C" fn(*mut c_void, *const c_char) -> *mut c_void;
+type NewObjectArrayFn =
+    unsafe extern "C" fn(*mut c_void, i32, *mut c_void, *mut c_void) -> *mut c_void;
+type SetObjectArrayElementFn =
+    unsafe extern "C" fn(*mut c_void, *mut c_void, i32, *mut c_void);
+type ExceptionCheckFn = unsafe extern "C" fn(*mut c_void) -> u8;
+
+unsafe fn attach_jni_env(app: &AndroidApp) -> Option<*mut c_void> {
+    let vm = app.vm_as_ptr();
+    if vm.is_null() {
+        return None;
+    }
+    // SAFETY: `vm` is a valid `JavaVM*` supplied by `AndroidApp`; its first word
+    // points to the standard `JNIInvokeInterface` function table (slots 4 and 6).
+    unsafe {
+        let vtable = *(vm as *const *const *const c_void);
+        if vtable.is_null() {
+            return None;
+        }
+        let get_env: GetEnvFn = std::mem::transmute(*vtable.add(6));
+        let mut env: *mut c_void = std::ptr::null_mut();
+        if get_env(vm, &mut env, JNI_VERSION_1_6) == 0 && !env.is_null() {
+            return Some(env);
+        }
+        let attach: AttachCurrentThreadFn = std::mem::transmute(*vtable.add(4));
+        if attach(vm, &mut env, std::ptr::null_mut()) == 0 && !env.is_null() {
+            Some(env)
+        } else {
+            None
+        }
+    }
+}
+
+unsafe fn clear_exception(env: *mut c_void, vtable: *const *const c_void) -> bool {
+    // SAFETY: `env` and `vtable` belong to the attached `JNIEnv*`; slots 228 and 17
+    // are `ExceptionCheck` and `ExceptionClear` in `JNINativeInterface`.
+    unsafe {
+        let check: ExceptionCheckFn = std::mem::transmute(*vtable.add(228));
+        if check(env) != 0 {
+            let clear: ExceptionClearFn = std::mem::transmute(*vtable.add(17));
+            clear(env);
+            true
+        } else {
+            false
+        }
+    }
+}
+
+fn check_self_permission(app: &AndroidApp, permission: &str) -> bool {
+    let Ok(perm_c) = CString::new(permission) else {
+        return false;
+    };
+    let activity = app.activity_as_ptr();
+    if activity.is_null() {
+        return true;
+    }
+    // SAFETY: Calls `Activity.checkSelfPermission(String)` via the standard JNI
+    // function table on the attached thread and deletes all local references.
+    unsafe {
+        let Some(env) = attach_jni_env(app) else {
+            return true;
+        };
+        let vtable = *(env as *const *const *const c_void);
+        let get_object_class: GetObjectClassFn = std::mem::transmute(*vtable.add(31));
+        let get_method_id: GetMethodIdFn = std::mem::transmute(*vtable.add(33));
+        let new_string_utf: NewStringUtfFn = std::mem::transmute(*vtable.add(167));
+        let call_int_method_a: CallIntMethodAFn = std::mem::transmute(*vtable.add(51));
+        let delete_local_ref: DeleteLocalRefFn = std::mem::transmute(*vtable.add(23));
+
+        let cls = get_object_class(env, activity);
+        if cls.is_null() || clear_exception(env, vtable) {
+            return true;
+        }
+        let mid = get_method_id(
+            env,
+            cls,
+            c"checkSelfPermission".as_ptr(),
+            c"(Ljava/lang/String;)I".as_ptr(),
+        );
+        if mid.is_null() || clear_exception(env, vtable) {
+            delete_local_ref(env, cls);
+            return true;
+        }
+        let jperm = new_string_utf(env, perm_c.as_ptr());
+        if jperm.is_null() || clear_exception(env, vtable) {
+            delete_local_ref(env, cls);
+            return true;
+        }
+        let args = [JValue { l: jperm }];
+        let res = call_int_method_a(env, activity, mid, args.as_ptr());
+        let had_exc = clear_exception(env, vtable);
+        delete_local_ref(env, jperm);
+        delete_local_ref(env, cls);
+        !had_exc && res == 0
+    }
+}
+
+fn request_permissions(app: &AndroidApp, permissions: &[&str]) -> bool {
+    let activity = app.activity_as_ptr();
+    if activity.is_null() || permissions.is_empty() {
+        return false;
+    }
+    // SAFETY: Calls `Activity.requestPermissions(String[], int)` via the standard
+    // JNI function table on the attached thread and deletes all local references.
+    unsafe {
+        let Some(env) = attach_jni_env(app) else {
+            return false;
+        };
+        let vtable = *(env as *const *const *const c_void);
+        let find_class: FindClassFn = std::mem::transmute(*vtable.add(6));
+        let get_object_class: GetObjectClassFn = std::mem::transmute(*vtable.add(31));
+        let get_method_id: GetMethodIdFn = std::mem::transmute(*vtable.add(33));
+        let new_string_utf: NewStringUtfFn = std::mem::transmute(*vtable.add(167));
+        let new_object_array: NewObjectArrayFn = std::mem::transmute(*vtable.add(172));
+        let set_object_array_element: SetObjectArrayElementFn =
+            std::mem::transmute(*vtable.add(174));
+        let call_void_method_a: CallVoidMethodAFn = std::mem::transmute(*vtable.add(63));
+        let delete_local_ref: DeleteLocalRefFn = std::mem::transmute(*vtable.add(23));
+
+        let string_cls = find_class(env, CStr::from_bytes_with_nul_unchecked(b"java/lang/String\0").as_ptr());
+        if string_cls.is_null() || clear_exception(env, vtable) {
+            return false;
+        }
+        let arr = new_object_array(env, permissions.len() as i32, string_cls, std::ptr::null_mut());
+        delete_local_ref(env, string_cls);
+        if arr.is_null() || clear_exception(env, vtable) {
+            return false;
+        }
+        for (i, &perm) in permissions.iter().enumerate() {
+            let Ok(perm_c) = CString::new(perm) else {
+                delete_local_ref(env, arr);
+                return false;
+            };
+            let jperm = new_string_utf(env, perm_c.as_ptr());
+            if jperm.is_null() || clear_exception(env, vtable) {
+                delete_local_ref(env, arr);
+                return false;
+            }
+            set_object_array_element(env, arr, i as i32, jperm);
+            delete_local_ref(env, jperm);
+            if clear_exception(env, vtable) {
+                delete_local_ref(env, arr);
+                return false;
+            }
+        }
+
+        let cls = get_object_class(env, activity);
+        if cls.is_null() || clear_exception(env, vtable) {
+            delete_local_ref(env, arr);
+            return false;
+        }
+        let mid = get_method_id(
+            env,
+            cls,
+            c"requestPermissions".as_ptr(),
+            c"([Ljava/lang/String;I)V".as_ptr(),
+        );
+        if mid.is_null() || clear_exception(env, vtable) {
+            delete_local_ref(env, cls);
+            delete_local_ref(env, arr);
+            return false;
+        }
+        let args = [
+            JValue { l: arr },
+            JValue {
+                i: PERMISSION_REQUEST_CODE,
+            },
+        ];
+        call_void_method_a(env, activity, mid, args.as_ptr());
+        let had_exc = clear_exception(env, vtable);
+        delete_local_ref(env, cls);
+        delete_local_ref(env, arr);
+        !had_exc
+    }
+}
+
+#[unsafe(no_mangle)]
+pub fn android_main(app: AndroidApp) {
+    if let Some(dir) = app.internal_data_path().or_else(|| app.external_data_path()) {
+        let _ = std::fs::create_dir_all(&dir);
+        let _ = DATA_DIR.set(dir);
+    }
+    let _ = ANDROID_APP.set(app.clone());
+    aurora_i18n::select("default", None);
+    crate::logging::init();
+    if let Err(error) = crate::run_viewer_with_android(Some(app)) {
+        log::error!("Android viewer error: {error:#}");
+    }
+    crate::logging::drain(crate::logging::DRAIN_WAIT);
+    // Terminate the process so a subsequent Activity launch does not inherit
+    // winit's static OnceLock EventLoop state ("EventLoop can't be recreated").
+    std::process::exit(0);
+}

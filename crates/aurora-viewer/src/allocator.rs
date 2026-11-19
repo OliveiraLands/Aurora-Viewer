@@ -23,6 +23,7 @@
 use std::alloc::{GlobalAlloc, Layout, System};
 use std::sync::atomic::{AtomicU8, Ordering};
 
+#[cfg(not(target_os = "android"))]
 use mimalloc::MiMalloc;
 
 const UNSET: u8 = 0;
@@ -44,6 +45,10 @@ pub fn name() -> &'static str {
 
 #[inline]
 fn use_system() -> bool {
+    if cfg!(target_os = "android") {
+        CHOICE.compare_exchange(UNSET, SYSTEM, Ordering::Relaxed, Ordering::Relaxed).ok();
+        return true;
+    }
     match CHOICE.load(Ordering::Relaxed) {
         MIMALLOC => false,
         SYSTEM => true,
@@ -97,6 +102,7 @@ fn system_wanted() -> bool {
 // `GlobalAlloc` correctly, always the same one for the whole process
 // (`CHOICE` is set once, before any block exists), so a block is freed or
 // resized by the allocator that gave it.
+#[cfg(not(target_os = "android"))]
 unsafe impl GlobalAlloc for Allocator {
     #[inline]
     unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
@@ -149,6 +155,33 @@ unsafe impl GlobalAlloc for Allocator {
             }
         };
         failed(block, new_size)
+    }
+}
+
+#[cfg(target_os = "android")]
+unsafe impl GlobalAlloc for Allocator {
+    #[inline]
+    unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
+        // SAFETY: the caller's contract, passed on unchanged
+        failed(unsafe { System.alloc(layout) }, layout.size())
+    }
+
+    #[inline]
+    unsafe fn alloc_zeroed(&self, layout: Layout) -> *mut u8 {
+        // SAFETY: the caller's contract, passed on unchanged
+        failed(unsafe { System.alloc_zeroed(layout) }, layout.size())
+    }
+
+    #[inline]
+    unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout) {
+        // SAFETY: the caller's contract, passed on unchanged
+        unsafe { System.dealloc(ptr, layout) }
+    }
+
+    #[inline]
+    unsafe fn realloc(&self, ptr: *mut u8, layout: Layout, new_size: usize) -> *mut u8 {
+        // SAFETY: the caller's contract, passed on unchanged
+        failed(unsafe { System.realloc(ptr, layout, new_size) }, new_size)
     }
 }
 

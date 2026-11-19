@@ -15,11 +15,19 @@ pub(super) struct FilePicker {
 impl FilePicker {
     pub(super) fn open(multiple: bool) -> std::io::Result<Self> {
         Self::spawn(multiple, |multiple| {
-            let dialog = rfd::FileDialog::new();
-            if multiple {
-                dialog.pick_files()
-            } else {
-                dialog.pick_file().map(|file| vec![file])
+            #[cfg(not(target_os = "android"))]
+            {
+                let dialog = rfd::FileDialog::new();
+                if multiple {
+                    dialog.pick_files()
+                } else {
+                    dialog.pick_file().map(|file| vec![file])
+                }
+            }
+            #[cfg(target_os = "android")]
+            {
+                let _ = multiple;
+                None
             }
         })
     }

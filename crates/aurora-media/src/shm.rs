@@ -14,7 +14,7 @@ pub struct SharedMemory {
     size: usize,
     #[cfg(windows)]
     handle: windows_sys::Win32::Foundation::HANDLE,
-    #[cfg(unix)]
+    #[cfg(all(unix, not(target_os = "android")))]
     // closed after the unmapping, when the segment drops
     _fd: std::os::fd::OwnedFd,
     addr: *mut u8,
@@ -60,7 +60,7 @@ impl SharedMemory {
         }
     }
 
-    #[cfg(unix)]
+    #[cfg(all(unix, not(target_os = "android")))]
     pub fn create(size: usize) -> Option<SharedMemory> {
         use std::os::fd::{FromRawFd, OwnedFd};
         let name = format!("/LL{}_{}", std::process::id(), SEGMENT_NUMBER.fetch_add(1, Ordering::Relaxed));
@@ -110,7 +110,7 @@ impl SharedMemory {
         }
     }
 
-    #[cfg(not(any(windows, unix)))]
+    #[cfg(any(target_os = "android", not(any(windows, unix))))]
     pub fn create(_size: usize) -> Option<SharedMemory> {
         let _ = SEGMENT_NUMBER.load(Ordering::Relaxed);
         None
@@ -145,7 +145,7 @@ impl Drop for SharedMemory {
         // SAFETY: addr / size are the mapping made in `create`; the name is
         // usually unlinked by the plugin already (an error is then expected).
         // The descriptor closes with `_fd`.
-        #[cfg(unix)]
+        #[cfg(all(unix, not(target_os = "android")))]
         unsafe {
             libc::munmap(self.addr as *mut libc::c_void, self.size);
             if let Ok(cname) = std::ffi::CString::new(self.name.clone()) {
@@ -155,7 +155,7 @@ impl Drop for SharedMemory {
     }
 }
 
-#[cfg(all(test, unix))]
+#[cfg(all(test, unix, not(target_os = "android")))]
 mod tests {
     use super::*;
 

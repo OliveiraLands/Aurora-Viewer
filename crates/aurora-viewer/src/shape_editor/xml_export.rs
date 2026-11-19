@@ -149,7 +149,7 @@ impl Export {
             .name("aurora-appearance-xml-export".into())
             .spawn(move || {
                 let path = path.or_else(|| {
-                    rfd::FileDialog::new()
+                    crate::file_dialog::FileDialog::new()
                         .set_title(aurora_i18n::tr!("appearance-xml-export"))
                         .add_filter(aurora_i18n::tr!("appearance-xml-file-type"), &["xml"])
                         .set_file_name(file_name)

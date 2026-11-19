@@ -463,7 +463,7 @@ impl Editor {
             let work = || -> Result<Output, String> {
                 match action {
                     Some(Action::Open) => {
-                        let Some(path) = rfd::FileDialog::new().add_filter("Aurora IK", &["json"]).pick_file() else {
+                        let Some(path) = crate::file_dialog::FileDialog::new().add_filter("Aurora IK", &["json"]).pick_file() else {
                             return Ok(Output::Cancelled);
                         };
                         Ok(Output::Loaded(read(&path)?))

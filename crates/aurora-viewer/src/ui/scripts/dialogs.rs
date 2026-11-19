@@ -361,7 +361,7 @@ impl Preferences {
                                     let (tx,rx) = std::sync::mpsc::channel();
                                     let directory = settings.include_directory.clone(); self.directory = Some(rx);
                                     std::thread::spawn(move || {
-                                        let path = rfd::FileDialog::new().set_directory(directory).pick_folder().map(|p| p.display().to_string());
+                                        let path = crate::file_dialog::FileDialog::new().set_directory(directory).pick_folder().map(|p| p.display().to_string());
                                         let _ = tx.send(path);
                                     });
                                 }

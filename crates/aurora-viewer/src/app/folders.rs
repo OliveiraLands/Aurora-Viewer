@@ -39,7 +39,7 @@ impl App {
                     _ => aurora_i18n::tr!("ui-options-change-folder"),
                 };
                 let _ = std::thread::Builder::new().name("aurora-folder-dialog".into()).spawn(move || {
-                    let _ = tx.send(rfd::FileDialog::new().set_title(title).pick_folder());
+                    let _ = tx.send(crate::file_dialog::FileDialog::new().set_title(title).pick_folder());
                 });
             }
             FolderChoice::Default => self.set_folder(folder, String::new()),

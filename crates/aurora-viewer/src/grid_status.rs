@@ -337,7 +337,7 @@ fn decode_entities(s: &str) -> String {
 
 /// GET the feed, at most MAX_FEED bytes.
 async fn fetch(url: &str) -> Result<Vec<Entry>, String> {
-    let http = reqwest::Client::builder()
+    let http = aurora_net::http_client_builder()
         .user_agent(aurora_version::user_agent())
         .timeout(Duration::from_secs(20))
         .build()

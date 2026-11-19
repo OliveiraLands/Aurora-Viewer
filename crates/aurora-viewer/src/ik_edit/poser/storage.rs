@@ -259,7 +259,7 @@ impl Service {
                         let path = match path {
                             Some(p) => p,
                             None => {
-                                let mut dialog = rfd::FileDialog::new();
+                                let mut dialog = crate::file_dialog::FileDialog::new();
                                 if root.is_dir() {
                                     dialog = dialog.set_directory(&root);
                                 }
@@ -315,7 +315,7 @@ impl Service {
                         let path = if pick {
                             // Best effort: the dialog opens in the library when it exists.
                             let _ = std::fs::create_dir_all(&root);
-                            let Some(path) = rfd::FileDialog::new()
+                            let Some(path) = crate::file_dialog::FileDialog::new()
                                 .set_directory(&root)
                                 .set_file_name(format!("{name}.aurora-pose.json"))
                                 .add_filter(aurora_i18n::tr!("poser-pose-filter"), &["json"])

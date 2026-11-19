@@ -46,6 +46,75 @@ const MAX_LIGHTS: usize = 64;
 const XR_RETRIES: u8 = 3;
 #[cfg(any(target_os = "linux", target_os = "windows", target_os = "macos"))]
 const XR_RETRY_DELAY: std::time::Duration = std::time::Duration::from_millis(750);
+/// TEMPORARY Android diagnostic (CRASH-ANDROID.md): the mask of scene pass B
+/// parts to leave out, from the system property `debug.aurora.skip` (set with
+/// `adb shell setprop`), so the Mali device loss can be bisected without
+/// reinstalling. A change is logged. Zero on every other system. Bit 32 leaves
+/// out the texture uploads of real assets (`PageStore::replace*`), bit 64 every
+/// mesh draw of the scene (`draw`, `draw_from`), bits 128 / 256 / 512 / 1024 the
+/// terrain, opaque, alpha-masked and blended families.
+#[cfg(target_os = "android")]
+pub(crate) fn android_skip() -> u32 {
+    use std::sync::atomic::{AtomicU32, Ordering};
+    static LAST: AtomicU32 = AtomicU32::new(0);
+    // PROP_VALUE_MAX
+    let mut buf = [0 as libc::c_char; 92];
+    // SAFETY: the name is a NUL-terminated string and `buf` holds
+    // PROP_VALUE_MAX bytes, the most `__system_property_get` writes (with its
+    // NUL).
+    let len = unsafe { libc::__system_property_get(c"debug.aurora.skip".as_ptr(), buf.as_mut_ptr()) };
+    let mask = if len > 0 {
+        // SAFETY: the call above NUL-terminated `buf`.
+        unsafe { std::ffi::CStr::from_ptr(buf.as_ptr()) }
+            .to_str()
+            .ok()
+            .and_then(|s| s.trim().parse().ok())
+            .unwrap_or(0)
+    } else {
+        0
+    };
+    if LAST.swap(mask, Ordering::Relaxed) != mask {
+        log::warn!("android diagnostic: debug.aurora.skip = {mask}");
+    }
+    mask
+}
+
+#[cfg(not(target_os = "android"))]
+pub(crate) fn android_skip() -> u32 {
+    0
+}
+
+/// TEMPORARY Android diagnostic (CRASH-ANDROID.md): the `DIAG_BLEND` mask the
+/// scene shader module is built with (`object_shader_source`), from the system
+/// property `debug.aurora.blend`; read when the modules are made, so a change
+/// needs a restart of the app. 1 no portal surface, 2 no early discard of the
+/// glare, 4 no derez alpha, 8 no water clip, 16 a flat colour instead of the
+/// material and its lighting. Zero on every other system.
+#[cfg(target_os = "android")]
+pub(crate) fn android_blend_diag() -> u32 {
+    // PROP_VALUE_MAX
+    let mut buf = [0 as libc::c_char; 92];
+    // SAFETY: as in `android_skip`.
+    let len = unsafe { libc::__system_property_get(c"debug.aurora.blend".as_ptr(), buf.as_mut_ptr()) };
+    let mask = if len > 0 {
+        // SAFETY: the call above NUL-terminated `buf`.
+        unsafe { std::ffi::CStr::from_ptr(buf.as_ptr()) }
+            .to_str()
+            .ok()
+            .and_then(|s| s.trim().parse().ok())
+            .unwrap_or(0)
+    } else {
+        0
+    };
+    log::warn!("android diagnostic: debug.aurora.blend = {mask}");
+    mask
+}
+
+#[cfg(not(target_os = "android"))]
+pub(crate) fn android_blend_diag() -> u32 {
+    0
+}
+
 /// `AURORA_DEMO_VR_CLOSED`: the frame the VR runtime is taken as closing at.
 #[cfg(any(target_os = "linux", target_os = "windows", target_os = "macos"))]
 fn demo_vr_closed() -> Option<u64> {
@@ -3716,7 +3785,11 @@ impl Backend {
             height: height.max(1),
             present_mode,
             desired_maximum_frame_latency: 2,
-            alpha_mode: caps.alpha_modes.first().copied().unwrap_or(wgpu::CompositeAlphaMode::Auto),
+            alpha_mode: if caps.alpha_modes.contains(&wgpu::CompositeAlphaMode::Opaque) {
+                wgpu::CompositeAlphaMode::Opaque
+            } else {
+                caps.alpha_modes.first().copied().unwrap_or(wgpu::CompositeAlphaMode::Auto)
+            },
             view_formats: vec![],
         };
         if !external {
@@ -8864,6 +8937,11 @@ impl Backend {
         // (2 opaque, 4 alpha pool, 8 blended)
         static GLOW_SKIP: std::sync::OnceLock<u32> = std::sync::OnceLock::new();
         let glow_skip = *GLOW_SKIP.get_or_init(|| std::env::var("AURORA_GLOW_SKIP").ok().and_then(|v| v.parse().ok()).unwrap_or(0));
+        // TEMPORARY Android diagnostic (CRASH-ANDROID.md): parts of scene pass B
+        // left out, from `adb shell setprop debug.aurora.skip <mask>`, read
+        // every frame (1 SSR + wet ground, 2 water, 4 glow, 8 blended faces,
+        // 16 overlays + rain + particles). Always 0 elsewhere.
+        let skip = android_skip();
         // Aurora's bloom: its levels kept while on (or alternated), none
         // under a debug view, which replaces the image
         let bloom = {
@@ -9449,8 +9527,35 @@ impl Backend {
         };
         // draw commands recorded (AURORA_PROFILE)
         let calls = std::cell::Cell::new(0u32);
+        // TEMPORARY Android diagnostic (bits 128 terrain, 256 opaque, 512
+        // alpha-masked, 1024 blended): the draws of a family, wherever they
+        // are drawn (a run of a family lies inside its region of the buffer)
+        let diag_rg = rg;
+        let diag_stride = std::mem::size_of::<DrawIndexedIndirect>() as u64;
+        // (2048 the rigged blended faces, which come first in the range, 4096
+        // the others)
+        let diag_rigged_end = diag_rg.blend.0 + (lists.blend_depth as u64) * diag_stride;
+        let diag_skips = move |r: (u64, u32)| -> bool {
+            let within = |reg: (u64, u32)| reg.1 > 0 && r.0 >= reg.0 && r.0 < reg.0 + u64::from(reg.1) * diag_stride;
+            let family = if within(diag_rg.terrain) || within(diag_rg.terrain_pbr) || within(diag_rg.terrain_mask) {
+                128
+            } else if within(diag_rg.opaque) || within(diag_rg.opaque_2s) {
+                256
+            } else if within(diag_rg.mask) || within(diag_rg.mask_2s) {
+                512
+            } else if within(diag_rg.blend) {
+                1024 | if r.0 < diag_rigged_end { 2048 } else { 4096 }
+            } else if within(diag_rg.blend_under) {
+                1024
+            } else {
+                0
+            };
+            skip & family != 0
+        };
         let draw = |pass: &mut wgpu::RenderPass, pipe: &wgpu::RenderPipeline, r: (u64, u32)| {
-            if r.1 > 0 {
+            // (TEMPORARY Android diagnostic, bit 64: no mesh drawn at all,
+            // every pass still runs)
+            if r.1 > 0 && skip & 64 == 0 && !(skip & 0x1f80 != 0 && diag_skips(r)) {
                 calls.set(calls.get() + 1);
                 pass.set_pipeline(pipe);
                 pass.multi_draw_indexed_indirect(&self.indirect, r.0, r.1);
@@ -9467,13 +9572,15 @@ impl Backend {
             }
         };
         let draw_sided = |pass: &mut wgpu::RenderPass, pipes: &SidedPipelines, r, first| {
-            draw_sided_list(pass, pipes, r, first, &lists.blend_double_sided);
+            if skip & 8 == 0 {
+                draw_sided_list(pass, pipes, r, first, &lists.blend_double_sided);
+            }
         };
         let draw_under = |pass: &mut wgpu::RenderPass, pipes: &SidedPipelines, r| {
             draw_sided_list(pass, pipes, r, 0, &lists.blend_under_double_sided);
         };
         let draw_from = |pass: &mut wgpu::RenderPass, pipe: &wgpu::RenderPipeline, buf: &wgpu::Buffer, r: (u64, u32)| {
-            if r.1 > 0 {
+            if r.1 > 0 && skip & 64 == 0 {
                 calls.set(calls.get() + 1);
                 pass.set_pipeline(pipe);
                 pass.multi_draw_indexed_indirect(buf, r.0, r.1);
@@ -10227,6 +10334,22 @@ impl Backend {
                 label: Some("frame scene"),
             }),
         );
+        // TEMPORARY Android diagnostic (CRASH-ANDROID.md): the scene encoder
+        // is cut between its passes, one command buffer per part, so that
+        // `android_frame_split` names the part where the Mali device is lost.
+        #[cfg(target_os = "android")]
+        let mut scene_parts: Vec<(&'static str, wgpu::CommandBuffer)> = Vec::new();
+        macro_rules! scene_cut {
+            ($label:expr) => {
+                #[cfg(target_os = "android")]
+                {
+                    let next = self.device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                        label: Some("frame scene part"),
+                    });
+                    scene_parts.push(($label, std::mem::replace(&mut encoder, next).finish()));
+                }
+            };
+        }
         mark(&mut encoder, MARK_SCENE_BEGIN);
         // Keep water and exclusion depths separate from opaque objects. The
         // same mask removes surface shading and above-water haze through a face.
@@ -10265,6 +10388,7 @@ impl Backend {
             );
         }
         mark(&mut encoder, MARK_WATER_INTERFACE_END);
+        scene_cut!("water_mask");
         let prepass_wanted = match msaa_prepass() {
             MsaaPrepass::On => true,
             MsaaPrepass::Off => false,
@@ -10423,6 +10547,7 @@ impl Backend {
 
         prof.mark("scene_a");
         mark(&mut encoder, MARK_SCENE_A_END);
+        scene_cut!("scene_a");
         // a cut-out photo: what shows through, from the depth the scene
         // pass ended with (cutout.rs)
         if f.cutout {
@@ -10609,6 +10734,7 @@ impl Backend {
                 );
             }
         }
+        scene_cut!("cutout_rain_blend_under");
         // ---- scene copy (refraction / SSR source)
         let size = wgpu::Extent3d {
             width: world_size.0,
@@ -10632,6 +10758,7 @@ impl Backend {
         );
 
         mark(&mut encoder, MARK_COPY_END);
+        scene_cut!("scene_copy");
 
         // the copy of the depth `RiggedBlendDepth::Layered` and `Layers`
         // draw into, and `Exact` writes its cut into, made on its first use
@@ -10788,6 +10915,9 @@ impl Backend {
         // blended faces `from..to`, back to front; a glowing one adds its glow
         // right after itself, so later layers in front dim it (LLDrawPoolAlpha)
         let blended = |pass: &mut wgpu::RenderPass, pipe: &SidedPipelines, from: u32, to: u32| {
+            if skip & 8 != 0 {
+                return;
+            }
             let mut start = from;
             for i in from..to {
                 if !(glow_on && glow_skip & 8 == 0 && lists.blend_glow.get(i as usize).copied().unwrap_or(false)) {
@@ -10810,6 +10940,9 @@ impl Backend {
                     draw(pass, &self.pipelines.creation_preview, rg.creation_preview);
                 }
                 blended(pass, blend_pipe, rest_from, bn);
+            }
+            if skip & 16 != 0 {
+                return;
             }
             // debug overlays (before the particles, which rebind vertex buffer 0)
             draw(pass, &self.pipelines.land_overlay, rg.land_overlay);
@@ -10891,7 +11024,7 @@ impl Backend {
             }
             let mut pass = begin_scene_b(&mut encoder, &self.targets, "scene b", !split && !st_on, false);
             bind_mesh(&mut pass, &self.groups.b);
-            if let (true, Some(ssr), Some(gbg)) = (self.settings.ssr, &self.pipelines.ssr, &self.gbuf_group) {
+            if let (true, Some(ssr), Some(gbg)) = (self.settings.ssr && skip & 1 == 0, &self.pipelines.ssr, &self.gbuf_group) {
                 pass.set_pipeline(ssr);
                 pass.set_bind_group(3, gbg, &[]);
                 pass.draw(0..3, 0..1);
@@ -10899,7 +11032,7 @@ impl Backend {
             // rain prototype: wet ground and puddles, under the transparent
             // things drawn after
             pass_mark(&mut pass, MARK_WET_BEGIN);
-            if rain_wet {
+            if rain_wet && skip & 1 == 0 {
                 match (&self.pipelines.rain_wet_g, &self.gbuf_group) {
                     (Some(pipe), Some(gbg)) => {
                         pass.set_pipeline(pipe);
@@ -10916,9 +11049,11 @@ impl Backend {
                 .as_ref()
                 .filter(|_| water_near)
                 .unwrap_or(&self.pipelines.water);
-            draw(&mut pass, water_pipe, rg.water);
+            if skip & 2 == 0 {
+                draw(&mut pass, water_pipe, rg.water);
+            }
             pass_mark(&mut pass, MARK_WATER_END);
-            if glow_on {
+            if glow_on && skip & 4 == 0 {
                 draw(&mut pass, &self.pipelines.glow_max, rg.creation_preview);
                 if glow_skip & 2 == 0 {
                     draw(&mut pass, &self.pipelines.glow_max, rg.glow);
@@ -11333,6 +11468,7 @@ impl Backend {
             }
             self.drawn_pick.encode_copy(&mut encoder);
         }
+        scene_cut!("scene_b");
         // depth under the cursor, read back in a later frame
         self.depth_pick.encode_hover(
             &self.device,
@@ -11763,6 +11899,8 @@ impl Backend {
         // ---- egui: its meshes, and what it painted for the world (name
         // tags, floating texts), which the HUD attachments cover
         let mut extra_cmds = Vec::new();
+        #[cfg(target_os = "android")]
+        let mut part_labels: Vec<&'static str> = Vec::new();
         let mut window_glass = false;
         let mut meshes_uploaded = false;
         let sd = egui_wgpu::ScreenDescriptor {
@@ -12026,7 +12164,15 @@ impl Backend {
         // frame of a second)
         let (pre, post, scene) = self.finishers.pair(enc_pre, encoder, move || enc_scene.finish());
         match (pre, post) {
-            (Some(pre), Some(post)) => extra_cmds.extend([pre, scene, post]),
+            (Some(pre), Some(post)) => {
+                extra_cmds.push(pre);
+                #[cfg(target_os = "android")]
+                {
+                    part_labels = scene_parts.iter().map(|(label, _)| *label).collect();
+                    extra_cmds.extend(scene_parts.drain(..).map(|(_, cmd)| cmd));
+                }
+                extra_cmds.extend([scene, post]);
+            }
             _ => {
                 log::error!("render: a command encoder thread panicked");
                 let spent = Spent { writes, lists: draw_lists };
@@ -12049,6 +12195,65 @@ impl Backend {
             encoder.finish()
         });
         // (noted for the line of a device loss, device_lost.rs)
+        #[cfg(target_os = "android")]
+        let submission = if rg.opaque.1 > 0 || rg.terrain.1 > 0 || rg.blend.1 > 0 {
+            let mut last = None;
+            let n_uploads = usize::from(upload_cmds.is_some());
+            let mut step_submit = |label: &str, cmd: wgpu::CommandBuffer| {
+                if self.lost.get() {
+                    return;
+                }
+                last = Some(crate::device_lost::submit_tracked(
+                    &self.lost,
+                    &self.queue,
+                    index,
+                    std::iter::once(cmd),
+                ));
+                let poll_res = self.device.poll(wgpu::PollType::wait_indefinitely());
+                self.queue.submit([]);
+                if self.lost.get() || poll_res.is_err() {
+                    log::error!(
+                        "android_frame_split LOST at frame {index} step '{label}' (poll={poll_res:?}, uploads={n_uploads}, terrain={:?}, opaque={:?}, mask={:?}, blend={:?})",
+                        rg.terrain,
+                        rg.opaque,
+                        rg.mask,
+                        rg.blend,
+                    );
+                }
+            };
+            for (i, cmd) in upload_cmds.into_iter().enumerate() {
+                step_submit(&format!("upload[{i}]"), cmd);
+            }
+            let n_extra = extra_cmds.len();
+            for (i, cmd) in extra_cmds.into_iter().enumerate() {
+                // from the end: post, the scene's tail (depth pick), the
+                // scene parts (last cut first), then pre
+                let from_end = n_extra.saturating_sub(i);
+                let k = part_labels.len();
+                let tag = match from_end {
+                    1 => "post",
+                    2 => "scene_tail_depth_pick",
+                    n if (3..3 + k).contains(&n) => part_labels[k - (n - 3) - 1],
+                    n if n == 3 + k => "pre",
+                    _ => "extra",
+                };
+                step_submit(tag, cmd);
+            }
+            for cmd in output_transition {
+                step_submit("output_transition", cmd);
+            }
+            last.unwrap_or_else(|| {
+                crate::device_lost::submit_tracked(&self.lost, &self.queue, index, std::iter::empty())
+            })
+        } else {
+            crate::device_lost::submit_tracked(
+                &self.lost,
+                &self.queue,
+                index,
+                upload_cmds.into_iter().chain(extra_cmds).chain(output_transition),
+            )
+        };
+        #[cfg(not(target_os = "android"))]
         let submission = crate::device_lost::submit_tracked(
             &self.lost,
             &self.queue,

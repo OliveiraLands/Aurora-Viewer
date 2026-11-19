@@ -45,6 +45,11 @@ pub fn logs_dir() -> PathBuf {
     if let Some(test) = aurora_updater::test_environment() {
         return test.root.join("logs");
     }
+    #[cfg(target_os = "android")]
+    {
+        return crate::android::data_dir().join("logs");
+    }
+    #[cfg(not(target_os = "android"))]
     directories::ProjectDirs::from("org", "Aurora", "AuroraViewer")
         .map(|d| d.data_local_dir().join("logs"))
         .unwrap_or_else(|| PathBuf::from("logs"))
@@ -245,11 +250,45 @@ impl LogSink for LogFile {
 /// stderr may block too (a pipe nobody reads): it is the writer's as well.
 struct Console;
 
+#[cfg(target_os = "android")]
+unsafe extern "C" {
+    fn __android_log_write(prio: std::ffi::c_int, tag: *const std::ffi::c_char, text: *const std::ffi::c_char) -> std::ffi::c_int;
+}
+
 impl LogSink for Console {
+    #[cfg(not(target_os = "android"))]
     fn put(&mut self, bytes: &[u8]) {
         let mut stderr = std::io::stderr().lock();
         let _ = stderr.write_all(bytes);
         let _ = stderr.flush();
+    }
+
+    #[cfg(target_os = "android")]
+    fn put(&mut self, bytes: &[u8]) {
+        // Android `android_log_buf_write` priorities: WARN=5, ERROR=6, INFO=4.
+        const ANDROID_LOG_INFO: std::ffi::c_int = 4;
+        const ANDROID_LOG_WARN: std::ffi::c_int = 5;
+        const ANDROID_LOG_ERROR: std::ffi::c_int = 6;
+
+        let text = String::from_utf8_lossy(bytes);
+        for line in text.lines() {
+            if line.is_empty() {
+                continue;
+            }
+            let prio = if line.contains(" ERROR ") {
+                ANDROID_LOG_ERROR
+            } else if line.contains(" WARN ") {
+                ANDROID_LOG_WARN
+            } else {
+                ANDROID_LOG_INFO
+            };
+            if let Ok(c_line) = std::ffi::CString::new(line) {
+                // SAFETY: `c"AuroraViewer"` and `c_line` are valid NUL-terminated C strings.
+                unsafe {
+                    __android_log_write(prio, c"AuroraViewer".as_ptr(), c_line.as_ptr());
+                }
+            }
+        }
     }
 }
 
@@ -542,6 +581,12 @@ fn prune_old_logs(dir: PathBuf, keep: Vec<PathBuf>) {
 }
 
 pub fn init() {
+    static INIT: std::sync::Once = std::sync::Once::new();
+    let mut first = false;
+    INIT.call_once(|| first = true);
+    if !first {
+        return;
+    }
     let dir = logs_dir();
     let _ = std::fs::create_dir_all(&dir);
     let path = log_path();
@@ -569,13 +614,13 @@ pub fn init() {
     // Client disconnected` each time cpal closes a stream (every output or
     // capture device switch). Real stream failures reach aurora-audio through
     // cpal's error callback, which reopens the device.
-    env_logger::Builder::from_env(
+    let _ = env_logger::Builder::from_env(
         env_logger::Env::default()
             .default_filter_or("info,wgpu_core=warn,wgpu_hal=warn,naga=warn,reqwest=warn,symphonia=warn,pulseaudio=off,zbus=warn"),
     )
     .format_timestamp_millis()
     .target(env_logger::Target::Pipe(Box::new(tee)))
-    .init();
+    .try_init();
     std::panic::set_hook(Box::new(|info| {
         // wgpu's panic for a device lost during a wait, caught by the
         // renderer and taken as the loss (aurora-render device_lost.rs);

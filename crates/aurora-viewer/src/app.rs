@@ -24,6 +24,28 @@ use winit::event_loop::ActiveEventLoop;
 use winit::keyboard::{KeyCode, PhysicalKey};
 use winit::window::{Window, WindowId};
 
+#[cfg(not(target_os = "android"))]
+fn key_without_modifiers(key: &winit::event::KeyEvent) -> winit::keyboard::Key {
+    use winit::platform::modifier_supplement::KeyEventExtModifierSupplement;
+    key.key_without_modifiers()
+}
+
+#[cfg(target_os = "android")]
+fn key_without_modifiers(key: &winit::event::KeyEvent) -> winit::keyboard::Key {
+    key.logical_key.clone()
+}
+
+#[cfg(not(target_os = "android"))]
+fn physical_key_scancode(key: PhysicalKey) -> u32 {
+    use winit::platform::scancode::PhysicalKeyExtScancode;
+    key.to_scancode().unwrap_or(0)
+}
+
+#[cfg(target_os = "android")]
+fn physical_key_scancode(_key: PhysicalKey) -> u32 {
+    0
+}
+
 mod about;
 mod animation_explorer;
 mod ao;
@@ -466,6 +488,8 @@ pub struct App {
     vr_rig_yaw: f32,
     vr_head_rotation: glam::Quat,
     vr_head_pose: Option<aurora_render::HeadPose>,
+    mobile_vr: crate::mobile_vr::MobileVr,
+    touch_nav: crate::touch::TouchNav,
     vr_body_follow: crate::camera::vr::BodyFollow,
     vr_walk_override: crate::camera::vr::WalkOverride,
     vr_follow_flags: Option<u32>,
@@ -1750,6 +1774,8 @@ impl App {
             current_window: Weak::new(),
             exit_windows_hidden: false,
             gpu_losses: Default::default(),
+            mobile_vr: Default::default(),
+            touch_nav: Default::default(),
             egui_ctx,
             logo: None,
             logo_rx: Some(rx),
@@ -8367,6 +8393,29 @@ impl App {
         true
     }
 
+    /// Handle multi-touch gestures on the 3D world (1-finger orbit/tap, 2-finger pinch/pan).
+    fn handle_touch(&mut self, touch: winit::event::Touch) {
+        let scale = self.gfx.as_ref().map_or(1.0, |g| g.window.scale_factor() as f32).max(0.5);
+        let pos = [touch.location.x as f32 / scale, touch.location.y as f32 / scale];
+        let action = self.touch_nav.on_touch(touch.phase, touch.id, pos, Instant::now());
+        if action.orbit != [0.0, 0.0] {
+            let s = self.settings.mouse_sensitivity;
+            self.camera.orbit_drag(action.orbit[0], action.orbit[1], s, &mut self.world.agent);
+        }
+        if action.zoom.abs() > 1e-4 && self.camera.free().is_none() {
+            self.camera_wheel(-action.zoom);
+        }
+        if action.pan != [0.0, 0.0] {
+            let pan = Vec3::new(-action.pan[0] * 0.01, action.pan[1] * 0.01, 0.0);
+            self.camera.pan_edit(pan, &mut self.world.agent, &self.settings.camera);
+        }
+        if let Some(tap) = action.tap {
+            self.cursor_pos = (tap[0], tap[1]);
+            self.mouse_input(MouseButton::Left, true, false);
+            self.mouse_input(MouseButton::Left, false, false);
+        }
+    }
+
     /// Wheel clicks on the world (SL sign: positive zooms out): the held
     /// mouselook zoom's angle, or the camera's own use of the wheel.
     fn camera_wheel(&mut self, clicks: f32) {
@@ -8893,13 +8942,12 @@ impl App {
     /// The headset has no viewer UI yet. Restrict keyboard actions so an
     /// accidental shortcut cannot open an invisible window or enter text.
     fn vr_keyboard_input(&mut self, key: &winit::event::KeyEvent) {
-        use winit::platform::modifier_supplement::KeyEventExtModifierSupplement;
         let PhysicalKey::Code(code) = key.physical_key else {
             return;
         };
         let code = crate::keybinds::binding_code(code, &key.logical_key);
         let input = Input::key(code);
-        let gesture = crate::gestures::keys::from_key(code, &key.key_without_modifiers());
+        let gesture = crate::gestures::keys::from_key(code, &key_without_modifiers(key));
         if key.state == ElementState::Released {
             self.down.remove(&input);
             self.check_temp_run();
@@ -10749,15 +10797,23 @@ impl App {
             self.vr_reference_generation = Some(pose.generation);
             self.vr_head_pose = Some(pose);
         }
-        let pose = self.vr_head_pose.filter(|p| p.fresh() && p.origin == self.world.main_region);
-        self.vr_focused = gfx.renderer.vr_focused() && pose.is_some();
-        if let Some(pose) = pose {
+        if let Some(mut pose) = self.mobile_vr.poll_head_pose(Instant::now()) {
+            pose.origin = self.world.main_region;
+            pose.revision = self.vr_revision;
+            self.vr_head_pose = Some(pose);
             self.vr_head_rotation = pose.rotation;
+            self.camera.vr_tracking(Some(pose));
         } else {
-            self.vr_head_rotation = glam::Quat::IDENTITY;
+            let pose = self.vr_head_pose.filter(|p| p.fresh() && p.origin == self.world.main_region);
+            self.vr_focused = gfx.renderer.vr_focused() && pose.is_some();
+            if let Some(pose) = pose {
+                self.vr_head_rotation = pose.rotation;
+            } else {
+                self.vr_head_rotation = glam::Quat::IDENTITY;
+            }
+            self.camera
+                .vr_tracking(pose.filter(|p| self.vr_focused && p.revision == self.vr_revision));
         }
-        self.camera
-            .vr_tracking(pose.filter(|p| self.vr_focused && p.revision == self.vr_revision));
         if gfx.renderer.vr_engaged() && self.vr_mode.is_none() {
             self.apply_vr_mode(self.vr_requested_mode);
         }
@@ -20796,6 +20852,13 @@ impl ApplicationHandler for App {
         if self.gfx.is_some() {
             return;
         }
+        #[cfg(target_os = "android")]
+        if !crate::android::ensure_permissions_before_start(true) {
+            event_loop.set_control_flow(winit::event_loop::ControlFlow::WaitUntil(
+                Instant::now() + Duration::from_millis(100),
+            ));
+            return;
+        }
         // captures keep a fixed, predictable window
         let capture = self.capture.is_some();
         let (mut w, mut h) = (self.settings.window_width.max(800), self.settings.window_height.max(600));
@@ -20915,6 +20978,9 @@ impl ApplicationHandler for App {
             self.settings.save();
         }
         renderer.apply_settings(self.settings.render_settings());
+        if self.egui_replay {
+            self.adopt_gpu_scene(&mut renderer);
+        }
         self.note_gpus(&renderer);
         self.login_form.driver_notice = self.driver_notice(&renderer.info);
         self.safe_graphics_at_start();
@@ -23842,6 +23908,21 @@ impl ApplicationHandler for App {
         self.gfx = None;
     }
 
+    fn suspended(&mut self, _event_loop: &ActiveEventLoop) {
+        self.touch_nav.clear();
+        self.mobile_vr.set_enabled(false);
+        #[cfg(target_os = "android")]
+        {
+            crate::android::notify_suspended();
+            // Android destroys the NativeActivity surface when suspended;
+            // drop the renderer and window so `resumed` recreates them cleanly.
+            if let Some(mut gfx) = self.gfx.take() {
+                self.forget_gpu_scene(&mut gfx.renderer);
+            }
+            self.egui_replay = true;
+        }
+    }
+
     fn window_event(&mut self, event_loop: &ActiveEventLoop, id: WindowId, event: WindowEvent) {
         // the emoji a remote desktop types as two halves, which winit loses,
         // given back to the press of the second (wide_chars.rs)
@@ -24293,8 +24374,7 @@ impl ApplicationHandler for App {
                     }
                     // Releases always go through so keys never get stuck.
                     let typing = self.egui_ctx.egui_wants_keyboard_input() || egui::Popup::is_any_open(&self.egui_ctx);
-                    use winit::platform::modifier_supplement::KeyEventExtModifierSupplement;
-                    let gesture_key = crate::gestures::keys::from_key(code, &ke.key_without_modifiers());
+                    let gesture_key = crate::gestures::keys::from_key(code, &key_without_modifiers(ke));
                     if !pressed && let Some(key) = gesture_key {
                         self.gesture_state.manager.release(Some(key));
                     }
@@ -24329,8 +24409,7 @@ impl ApplicationHandler for App {
                     let web = self.focused_web();
                     let web_focused = web.is_some();
                     if !typing && let Some(p) = web {
-                        use winit::platform::scancode::PhysicalKeyExtScancode;
-                        let scancode = ke.physical_key.to_scancode().unwrap_or(0);
+                        let scancode = physical_key_scancode(ke.physical_key);
                         if crate::media::keys::edit(p, letter, code, pressed, ke.repeat, web_mods)
                             || crate::media::keys::forward(p, code, scancode, pressed, ke.repeat, ke.text.as_deref(), web_mods)
                             || pressed
@@ -24340,8 +24419,7 @@ impl ApplicationHandler for App {
                     }
                     // a focused media page gets the keyboard (LLViewerMediaFocus)
                     if self.media.focus.is_some() && !typing && (!resp.consumed || !pressed) {
-                        use winit::platform::scancode::PhysicalKeyExtScancode;
-                        let scancode = ke.physical_key.to_scancode().unwrap_or(0);
+                        let scancode = physical_key_scancode(ke.physical_key);
                         let mods = aurora_media::Modifiers {
                             control: self.ctrl,
                             alt: self.alt,
@@ -24514,6 +24592,9 @@ impl ApplicationHandler for App {
                     self.camera_wheel(-steps);
                 }
             }
+            WindowEvent::Touch(touch) if !self.exit_prompt.open && !self.ui_takes_pointer() && self.in_world() => {
+                self.handle_touch(*touch);
+            }
             _ => {}
         }
     }
@@ -24540,6 +24621,30 @@ impl ApplicationHandler for App {
 
     fn about_to_wait(&mut self, event_loop: &ActiveEventLoop) {
         crate::crash::pumped();
+        if let Some(pos) = self.touch_nav.poll_long_press(Instant::now())
+            && !self.exit_prompt.open
+            && !self.ui_takes_pointer()
+            && self.in_world()
+        {
+            self.cursor_pos = (pos[0], pos[1]);
+            self.mouse_input(MouseButton::Right, true, false);
+            self.mouse_input(MouseButton::Right, false, false);
+        }
+        #[cfg(target_os = "android")]
+        if self.gfx.is_none() {
+            if crate::android::waiting_for_permissions() {
+                if crate::android::ensure_permissions_before_start(false) {
+                    self.resumed(event_loop);
+                } else {
+                    event_loop.set_control_flow(winit::event_loop::ControlFlow::WaitUntil(
+                        Instant::now() + Duration::from_millis(100),
+                    ));
+                }
+            } else {
+                event_loop.set_control_flow(winit::event_loop::ControlFlow::Wait);
+            }
+            return;
+        }
         if self.exit_windows_hidden {
             // A hidden window need not receive redraws. Finish the last scene
             // capture if requested, then only pump LogoutReply and the quit timer.

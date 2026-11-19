@@ -96,7 +96,7 @@ impl Addon {
         let legacy = self.legacy;
         jobs.execute(move || {
             let saved = (|| {
-                let Some(path) = rfd::FileDialog::new()
+                let Some(path) = crate::file_dialog::FileDialog::new()
                     .set_title(aurora_i18n::tr!("blender-live-save-addon"))
                     .set_file_name(if legacy {
                         "aurora-live-mesh-legacy.zip"
