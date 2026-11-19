@@ -148,6 +148,9 @@ objc2-foundation = { version = "0.3.2", default-features = false, features = ["s
 # cancelled; already in the tree through rfd
 objc2-core-foundation = { version = "0.3.2", default-features = false, features = ["std", "CFBase", "CFDate", "CFDictionary", "CFString", "CFUserNotification"] }
 
+[target.'cfg(target_os = "android")'.dependencies]
+winit = { version = "0.30", features = ["android-native-activity"] }
+
 [target.'cfg(target_os = "linux")'.dependencies]
 # The freedesktop notification service (system_notify.rs), over the session
 # bus; already in the tree through keyring's Secret Service store
