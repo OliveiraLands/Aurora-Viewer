@@ -953,6 +953,7 @@ impl Renderer {
         crate::start_progress::enter(crate::start_progress::Phase::Ready);
         Ok(Renderer {
             backend: RendererBackend::Glow(Box::new(glow)),
+            second_view: None,
             vr: Arc::new(crate::vr_control::Control::new(false)),
             info,
             geometry: GeometryArena::new_cpu(256 << 20),
