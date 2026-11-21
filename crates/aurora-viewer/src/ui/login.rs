@@ -768,8 +768,9 @@ pub fn show(
     let ctx = ui.ctx().clone();
     let screen = ctx.content_rect();
     let wide = screen.width() >= 1100.0;
-    let compact = screen.width() < 600.0;
-    let card_w = if compact {
+    let short = screen.height() < 620.0;
+    let compact = screen.width() < 600.0 || short;
+    let card_w = if compact && !short {
         300.0f32.min(screen.width() - 48.0)
     } else {
         380.0f32.min(screen.width() - 32.0)
@@ -803,304 +804,317 @@ pub fn show(
     egui::Area::new(area)
         .anchor(egui::Align2::CENTER_CENTER, Vec2::new(0.0, CENTER_OFFSET - lift))
         .show(&ctx, |ui| {
-            ui.set_width(card_w);
-            ui.vertical_centered(|ui| {
-                if let Some(l) = logo {
-                    let drawn_logo = if compact { logo_size.min(68.0) } else { logo_size };
-                    let r = ui.add(egui::Image::new(l).fit_to_exact_size(Vec2::splat(drawn_logo))).rect;
-                    // soft light behind the logo (additive)
-                    let painter = ctx.layer_painter(egui::LayerId::new(egui::Order::Background, egui::Id::unique("halo")));
-                    super::aurora_bg::radial_glow(&painter, r.center(), 150.0, p.violet, 0.42);
-                }
-                ui.add_space(2.0);
-                ui.label(
-                    RichText::new("Aurora Viewer")
-                        .size(if compact { 24.0 } else { 34.0 })
-                        .strong()
-                        .color(p.ink),
-                );
-                ui.label(
-                    RichText::new(client_tagline())
-                        .size(if compact { 11.5 } else { 13.0 })
-                        .color(p.violet_pale),
-                );
-                ui.add_space(if compact { 10.0 } else { 18.0 });
-            });
-            login_card = card(ui, p, card_margin, true, |ui| {
-                ui.set_width(card_w - f32::from(card_margin) * 2.0);
-                if compact {
-                    ui.spacing_mut().interact_size.y = ui.spacing().interact_size.y.min(32.0);
-                    ui.spacing_mut().item_spacing.y = 4.0;
-                } else {
-                    ui.spacing_mut().item_spacing.y = 6.0;
-                }
-                let enabled = !form.busy && !super::grids::is_open(&ctx);
-                ui.add_enabled_ui(enabled, |ui| {
-                    ui.label(RichText::new(aurora_i18n::tr!("ui-login-login")).size(18.0).strong().color(p.ink));
-                    ui.add_space(6.0);
-                    caption(ui, p, aurora_i18n::tr!("common-username"));
-                    let user = field(
-                        ui,
-                        p,
-                        icons,
-                        "login_user",
-                        "user-filled",
-                        aurora_i18n::tr!("extra-first-last-or-username"),
-                        &mut settings.username,
-                        None,
-                    );
-                    ui.add_space(4.0);
-                    caption(ui, p, aurora_i18n::tr!("ui-login-password"));
-                    // LLPanelLogin::setFields (indra/newview/llpanellogin.cpp,
-                    // originally LGPL 2.1): show 16 masked filler characters.
-                    // Keep the marker out of the input so login still uses the
-                    // saved hash, and typing replaces it without editing filler.
-                    let hint = if form.stored.is_some() { REMEMBERED_PASSWORD_MASK } else { "" };
-                    let pass = field(
-                        ui,
-                        p,
-                        icons,
-                        "login_pass",
-                        "lock-filled",
-                        hint,
-                        &mut form.password,
-                        Some(&mut form.show_password),
-                    );
-                    let mut mfa = None;
-                    if form.show_mfa {
-                        ui.add_space(4.0);
+            let max_h = (lowest - BAR_GAP).max(160.0);
+            egui::ScrollArea::vertical()
+                .id_salt("login_scroll")
+                .max_height(max_h)
+                .auto_shrink([true, true])
+                .show(ui, |ui| {
+                    ui.set_width(card_w);
+                    ui.vertical_centered(|ui| {
+                        if let Some(l) = logo {
+                            let drawn_logo = if short {
+                                logo_size.min(44.0)
+                            } else if compact {
+                                logo_size.min(68.0)
+                            } else {
+                                logo_size
+                            };
+                            let r = ui.add(egui::Image::new(l).fit_to_exact_size(Vec2::splat(drawn_logo))).rect;
+                            // soft light behind the logo (additive)
+                            let painter = ctx.layer_painter(egui::LayerId::new(egui::Order::Background, egui::Id::unique("halo")));
+                            super::aurora_bg::radial_glow(&painter, r.center(), 150.0, p.violet, 0.42);
+                        }
+                        ui.add_space(2.0);
                         ui.label(
-                            RichText::new(aurora_i18n::tr!("ui-login-authentication-code-2fa"))
-                                .size(11.5)
-                                .color(p.amber),
+                            RichText::new("Aurora Viewer")
+                                .size(if compact { 24.0 } else { 34.0 })
+                                .strong()
+                                .color(p.ink),
                         );
-                        mfa = Some(field(
-                            ui,
-                            p,
-                            icons,
-                            "login_mfa",
-                            "shield-lock-filled",
-                            "000000",
-                            &mut form.mfa_token,
-                            None,
-                        ));
-                        widgets::checkbox(ui, p, &mut form.remember_mfa, aurora_i18n::tr!("login-accounts-remember-mfa"));
-                    }
+                        ui.label(
+                            RichText::new(client_tagline())
+                                .size(if compact { 11.5 } else { 13.0 })
+                                .color(p.violet_pale),
+                        );
+                        ui.add_space(if compact { 10.0 } else { 18.0 });
+                    });
+                    login_card = card(ui, p, card_margin, true, |ui| {
+                        ui.set_width(card_w - f32::from(card_margin) * 2.0);
+                        if compact {
+                            ui.spacing_mut().interact_size.y = ui.spacing().interact_size.y.min(32.0);
+                            ui.spacing_mut().item_spacing.y = 4.0;
+                        } else {
+                            ui.spacing_mut().item_spacing.y = 6.0;
+                        }
+                        let enabled = !form.busy && !super::grids::is_open(&ctx);
+                        ui.add_enabled_ui(enabled, |ui| {
+                            ui.label(RichText::new(aurora_i18n::tr!("ui-login-login")).size(18.0).strong().color(p.ink));
+                            ui.add_space(6.0);
+                            caption(ui, p, aurora_i18n::tr!("common-username"));
+                            let user = field(
+                                ui,
+                                p,
+                                icons,
+                                "login_user",
+                                "user-filled",
+                                aurora_i18n::tr!("extra-first-last-or-username"),
+                                &mut settings.username,
+                                None,
+                            );
+                            ui.add_space(4.0);
+                            caption(ui, p, aurora_i18n::tr!("ui-login-password"));
+                            // LLPanelLogin::setFields (indra/newview/llpanellogin.cpp,
+                            // originally LGPL 2.1): show 16 masked filler characters.
+                            // Keep the marker out of the input so login still uses the
+                            // saved hash, and typing replaces it without editing filler.
+                            let hint = if form.stored.is_some() { REMEMBERED_PASSWORD_MASK } else { "" };
+                            let pass = field(
+                                ui,
+                                p,
+                                icons,
+                                "login_pass",
+                                "lock-filled",
+                                hint,
+                                &mut form.password,
+                                Some(&mut form.show_password),
+                            );
+                            let mut mfa = None;
+                            if form.show_mfa {
+                                ui.add_space(4.0);
+                                ui.label(
+                                    RichText::new(aurora_i18n::tr!("ui-login-authentication-code-2fa"))
+                                        .size(11.5)
+                                        .color(p.amber),
+                                );
+                                mfa = Some(field(
+                                    ui,
+                                    p,
+                                    icons,
+                                    "login_mfa",
+                                    "shield-lock-filled",
+                                    "000000",
+                                    &mut form.mfa_token,
+                                    None,
+                                ));
+                                widgets::checkbox(ui, p, &mut form.remember_mfa, aurora_i18n::tr!("login-accounts-remember-mfa"));
+                            }
 
-                    ui.add_space(6.0);
-                    // grid and start location side by side
-                    ui.columns(2, |cols| {
-                        caption(&mut cols[0], p, aurora_i18n::tr!("ui-login-grid"));
-                        let mut uri = settings.login_uri();
-                        super::grids::selector(&mut cols[0], &settings.grids, &mut uri);
-                        settings.grid = crate::login_accounts::grid(&uri);
-                        if settings.grid == GridChoice::Custom && !uri.is_empty() {
-                            settings.custom_login_uri = uri;
-                        }
-                        caption(&mut cols[1], p, aurora_i18n::tr!("ui-login-start"));
-                        let width = cols[1].available_width();
-                        let key = crate::login_favorites::key(&settings.login_uri(), &settings.username);
-                        let mut favorites = StartFavorites::of(&form.favorites, &form.start_favorite, &key);
-                        demo_open_start_menu(&cols[1], "start", &favorites);
-                        start_menu(
-                            &mut cols[1],
-                            egui::ComboBox::from_id_salt("start").width(width),
-                            &mut settings.start_location,
-                            &mut form.start_slurl,
-                            &mut favorites,
-                        );
-                        favorites.keep(&mut form.start_favorite, key);
-                    });
-                    let key = crate::login_favorites::key(&settings.login_uri(), &settings.username);
-                    let favorite_chosen = StartFavorites::of(&form.favorites, &form.start_favorite, &key).chosen().is_some();
-                    if settings.grid == GridChoice::Custom {
-                        field(
-                            ui,
-                            p,
-                            icons,
-                            "login_grid",
-                            "world-filled",
-                            "http://grille.exemple:8002/",
-                            &mut settings.custom_login_uri,
-                            None,
-                        );
-                    }
-                    if settings.start_location == "region" && form.start_slurl.is_none() && !favorite_chosen {
-                        field(
-                            ui,
-                            p,
-                            icons,
-                            "login_region",
-                            "map-pin-filled",
-                            aurora_i18n::tr!("ui-login-region-name"),
-                            &mut settings.start_region,
-                            None,
-                        );
-                    }
-                    ui.add_space(2.0);
-                    ui.horizontal(|ui| {
-                        super::widgets::switch(ui, p, &mut settings.remember_username);
-                        ui.label(RichText::new(aurora_i18n::tr!("ui-login-remember-me")).size(12.5).color(p.muted));
-                        // "Create an account" at the end of the row: the card
-                        // keeps its height in a low window
-                        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                            create_account_button(ui, p, settings, form, Vec2::new(0.0, 24.0));
+                            ui.add_space(6.0);
+                            // grid and start location side by side
+                            ui.columns(2, |cols| {
+                                caption(&mut cols[0], p, aurora_i18n::tr!("ui-login-grid"));
+                                let mut uri = settings.login_uri();
+                                super::grids::selector(&mut cols[0], &settings.grids, &mut uri);
+                                settings.grid = crate::login_accounts::grid(&uri);
+                                if settings.grid == GridChoice::Custom && !uri.is_empty() {
+                                    settings.custom_login_uri = uri;
+                                }
+                                caption(&mut cols[1], p, aurora_i18n::tr!("ui-login-start"));
+                                let width = cols[1].available_width();
+                                let key = crate::login_favorites::key(&settings.login_uri(), &settings.username);
+                                let mut favorites = StartFavorites::of(&form.favorites, &form.start_favorite, &key);
+                                demo_open_start_menu(&cols[1], "start", &favorites);
+                                start_menu(
+                                    &mut cols[1],
+                                    egui::ComboBox::from_id_salt("start").width(width),
+                                    &mut settings.start_location,
+                                    &mut form.start_slurl,
+                                    &mut favorites,
+                                );
+                                favorites.keep(&mut form.start_favorite, key);
+                            });
+                            let key = crate::login_favorites::key(&settings.login_uri(), &settings.username);
+                            let favorite_chosen = StartFavorites::of(&form.favorites, &form.start_favorite, &key).chosen().is_some();
+                            if settings.grid == GridChoice::Custom {
+                                field(
+                                    ui,
+                                    p,
+                                    icons,
+                                    "login_grid",
+                                    "world-filled",
+                                    "http://grille.exemple:8002/",
+                                    &mut settings.custom_login_uri,
+                                    None,
+                                );
+                            }
+                            if settings.start_location == "region" && form.start_slurl.is_none() && !favorite_chosen {
+                                field(
+                                    ui,
+                                    p,
+                                    icons,
+                                    "login_region",
+                                    "map-pin-filled",
+                                    aurora_i18n::tr!("ui-login-region-name"),
+                                    &mut settings.start_region,
+                                    None,
+                                );
+                            }
+                            ui.add_space(2.0);
+                            ui.horizontal(|ui| {
+                                super::widgets::switch(ui, p, &mut settings.remember_username);
+                                ui.label(RichText::new(aurora_i18n::tr!("ui-login-remember-me")).size(12.5).color(p.muted));
+                                // "Create an account" at the end of the row: the card
+                                // keeps its height in a low window
+                                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                                    create_account_button(ui, p, settings, form, Vec2::new(0.0, 24.0));
+                                });
+                            });
+                            ui.horizontal(|ui| {
+                                super::widgets::switch(ui, p, &mut settings.remember_password);
+                                ui.label(
+                                    RichText::new(aurora_i18n::tr!("ui-login-remember-password"))
+                                        .size(12.5)
+                                        .color(p.muted),
+                                )
+                                .on_hover_text(remember_password_hint());
+                            });
+                            ui.add_space(10.0);
+                            let can = form.block_reason.is_none()
+                                && !settings.username.trim().is_empty()
+                                && (!form.password.is_empty() || form.stored.is_some());
+                            let (r, resp) = ui.allocate_exact_size(
+                                Vec2::new(ui.available_width(), 38.0),
+                                if can { Sense::click() } else { Sense::hover() },
+                            );
+                            // Requested UX: focus the first missing field, or Connect
+                            // when credentials are ready. Firestorm giveFocus otherwise
+                            // returns to the user-name field when both are present.
+                            if !form.focused && enabled {
+                                form.focused = true;
+                                match mfa {
+                                    Some(m) if form.mfa_token.is_empty() => m.request_focus(),
+                                    _ if settings.username.trim().is_empty() => user.request_focus(),
+                                    _ if can => resp.request_focus(),
+                                    _ => pass.request_focus(),
+                                }
+                            }
+                            let hot = can && resp.hovered();
+                            let fill = if !can {
+                                p.violet.gamma_multiply(0.35)
+                            } else if hot {
+                                p.violet_light
+                            } else {
+                                p.violet
+                            };
+                            ui.painter().rect_filled(r, ui.visuals().widgets.inactive.corner_radius, fill);
+                            let txt_col = if can { p.on_accent } else { p.on_accent.gamma_multiply(0.5) };
+                            let galley = ui.painter().layout_no_wrap(
+                                aurora_i18n::tr!("ui-login-log-in").to_owned(),
+                                egui::FontId::proportional(15.0),
+                                txt_col,
+                            );
+                            let total = galley.size().x + 26.0;
+                            let x0 = r.center().x - total * 0.5;
+                            img(
+                                ui,
+                                icons,
+                                if form.block_reason.is_some() { "lock-filled" } else { "login-2" },
+                                egui::Rect::from_center_size(egui::pos2(x0 + 9.0, r.center().y), Vec2::splat(18.0)),
+                                txt_col,
+                            );
+                            super::widgets::paint_ink_centered(
+                                ui.painter(),
+                                galley,
+                                egui::pos2(x0 + 26.0 + (total - 26.0) * 0.5, r.center().y),
+                                txt_col,
+                            );
+                            if hot {
+                                ui.ctx().set_cursor_icon(egui::CursorIcon::PointingHand);
+                            }
+                            // the keys typed in the sign-up page reach egui too
+                            let enter = !form.signup_open
+                                && (user.lost_focus() || pass.lost_focus() || resp.has_focus())
+                                && ui.input(|i| i.key_pressed(egui::Key::Enter));
+                            if (resp.clicked() || enter) && can && enabled {
+                                action = LoginAction::Login;
+                            }
                         });
-                    });
-                    ui.horizontal(|ui| {
-                        super::widgets::switch(ui, p, &mut settings.remember_password);
-                        ui.label(
-                            RichText::new(aurora_i18n::tr!("ui-login-remember-password"))
-                                .size(12.5)
-                                .color(p.muted),
-                        )
-                        .on_hover_text(remember_password_hint());
-                    });
-                    ui.add_space(10.0);
-                    let can = form.block_reason.is_none()
-                        && !settings.username.trim().is_empty()
-                        && (!form.password.is_empty() || form.stored.is_some());
-                    let (r, resp) = ui.allocate_exact_size(
-                        Vec2::new(ui.available_width(), 38.0),
-                        if can { Sense::click() } else { Sense::hover() },
-                    );
-                    // Requested UX: focus the first missing field, or Connect
-                    // when credentials are ready. Firestorm giveFocus otherwise
-                    // returns to the user-name field when both are present.
-                    if !form.focused && enabled {
-                        form.focused = true;
-                        match mfa {
-                            Some(m) if form.mfa_token.is_empty() => m.request_focus(),
-                            _ if settings.username.trim().is_empty() => user.request_focus(),
-                            _ if can => resp.request_focus(),
-                            _ => pass.request_focus(),
+                        if let Some(reason) = form.block_reason {
+                            ui.add_space(8.0);
+                            ui.label(RichText::new(reason).size(12.0).color(p.amber));
                         }
-                    }
-                    let hot = can && resp.hovered();
-                    let fill = if !can {
-                        p.violet.gamma_multiply(0.35)
-                    } else if hot {
-                        p.violet_light
-                    } else {
-                        p.violet
-                    };
-                    ui.painter().rect_filled(r, ui.visuals().widgets.inactive.corner_radius, fill);
-                    let txt_col = if can { p.on_accent } else { p.on_accent.gamma_multiply(0.5) };
-                    let galley = ui.painter().layout_no_wrap(
-                        aurora_i18n::tr!("ui-login-log-in").to_owned(),
-                        egui::FontId::proportional(15.0),
-                        txt_col,
-                    );
-                    let total = galley.size().x + 26.0;
-                    let x0 = r.center().x - total * 0.5;
-                    img(
-                        ui,
-                        icons,
-                        if form.block_reason.is_some() { "lock-filled" } else { "login-2" },
-                        egui::Rect::from_center_size(egui::pos2(x0 + 9.0, r.center().y), Vec2::splat(18.0)),
-                        txt_col,
-                    );
-                    super::widgets::paint_ink_centered(
-                        ui.painter(),
-                        galley,
-                        egui::pos2(x0 + 26.0 + (total - 26.0) * 0.5, r.center().y),
-                        txt_col,
-                    );
-                    if hot {
-                        ui.ctx().set_cursor_icon(egui::CursorIcon::PointingHand);
-                    }
-                    // the keys typed in the sign-up page reach egui too
-                    let enter = !form.signup_open
-                        && (user.lost_focus() || pass.lost_focus() || resp.has_focus())
-                        && ui.input(|i| i.key_pressed(egui::Key::Enter));
-                    if (resp.clicked() || enter) && can && enabled {
-                        action = LoginAction::Login;
-                    }
+                        if let Some(msg) = form.tos_message.clone() {
+                            ui.add_space(8.0);
+                            widgets::divider(ui, p);
+                            ui.label(RichText::new(aurora_i18n::tr!("ui-login-terms-of-service")).strong().color(p.amber));
+                            egui::ScrollArea::vertical().max_height(120.0).show(ui, |ui| {
+                                ui.label(RichText::new(&msg).size(12.0).color(p.muted));
+                            });
+                            if let Some(url) = terms_url(&msg, &settings.login_uri()) {
+                                terms_link(ui, p, &url);
+                            }
+                            if ui
+                                .add_enabled(
+                                    form.block_reason.is_none() && !form.busy,
+                                    egui::Button::new(aurora_i18n::tr!("ui-login-i-accept-the-terms-and-want-to-log-in")),
+                                )
+                                .clicked()
+                            {
+                                form.agree_tos = true;
+                                form.tos_message = None;
+                                action = LoginAction::Login;
+                            }
+                        }
+                        // a step of its own, as the Legacy Viewer's message_critical
+                        // floater: reading it acknowledges this message only
+                        if let Some(msg) = form.critical_message.clone() {
+                            ui.add_space(8.0);
+                            widgets::divider(ui, p);
+                            ui.label(RichText::new(aurora_i18n::tr!("ui-login-critical-message")).strong().color(p.amber));
+                            egui::ScrollArea::vertical()
+                                .id_salt("critical_message")
+                                .max_height(120.0)
+                                .show(ui, |ui| {
+                                    ui.label(RichText::new(msg).size(12.0).color(p.muted));
+                                });
+                            if ui
+                                .add_enabled(
+                                    form.block_reason.is_none() && !form.busy,
+                                    egui::Button::new(aurora_i18n::tr!("ui-login-critical-message-read")),
+                                )
+                                .clicked()
+                            {
+                                form.read_critical = true;
+                                form.critical_message = None;
+                                action = LoginAction::Login;
+                            }
+                        }
+                        // the login would go on to another server: the user decides
+                        if let Some(server) = form.next_server.clone() {
+                            ui.add_space(8.0);
+                            widgets::divider(ui, p);
+                            ui.label(RichText::new(aurora_i18n::tr!("ui-login-next-server")).strong());
+                            ui.label(
+                                RichText::new(aurora_i18n::tr!("ui-login-next-server-body", server = server.as_str()))
+                                    .size(12.0)
+                                    .color(p.muted),
+                            );
+                            if ui
+                                .add_enabled(
+                                    form.block_reason.is_none() && !form.busy,
+                                    egui::Button::new(aurora_i18n::tr!("ui-login-next-server-accept")),
+                                )
+                                .clicked()
+                            {
+                                form.accepted_next_servers.push(server);
+                                form.next_server = None;
+                                action = LoginAction::Login;
+                            }
+                        }
+                        if let Some((msg, frac)) = progress {
+                            ui.add_space(10.0);
+                            widgets::progress(ui, p, "login_progress", frac, ui.available_width(), "", None);
+                            ui.label(RichText::new(msg).size(12.0).color(p.violet_pale));
+                        }
+                        if let Some(err) = &form.error {
+                            ui.add_space(8.0);
+                            ui.label(RichText::new(err).size(12.5).color(p.danger));
+                        }
+                    })
+                    .response
+                    .rect;
                 });
-                if let Some(reason) = form.block_reason {
-                    ui.add_space(8.0);
-                    ui.label(RichText::new(reason).size(12.0).color(p.amber));
-                }
-                if let Some(msg) = form.tos_message.clone() {
-                    ui.add_space(8.0);
-                    widgets::divider(ui, p);
-                    ui.label(RichText::new(aurora_i18n::tr!("ui-login-terms-of-service")).strong().color(p.amber));
-                    egui::ScrollArea::vertical().max_height(120.0).show(ui, |ui| {
-                        ui.label(RichText::new(&msg).size(12.0).color(p.muted));
-                    });
-                    if let Some(url) = terms_url(&msg, &settings.login_uri()) {
-                        terms_link(ui, p, &url);
-                    }
-                    if ui
-                        .add_enabled(
-                            form.block_reason.is_none() && !form.busy,
-                            egui::Button::new(aurora_i18n::tr!("ui-login-i-accept-the-terms-and-want-to-log-in")),
-                        )
-                        .clicked()
-                    {
-                        form.agree_tos = true;
-                        form.tos_message = None;
-                        action = LoginAction::Login;
-                    }
-                }
-                // a step of its own, as the Legacy Viewer's message_critical
-                // floater: reading it acknowledges this message only
-                if let Some(msg) = form.critical_message.clone() {
-                    ui.add_space(8.0);
-                    widgets::divider(ui, p);
-                    ui.label(RichText::new(aurora_i18n::tr!("ui-login-critical-message")).strong().color(p.amber));
-                    egui::ScrollArea::vertical()
-                        .id_salt("critical_message")
-                        .max_height(120.0)
-                        .show(ui, |ui| {
-                            ui.label(RichText::new(msg).size(12.0).color(p.muted));
-                        });
-                    if ui
-                        .add_enabled(
-                            form.block_reason.is_none() && !form.busy,
-                            egui::Button::new(aurora_i18n::tr!("ui-login-critical-message-read")),
-                        )
-                        .clicked()
-                    {
-                        form.read_critical = true;
-                        form.critical_message = None;
-                        action = LoginAction::Login;
-                    }
-                }
-                // the login would go on to another server: the user decides
-                if let Some(server) = form.next_server.clone() {
-                    ui.add_space(8.0);
-                    widgets::divider(ui, p);
-                    ui.label(RichText::new(aurora_i18n::tr!("ui-login-next-server")).strong());
-                    ui.label(
-                        RichText::new(aurora_i18n::tr!("ui-login-next-server-body", server = server.as_str()))
-                            .size(12.0)
-                            .color(p.muted),
-                    );
-                    if ui
-                        .add_enabled(
-                            form.block_reason.is_none() && !form.busy,
-                            egui::Button::new(aurora_i18n::tr!("ui-login-next-server-accept")),
-                        )
-                        .clicked()
-                    {
-                        form.accepted_next_servers.push(server);
-                        form.next_server = None;
-                        action = LoginAction::Login;
-                    }
-                }
-                if let Some((msg, frac)) = progress {
-                    ui.add_space(10.0);
-                    widgets::progress(ui, p, "login_progress", frac, ui.available_width(), "", None);
-                    ui.label(RichText::new(msg).size(12.0).color(p.violet_pale));
-                }
-                if let Some(err) = &form.error {
-                    ui.add_space(8.0);
-                    ui.label(RichText::new(err).size(12.5).color(p.danger));
-                }
-            })
-            .response
-            .rect;
         });
 
     // ---- version + news (right)

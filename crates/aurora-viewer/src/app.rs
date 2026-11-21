@@ -8457,6 +8457,10 @@ impl App {
 
     /// Handle multi-touch gestures on the 3D world (1-finger orbit/tap, 2-finger pinch/pan).
     fn handle_touch(&mut self, touch: winit::event::Touch) {
+        if self.mobile_vr.enabled {
+            self.touch_nav.clear();
+            return;
+        }
         let scale = self.gfx.as_ref().map_or(1.0, |g| g.window.scale_factor() as f32).max(0.5);
         let pos = [touch.location.x as f32 / scale, touch.location.y as f32 / scale];
         let action = self.touch_nav.on_touch(touch.phase, touch.id, pos, Instant::now());
@@ -10960,6 +10964,17 @@ impl App {
         if self.left_down && self.color_pipette() && !self.egui_ctx.is_pointer_over_egui() {
             self.sample_build_color();
         }
+        #[cfg(target_os = "android")]
+        {
+            crate::android::set_back_consumed(self.mobile_vr.enabled || self.camera.mouselook());
+            if crate::android::take_back_pressed() {
+                if self.mobile_vr.enabled {
+                    self.vr_toggle = true;
+                } else if self.camera.mouselook() {
+                    self.toggle_mouselook();
+                }
+            }
+        }
         // AURORA_DEMO_LINK's lost link, before the frame takes the window
         self.demo_link_lost();
         let Some(mut gfx) = self.gfx.take() else {
@@ -13432,6 +13447,7 @@ impl App {
         }
         // no VR device at startup: a headset there now needs a restart (the
         // GPU device is opened through the VR runtime, at startup only)
+        #[cfg(not(target_os = "android"))]
         if self.vr_toggle && gfx.renderer.vr_state() == aurora_render::VrState::Unavailable {
             self.vr_toggle = false;
             if aurora_render::vr_headset_ready() {
@@ -13454,6 +13470,7 @@ impl App {
                     self.vr_head_pose = None;
                     self.camera.vr_tracking(None);
                 } else {
+                    log::info!("mobile_vr trace: enabling");
                     if self.vr_camera.is_none() {
                         self.vr_camera = Some(self.camera.clone());
                         self.vr_rig_yaw = self.world.agent.yaw;
@@ -13461,13 +13478,16 @@ impl App {
                     self.camera.change_to_mouselook(&mut self.world.agent, &self.settings.camera, false);
                     self.camera.snap();
                     self.mobile_vr.set_enabled(true);
+                    log::info!("mobile_vr trace: sensors enabled");
                     self.mobile_vr.recenter();
                     crate::android::set_landscape(true);
+                    log::info!("mobile_vr trace: set_landscape(true) done");
                     self.vr_mode = Some(crate::camera::VrView::FirstPerson);
                     self.down.clear();
                     self.drop_clicks();
                     self.on_left_release();
                     self.release_cursor(true);
+                    log::info!("mobile_vr trace: toggle complete");
                 }
             }
             #[cfg(not(target_os = "android"))]
@@ -13619,7 +13639,7 @@ impl App {
             let (left_off, right_off) = crate::mobile_vr::eye_offsets(self.mobile_vr.ipd_mm);
             let eye_aspect = (w as f32 * 0.5).max(1.0) / (h as f32).max(1.0);
             let eye_proj = self.camera.proj(eye_aspect);
-            let base_view = fp.view;
+            let base_view = glam::Mat4::from_quat(self.vr_head_rotation.conjugate()) * fp.view;
             fp.view = glam::Mat4::from_translation(-left_off) * base_view;
             fp.proj = eye_proj;
             gfx.renderer.mobile_stereo = true;
@@ -18292,7 +18312,7 @@ impl App {
                 self.plates.probe = ui::nameplate::level_log().then_some(self.world.agent_id);
                 self.update_plate_hover(&ctx);
                 let chat_bubbles = self.chat_bubbles();
-                self.name_tags = if bare {
+                self.name_tags = if bare || self.mobile_vr.enabled {
                     self.name_tag_visibility.clear();
                     Vec::new()
                 } else {
@@ -19193,7 +19213,7 @@ impl App {
                         });
                 }
                 let vr_active = ctx.data(|data| data.get_temp::<bool>(egui::Id::unique("vr-active")).unwrap_or(false));
-                if vr_active {
+                if vr_active && !cfg!(target_os = "android") {
                     let painter = ctx.layer_painter(egui::LayerId::new(egui::Order::Foreground, egui::Id::unique("vr-exit-hint")));
                     aurora_render::vr_hint_marker(&painter, true);
                     let text = aurora_i18n::tr!("app-vr-leave", key = aurora_i18n::tr!("keybinds-esc").to_string());
@@ -19232,7 +19252,7 @@ impl App {
                         let picture = ui::crosshair::picture(&ctx, crosshair);
                         ui::crosshair::draw(&painter, c, crosshair, picture.as_ref());
                     }
-                    if self.settings.camera.show_mouselook_instructions {
+                    if self.settings.camera.show_mouselook_instructions && !cfg!(target_os = "android") {
                         // LLViewerWindow::drawMouselookInstructions: the way
                         // out, half transparent above the bottom bar (the
                         // hidden cursor cannot reach its button)
@@ -24488,6 +24508,9 @@ impl ApplicationHandler for App {
         if self.retired_window.as_ref().is_some_and(|w| w.id() == id) && !matches!(event, WindowEvent::CloseRequested) {
             return;
         }
+        if self.mobile_vr.enabled && matches!(event, WindowEvent::Resized(_) | WindowEvent::Focused(_) | WindowEvent::Destroyed) {
+            log::info!("mobile_vr trace: window_event {event:?}");
+        }
         self.typing_pointer.window_event(&event);
         // The system's view of the keys when the focus comes back is no key
         // press: a key it wrongly reports as down (#2287) would stay held
@@ -25171,9 +25194,10 @@ impl ApplicationHandler for App {
 
     fn about_to_wait(&mut self, event_loop: &ActiveEventLoop) {
         crate::crash::pumped();
-        if let Some(pos) = self.touch_nav.poll_long_press(Instant::now())
+        if self.ui_takes_pointer() || self.mobile_vr.enabled {
+            self.touch_nav.clear();
+        } else if let Some(pos) = self.touch_nav.poll_long_press(Instant::now())
             && !self.exit_prompt.open
-            && !self.ui_takes_pointer()
             && self.in_world()
         {
             self.cursor_pos = (pos[0], pos[1]);

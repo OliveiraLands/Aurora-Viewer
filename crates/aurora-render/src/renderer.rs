@@ -1946,6 +1946,9 @@ pub(crate) struct Backend {
     second_seed: Option<Box<BackendInit>>,
     /// The second camera's renderer and picture, while its window is open.
     second: Option<Box<SecondView>>,
+    /// Background initialization of the second camera's renderer so the render
+    /// thread keeps presenting frames without stalling the UI / input loop.
+    second_pending: Option<std::sync::mpsc::Receiver<Result<Box<Backend>, RenderError>>>,
     #[cfg(any(target_os = "linux", target_os = "windows", target_os = "macos"))]
     vr: Arc<crate::vr_control::Control>,
     #[cfg(any(target_os = "linux", target_os = "windows", target_os = "macos"))]
@@ -4476,6 +4479,7 @@ impl Backend {
             external,
             second_seed,
             second: None,
+            second_pending: None,
             #[cfg(any(target_os = "linux", target_os = "windows", target_os = "macos"))]
             vr,
             #[cfg(any(target_os = "linux", target_os = "windows", target_os = "macos"))]
@@ -8226,35 +8230,59 @@ impl Backend {
             return;
         };
         if self.second.is_none() {
-            let Some(seed) = self.second_seed.as_ref() else {
-                return;
-            };
-            let mut init = (**seed).clone();
-            init.external = true;
-            #[cfg(any(target_os = "linux", target_os = "windows", target_os = "macos"))]
-            {
-                init.xr = None;
-            }
-            init.width = packet.surface.width;
-            init.height = packet.surface.height;
-            init.output_format = Some(self.config.format);
-            init.scene = packet.scene.clone();
-            let started = Instant::now();
-            match Backend::new(init) {
-                Ok(backend) => {
-                    log::info!("second camera: renderer made ({} ms)", started.elapsed().as_millis());
-                    self.second = Some(Box::new(SecondView {
-                        backend,
-                        target: None,
-                        idle: 0,
-                    }));
+            if let Some(rx) = self.second_pending.as_ref() {
+                match rx.try_recv() {
+                    Ok(Ok(backend)) => {
+                        self.second_pending = None;
+                        self.second = Some(Box::new(SecondView {
+                            backend: *backend,
+                            target: None,
+                            idle: 0,
+                        }));
+                    }
+                    Ok(Err(e)) => {
+                        self.second_pending = None;
+                        self.second_seed = None;
+                        log::warn!("second camera: renderer could not be made: {e}");
+                        return;
+                    }
+                    Err(std::sync::mpsc::TryRecvError::Empty) => return,
+                    Err(std::sync::mpsc::TryRecvError::Disconnected) => {
+                        self.second_pending = None;
+                        self.second_seed = None;
+                        return;
+                    }
                 }
-                Err(e) => {
-                    // (not tried again every frame: the window stays empty)
-                    log::warn!("second camera: renderer could not be made: {e}");
-                    self.second_seed = None;
+            } else {
+                let Some(seed) = self.second_seed.as_ref() else {
                     return;
+                };
+                let mut init = (**seed).clone();
+                init.external = true;
+                #[cfg(any(target_os = "linux", target_os = "windows", target_os = "macos"))]
+                {
+                    init.xr = None;
                 }
+                init.width = packet.surface.width;
+                init.height = packet.surface.height;
+                init.output_format = Some(self.config.format);
+                init.scene = packet.scene.clone();
+                let (tx, rx) = std::sync::mpsc::channel();
+                let spawned = std::thread::Builder::new().name("aurora-second-view".into()).spawn(move || {
+                    let started = Instant::now();
+                    let res = Backend::new(init).map(Box::new);
+                    if res.is_ok() {
+                        log::info!("second camera: renderer made ({} ms)", started.elapsed().as_millis());
+                    }
+                    let _ = tx.send(res);
+                });
+                if spawned.is_ok() {
+                    self.second_pending = Some(rx);
+                } else {
+                    log::warn!("second camera: failed to spawn init thread");
+                    self.second_seed = None;
+                }
+                return;
             }
         }
         let Some(second) = self.second.as_mut() else {
@@ -8286,6 +8314,7 @@ impl Backend {
 
     /// The second camera's renderer let go, with its picture.
     fn drop_second_view(&mut self) {
+        self.second_pending = None;
         if let Some(mut second) = self.second.take() {
             if let Some(target) = second.target.take() {
                 self.egui.free_texture(&target.id);

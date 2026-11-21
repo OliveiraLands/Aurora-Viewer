@@ -126,6 +126,8 @@ pub struct ToolbarSettings {
     pub locked: bool,
     /// One-time discovery of the new command; later manual removal is retained.
     pub vr_button_migrated: bool,
+    /// One-time discovery of `vr_view` on Android for installs that saved `vr_button_migrated` earlier.
+    pub vr_mobile_button_migrated: bool,
     /// The same for the Director, placed next to the photo button.
     pub director_button_migrated: bool,
     #[serde(skip_serializing_if = "Vec::is_empty")]
@@ -139,11 +141,19 @@ pub struct ToolbarSettings {
 
 impl ToolbarSettings {
     pub fn migrate_vr_button(&mut self) -> bool {
-        if self.vr_button_migrated {
+        #[cfg(target_os = "android")]
+        let already_migrated = self.vr_mobile_button_migrated;
+        #[cfg(not(target_os = "android"))]
+        let already_migrated = self.vr_button_migrated;
+        if already_migrated {
             return false;
         }
         self.vr_button_migrated = true;
-        #[cfg(any(target_os = "linux", target_os = "windows", target_os = "macos"))]
+        #[cfg(target_os = "android")]
+        {
+            self.vr_mobile_button_migrated = true;
+        }
+        #[cfg(any(target_os = "linux", target_os = "windows", target_os = "macos", target_os = "android"))]
         if !self.left.iter().chain(&self.right).any(|b| b.command == "vr_view")
             && let Some(buttons) = &mut self.buttons
             && !buttons.is_empty()

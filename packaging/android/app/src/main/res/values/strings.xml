@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="aurora_bg">#0E131F</color>
+    <string name="app_name">Aurora Viewer</string>
+    <string name="loading_status">Loading…</string>
+</resources>

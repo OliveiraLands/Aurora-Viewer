@@ -1,19 +1,33 @@
 package org.auroraviewer.aurora;
 
 import android.app.NativeActivity;
+import android.graphics.Color;
+import android.graphics.Typeface;
 import android.os.Build;
 import android.os.Bundle;
+import android.util.TypedValue;
+import android.view.Gravity;
 import android.view.InputDevice;
 import android.view.KeyEvent;
 import android.view.MotionEvent;
 import android.view.View;
+import android.view.ViewGroup;
 import android.view.WindowInsets;
 import android.view.WindowInsetsController;
 import android.view.WindowManager;
+import android.widget.FrameLayout;
+import android.widget.ImageView;
+import android.widget.LinearLayout;
+import android.widget.ProgressBar;
+import android.widget.TextView;
 
 public class AuroraActivity extends NativeActivity {
     private static native void nativeOnGamepadAxis(float lx, float ly, float rx, float ry);
     private static native void nativeOnGamepadKey(int keyCode, boolean down);
+    private static native boolean nativeOnBackPressed();
+
+    private FrameLayout loadingOverlay;
+    private boolean backConsumedDown;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -25,6 +39,83 @@ public class AuroraActivity extends NativeActivity {
             getWindow().setAttributes(lp);
         }
         applyImmersiveFullscreen();
+        showLoadingOverlay();
+    }
+
+    private int dp(int value) {
+        return Math.round(TypedValue.applyDimension(
+                TypedValue.COMPLEX_UNIT_DIP, value, getResources().getDisplayMetrics()));
+    }
+
+    private void showLoadingOverlay() {
+        if (loadingOverlay != null) {
+            return;
+        }
+        FrameLayout root = new FrameLayout(this);
+        root.setBackgroundColor(Color.parseColor("#0E131F"));
+        root.setClickable(false);
+        root.setFocusable(false);
+
+        LinearLayout column = new LinearLayout(this);
+        column.setOrientation(LinearLayout.VERTICAL);
+        column.setGravity(Gravity.CENTER_HORIZONTAL);
+
+        ImageView logo = new ImageView(this);
+        logo.setImageResource(R.mipmap.ic_launcher);
+        LinearLayout.LayoutParams logoParams = new LinearLayout.LayoutParams(dp(96), dp(96));
+        logoParams.bottomMargin = dp(16);
+        column.addView(logo, logoParams);
+
+        TextView title = new TextView(this);
+        title.setText(R.string.app_name);
+        title.setTextColor(Color.parseColor("#F2F5FA"));
+        title.setTextSize(TypedValue.COMPLEX_UNIT_SP, 22);
+        title.setTypeface(Typeface.DEFAULT_BOLD);
+        LinearLayout.LayoutParams titleParams = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        titleParams.bottomMargin = dp(20);
+        column.addView(title, titleParams);
+
+        ProgressBar spinner = new ProgressBar(this);
+        spinner.setIndeterminate(true);
+        LinearLayout.LayoutParams spinnerParams = new LinearLayout.LayoutParams(dp(36), dp(36));
+        spinnerParams.bottomMargin = dp(12);
+        column.addView(spinner, spinnerParams);
+
+        TextView status = new TextView(this);
+        status.setText(R.string.loading_status);
+        status.setTextColor(Color.parseColor("#9BA8C2"));
+        status.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
+        column.addView(status, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+
+        FrameLayout.LayoutParams centerParams = new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.CENTER);
+        root.addView(column, centerParams);
+
+        addContentView(root, new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        loadingOverlay = root;
+    }
+
+    public void hideLoadingOverlay() {
+        runOnUiThread(() -> {
+            final FrameLayout overlay = loadingOverlay;
+            if (overlay == null) {
+                return;
+            }
+            loadingOverlay = null;
+            overlay.animate()
+                    .alpha(0f)
+                    .setDuration(250)
+                    .withEndAction(() -> {
+                        ViewGroup parent = (ViewGroup) overlay.getParent();
+                        if (parent != null) {
+                            parent.removeView(overlay);
+                        }
+                    })
+                    .start();
+        });
     }
 
     @Override
@@ -90,8 +181,20 @@ public class AuroraActivity extends NativeActivity {
 
     @Override
     public boolean dispatchKeyEvent(KeyEvent event) {
-        int source = event.getSource();
         int keyCode = event.getKeyCode();
+        if (keyCode == KeyEvent.KEYCODE_BACK) {
+            int action = event.getAction();
+            if (action == KeyEvent.ACTION_DOWN && event.getRepeatCount() == 0) {
+                backConsumedDown = nativeOnBackPressed();
+                if (backConsumedDown) {
+                    return true;
+                }
+            } else if (action == KeyEvent.ACTION_UP && backConsumedDown) {
+                backConsumedDown = false;
+                return true;
+            }
+        }
+        int source = event.getSource();
         boolean isGamepadOrDpad = (source & InputDevice.SOURCE_GAMEPAD) == InputDevice.SOURCE_GAMEPAD
                 || (source & InputDevice.SOURCE_JOYSTICK) == InputDevice.SOURCE_JOYSTICK
                 || (source & InputDevice.SOURCE_DPAD) == InputDevice.SOURCE_DPAD
