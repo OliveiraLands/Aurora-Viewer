@@ -65,7 +65,11 @@ impl World {
         let hud = wearer == Some(self.agent_id) && self.avatar_lib.attach_points.get(&object.attachment_point()).is_some_and(|p| p.hud);
         // @interact is enforced when the object is picked
         // (LLViewerWindow::cursorIntersect, llviewerwindow.cpp), before
-        // RlvActions::canTouch and its @touchme override are asked.
+        // RlvActions::canTouch and its @touchme override are asked. A HUD's
+        // pick is dropped there too, by `rlva_drops_picks` where the click
+        // is read: this rule also answers the Touch entry of a worn object,
+        // which needs no pick and keeps a HUD's touch (handle_attachment_touch,
+        // llviewermenu.cpp).
         if !hud && r.has("interact") {
             return false;
         }
@@ -129,15 +133,34 @@ impl World {
     /// around them; a bare @tplocal allows 1.5 m. Farther, only @tploc.
     fn rlva_teleport_delta_allowed(&self, delta: Vec3, actor: Uuid) -> bool {
         let r = &self.rlva;
-        if self.agent.is_sitting() && r.has_except("unsit", actor) {
-            return false;
-        }
         if delta.truncate().length_squared() < 256.0 * 256.0 {
-            delta.length() < r.distance_limit("sittp", 1.5, actor)
-                && (!r.has_except("tplocal", actor) || delta.length() < r.distance_limit("tplocal", 1.5, actor).min(256.0))
+            self.rlva_local_teleport_allowed(delta.length(), actor)
         } else {
-            !r.has_except("tploc", actor)
+            !(self.agent.is_sitting() && r.has_except("unsit", actor)) && !r.has_except("tploc", actor)
         }
+    }
+
+    /// RlvActions::canTeleportToLocal: the agent may stand up, and the
+    /// place is within what @sittp and @tplocal leave, measured in 3D.
+    fn rlva_local_teleport_allowed(&self, distance: f32, actor: Uuid) -> bool {
+        let r = &self.rlva;
+        !(self.agent.is_sitting() && r.has_except("unsit", actor))
+            && distance < r.distance_limit("sittp", 1.5, actor)
+            && (!r.has_except("tplocal", actor) || distance < r.distance_limit("tplocal", 1.5, actor).min(256.0))
+    }
+
+    /// RlvActions::canTeleportToLocal asked alone, whatever the distance:
+    /// what the area search shows "Teleport to" on
+    /// (FSPanelAreaSearchList::onContextMenuItemVisibleRLV,
+    /// indra/newview/fsareasearch.cpp). Farther than a region's width the
+    /// entry is hidden under @sittp or @tplocal, and shown under @tploc
+    /// alone, which refuses the teleport once asked.
+    pub fn rlva_can_teleport_local(&self, global: glam::DVec3) -> bool {
+        if !self.rlva.enabled() {
+            return true;
+        }
+        let distance = self.agent_global().map_or(f32::INFINITY, |here| (global - here).as_vec3().length());
+        self.rlva_local_teleport_allowed(distance, Uuid::nil())
     }
     /// What the interface greys: the same rules as the send boundary, so a
     /// greyed entry and a refused click never disagree.
@@ -225,7 +248,7 @@ impl World {
             NetCommand::SendIm { to, .. } => self.rlva_allows_im("sendim", *to),
             NetCommand::SendImDialog { to, dialog: 0, .. } => self.rlva_allows_im("sendim", *to),
             NetCommand::SendImDialog { to, dialog: 17, .. } => self.rlva_can_send_session(*to),
-            NetCommand::SendImDialog { to, dialog: 4, .. } => r.allows("share", &to.to_string()),
+            NetCommand::SendImDialog { to, dialog: 4, .. } | NetCommand::OfferInventory { to, .. } => r.allows("share", &to.to_string()),
             // A dialog shown before @sendchat (process_script_dialog_response,
             // llviewermessage.cpp): its public-chat answer is not sent.
             NetCommand::ScriptDialogReply { channel: 0, .. } => !r.has("sendchat"),
@@ -322,7 +345,13 @@ impl World {
                             && self.rlva_can_accept_teleport(v.from, false)
                     })
             }
-            NetCommand::DetachAttachments(items) => items.iter().all(|item| self.rlva_can_remove(*item, actor)),
+            // The viewer's own bridge comes off whatever the locks
+            // (FSLSLBridge::canDetach in
+            // LLVOAvatarSelf::detachAttachmentIntoInventory,
+            // indra/newview/llvoavatarself.cpp).
+            NetCommand::DetachAttachments(items) => items.iter().all(|item| {
+                super::super::bridge::viewer_bridge(self, *item, super::super::bridge::POINT) || self.rlva_can_remove(*item, actor)
+            }),
             NetCommand::DetachObject { handle, local_id } => self
                 .objects
                 .index_of(&super::super::objects::ObjKey {
@@ -339,9 +368,14 @@ impl World {
                 }),
             // Rez is sent as ADD while RLVa is enabled. The watchdog replaces
             // only removable predecessors once the actual point is known.
+            // The bridge goes back on Center 2 past them too (the fRlvForce
+            // of LLAttachmentsMgr::addAttachmentRequest,
+            // indra/newview/llattachmentsmgr.cpp).
             NetCommand::RezAttachments(items) => {
                 let worn = self.rlva_worn_attachment_points();
-                items.iter().all(|item| self.rlva_rez_allowed(item, &worn, actor))
+                items.iter().all(|item| {
+                    super::super::bridge::viewer_bridge(self, item.item_id, item.point) || self.rlva_rez_allowed(item, &worn, actor)
+                })
             }
             NetCommand::UpdateOutfit { change, .. } => {
                 let Some(cof) = super::super::appearance::cof(&self.inventory) else {

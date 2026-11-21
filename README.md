@@ -111,36 +111,37 @@ while rethinking the user interface.
   </tr>
 </table>
 
-### New in 0.9.10 <img src="docs/readme/pill-new.svg" alt="New" height="18" align="absmiddle">
+### New in 0.9.11 <img src="docs/readme/pill-new.svg" alt="New" height="18" align="absmiddle">
 
 <table>
   <tr>
     <td width="50%" valign="top">
-      <h3>The Director</h3>
-      Film in the world: keep camera views as keyframes on a timeline,
-      play them back as one smooth shot with the world alone, and record
-      it to a video file with your own ffmpeg.
+      <h3>A complete Director</h3>
+      Ready-made shots, renders up to 4K, films with their sound, montages
+      of several tracks, the photo looks and LUTs, and move and turn
+      handles on the cameras. No ffmpeg yet? The Director downloads it in
+      one click.
     </td>
     <td width="50%" valign="top">
-      <h3>Transparency in its true order</h3>
-      Glass, curtains and the layers of mesh hair show in the right order
-      at every pixel, even when they cross. Choose it in Preferences ›
-      Graphics, "Order of transparent surfaces"; the Stochastic choice
-      is thanks to Anne Skydancer.
+      <h3>Gaming mode</h3>
+      Aurora steps back while you play a game: the world stops drawing
+      and gives the video memory and RAM back, while chat, sounds and
+      notifications keep working. Coming back to the window ends it.
     </td>
   </tr>
   <tr>
     <td valign="top">
-      <h3>Weather and water</h3>
-      Aurora Weather reaches farther, with puddles and lying snow up to
-      256 m away and much steadier snow. Water and ambient occlusion cost
-      less for the same image.
+      <h3>360° pictures and better photos</h3>
+      Take a 360° picture and view it as a panorama, keep the camera's
+      tilt in presets, let you and others look at the camera, and tune
+      shadows and ambient occlusion in the viewfinder.
     </td>
     <td valign="top">
       <h3>More like the Legacy Viewer</h3>
-      The Conversation log, draw distance up to 1024 m, the Animation
-      Speed menu, beacons, radar marks, Doppler on moving sounds, and
-      objects saved as Collada or OBJ.
+      The Omnifilter, the pose stand, Favorite wearables, a target frame
+      rate (Autotune), proxy settings, script sync with outside editors,
+      saved poses from the Legacy Viewer and Alchemy, and the missing
+      interface sounds.
     </td>
   </tr>
 </table>
@@ -373,8 +374,8 @@ are planned or in progress: they are not in the viewer yet.
   whole-pose actions. Save poses to a library, export them as BVH or import
   them as an animation, with Ctrl+Z / Ctrl+Y as you go. The pose is seen by
   you only ([details](docs/POSER.md)).
-- **An IK workbench**: reusable pose projects that keep chosen bones on their
-  targets, with contacts that compatible viewers apply to nearby avatars
+- **An IK workbench**: pose your own skeleton bone by bone, with IK chains,
+  limb holds and animation layers, as a base for the animation creator
   ([details](docs/IK_EDIT.md)).
 - **Build tools that stay out of the way**: a compact editor you can arrange
   yourself, larger material previews for Blinn-Phong and PBR, a live preview
@@ -443,8 +444,9 @@ are planned or in progress: they are not in the viewer yet.
 - **Write with ease**: a spell checker with suggestions in the chat bars,
   conversations and notecards, auto-replace (`brb`…) if you like, `@` to
   mention someone in the conversation, names completed as you type, and `/`
-  in nearby chat to find and play a gesture. Ctrl+Shift+Enter starts a new
-  line, and pasted paragraphs keep their shape. Arabic and Hebrew read right
+  in nearby chat to find and play a gesture. Shift+Enter starts a new
+  line, and pasted paragraphs keep their shape; the chat's keys can be
+  changed in Preferences › Controls › Shortcuts. Arabic and Hebrew read right
   to left, in name tags, bubbles, floating text and conversations. A long
   IM goes out as several messages instead of being cut off.
 - **Messages that matter, in front of you**: a message an estate manager
@@ -541,7 +543,7 @@ are planned or in progress: they are not in the viewer yet.
   credits.
 - **Made for every eye**: an Accessibility page gathers the settings that
   help (interface scale, text size up to twice the normal size, reduce
-  motion, sounds…), with a button on the login screen. A high-contrast palette, the OpenDyslexic font, and
+  motion, sounds…), with a button on the login screen. A high-contrast palette, a setting that turns off the glass, the OpenDyslexic font, and
   volume sliders that follow your ear are a click away, and the chat can
   have a text size of its own.
 - **Your colours**: pick the accent, window background and text colours in
@@ -555,7 +557,7 @@ are planned or in progress: they are not in the viewer yet.
   downloads it in the background, checks it against its published hash,
   installs it and restarts your session, and rolls back if anything goes
   wrong. Before you agree, it tells you whether your cache and settings are
-  kept. On Linux and macOS it shows the new release instead
+  kept. On macOS it shows the new release instead
   ([details](docs/UPDATES.md)).
 
 ### Only in Aurora
@@ -573,10 +575,9 @@ are planned or in progress: they are not in the viewer yet.
 - **Portals to walk through**: open a portal to a place, drop a landmark
   into the world, or drag a place there from Favorites, Places, the teleport
   history or search results, and walk, run or fly through it to teleport.
-  A portal opens where you may build, like rezzing an object. Other Aurora
-  users see it too: your friends by default, everyone if you choose, and a
-  portal that appears on someone never pulls them in. The portal back home
-  is yours alone on land where you may not build.
+  A portal opens where you may build, like rezzing an object, and only you
+  see it; a portal that opens on you never pulls you in. The way back opens
+  behind you when you arrive.
 - **Just your parcel, if you like**: hide what stands outside the current
   parcel, everywhere or only on the parcels you list, with exceptions that
   stay visible and options for neighbouring parcels of the same owner or
@@ -668,7 +669,7 @@ frame on your own PC.
   to the body/HUD.
 - **Posing** — a [poser](docs/POSER.md) for yourself, your animesh and
   consenting nearby avatars, with a pose library, BVH export and animation
-  import; an [IK workbench](docs/IK_EDIT.md) with shared contact profiles.
+  import; an [IK workbench](docs/IK_EDIT.md) for local skeleton posing.
 - **World** — prims, sculpts, mesh with LOD, classic and PBR terrain, EEP environment,
   sky, water and day-cycle editors, experience environments, world sounds
   with occlusion, headphone HRTF and room reverb (experimental), parcel
@@ -676,8 +677,8 @@ frame on your own PC.
   on prims, with Aurora's media plugins pack, downloaded once you agree; an area search
   for the objects rezzed around you, with filters and sortable results;
   a Sound Explorer with local previews, source camera and sound blocking;
-  walk-through portals shared with other Aurora users, with friend/group
-  access and protection against portals appearing on top of someone;
+  walk-through portals of your own, with a way back and protection against
+  a portal opening on top of you;
   parcel content isolation, a grid status window, and a live particle
   editor; OpenSim grids and the Hypergrid, with a grid manager, avatars
   baked by the viewer where the grid does not bake, large regions, and
@@ -729,11 +730,11 @@ frame on your own PC.
   overlays; an immersive mode that keeps only the chat; Aurora team and
   Linden Lab marks; double-click walk / run / teleport and content-rating controls
   for places and teleport offers; an Accessibility page, a high-contrast
-  palette, custom interface colours, text up to twice the size and the
+  palette, a setting that turns off the glass, custom interface colours, text up to twice the size and the
   OpenDyslexic font.
-- **Windows updates** — release checks, cancellable verified downloads,
-  installation and restart with rollback. The prompt explains whether cache
-  and settings will be preserved, migrated or reset.
+- **Updates in place** (Windows and Linux) — release checks, cancellable
+  verified downloads, installation and restart with rollback. The prompt
+  explains whether cache and settings will be preserved, migrated or reset.
 
 Voice calls, photo uploads, environment saving and several group / region
 operations are implemented and tested in the offline demo, but still need
@@ -747,8 +748,6 @@ completed work from features awaiting that validation.
 
 - Depth exports and 360° snapshots.
 - Automatic updates on macOS (the viewer points to the new release).
-- Automatic installation of updates on Linux (the viewer points to the
-  new release instead).
 
 Voice is WebRTC only; Vivox is not supported.
 
@@ -1257,10 +1256,7 @@ its own task in its own git worktree:
 - [docs/BRANDING.md](docs/BRANDING.md) — palette, logos, icons and UI rules
 - [docs/TESTING.md](docs/TESTING.md) — test switches (demo scenarios,
   captures, diagnostics) and profiling
-- [docs/HAND_CONTACTS.md](docs/HAND_CONTACTS.md) — local motorcycle wrist
-  contact prototype and the creator's LSL script
-- [docs/IK_EDIT.md](docs/IK_EDIT.md) — frozen-pose skeleton editor, target-prim
-  offsets and general bone-contact authoring for LSL
+- [docs/IK_EDIT.md](docs/IK_EDIT.md) — frozen-pose skeleton editor
 
 Pull requests follow the [pull request template](.github/pull_request_template.md):
 a check lists what a description is missing, and maintainers review a PR

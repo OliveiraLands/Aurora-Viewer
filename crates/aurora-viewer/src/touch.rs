@@ -56,17 +56,16 @@ pub fn apply_touch_style(style: &mut egui::Style, form_factor: FormFactor) {
         return;
     }
     let min_h = match form_factor {
-        FormFactor::Compact | FormFactor::Medium => 44.0,
-        FormFactor::Expanded => 40.0,
+        FormFactor::Compact | FormFactor::Medium => 32.0,
+        FormFactor::Expanded => 30.0,
     };
     style.spacing.interact_size.y = style.spacing.interact_size.y.max(min_h);
     style.spacing.interact_size.x = style.spacing.interact_size.x.max(min_h);
-    style.spacing.button_padding.x = style.spacing.button_padding.x.max(12.0);
-    style.spacing.button_padding.y = style.spacing.button_padding.y.max(8.0);
-    style.spacing.item_spacing.x = style.spacing.item_spacing.x.max(10.0);
-    style.spacing.item_spacing.y = style.spacing.item_spacing.y.max(10.0);
-    style.spacing.slider_width = style.spacing.slider_width.max(180.0);
-    style.spacing.scroll.bar_width = style.spacing.scroll.bar_width.max(12.0);
+    style.spacing.button_padding = egui::vec2(7.0, 4.0);
+    style.spacing.item_spacing = egui::vec2(6.0, 4.0);
+    style.spacing.window_margin = egui::Margin::same(6);
+    style.spacing.slider_width = style.spacing.slider_width.max(150.0);
+    style.spacing.scroll.bar_width = style.spacing.scroll.bar_width.max(10.0);
 }
 
 /// Output of a touch frame / event update for the 3D world camera & interactions.
