@@ -332,6 +332,120 @@ pub fn forget(grid: &str, username: &str) {
     android_store::remove(SERVICE, grid, username);
 }
 
+/// The SOCKS 5 proxy's user name and password (Preferences › Network ›
+/// Proxy), like the Legacy Viewer's "SOCKS5" credential of LLSecAPI
+/// (LLFloaterPreferenceProxy::onBtnOk): one entry of the credential store,
+/// never the settings file, the log or a report. With no store at hand
+/// nothing is kept, and the login says the credentials are missing.
+const PROXY_SERVICE: &str = "Aurora Viewer Proxy";
+const PROXY_ACCOUNT: &str = "SOCKS5";
+
+#[derive(serde::Serialize, serde::Deserialize)]
+struct ProxySecret {
+    username: String,
+    password: String,
+}
+
+/// The proxy credential's entry, as (service, account), for the removal
+/// from this computer.
+pub fn proxy_store_entry() -> (&'static str, &'static str) {
+    (PROXY_SERVICE, PROXY_ACCOUNT)
+}
+
+#[cfg(not(target_os = "android"))]
+fn proxy_entry() -> Option<keyring::Entry> {
+    if aurora_updater::test_environment().is_some() {
+        return None;
+    }
+    keyring::Entry::new(PROXY_SERVICE, PROXY_ACCOUNT)
+        .map_err(|_| log::warn!("credential store unavailable for the proxy"))
+        .ok()
+}
+
+#[cfg(not(target_os = "android"))]
+fn proxy_secret() -> Option<ProxySecret> {
+    match proxy_entry()?.get_password() {
+        Ok(value) if value.len() <= 4 * 1024 => serde_json::from_str(&value).ok(),
+        Ok(_) | Err(keyring::Error::NoEntry) => None,
+        Err(_) => {
+            log::warn!("proxy credentials unreadable");
+            None
+        }
+    }
+}
+
+#[cfg(target_os = "android")]
+fn proxy_secret() -> Option<ProxySecret> {
+    let value = android_store::get(PROXY_SERVICE, "", PROXY_ACCOUNT)?;
+    if value.len() <= 4 * 1024 {
+        serde_json::from_str(&value).ok()
+    } else {
+        None
+    }
+}
+
+/// The saved proxy credentials, checked (1 to 255 bytes each).
+pub fn load_proxy() -> Option<aurora_proxy::Credentials> {
+    let secret = proxy_secret()?;
+    aurora_proxy::Credentials::new(secret.username, secret.password).ok()
+}
+
+/// The saved user name alone, for the Preferences (the password is never
+/// read back into the window).
+pub fn proxy_username() -> Option<String> {
+    proxy_secret().map(|secret| secret.username)
+}
+
+/// Keeps the proxy credentials; false when they are invalid or the store
+/// refused them.
+#[must_use]
+pub fn store_proxy(username: &str, password: &str) -> bool {
+    if aurora_proxy::Credentials::new(username.to_owned(), password.to_owned()).is_err() {
+        return false;
+    }
+    let Ok(value) = serde_json::to_string(&ProxySecret {
+        username: username.to_owned(),
+        password: password.to_owned(),
+    }) else {
+        return false;
+    };
+    #[cfg(not(target_os = "android"))]
+    {
+        let Some(entry) = proxy_entry() else {
+            return false;
+        };
+        match entry.set_password(&value) {
+            Ok(()) => true,
+            Err(_) => {
+                log::warn!("proxy credentials not saved");
+                false
+            }
+        }
+    }
+    #[cfg(target_os = "android")]
+    {
+        if android_store::set(PROXY_SERVICE, "", PROXY_ACCOUNT, &value) {
+            true
+        } else {
+            log::warn!("proxy credentials not saved");
+            false
+        }
+    }
+}
+
+/// Removes them (authentication back to none, as onBtnOk does).
+pub fn forget_proxy() {
+    #[cfg(not(target_os = "android"))]
+    if let Some(entry) = proxy_entry() {
+        match entry.delete_credential() {
+            Ok(()) | Err(keyring::Error::NoEntry) => {}
+            Err(_) => log::warn!("proxy credentials not removed"),
+        }
+    }
+    #[cfg(target_os = "android")]
+    android_store::remove(PROXY_SERVICE, "", PROXY_ACCOUNT);
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

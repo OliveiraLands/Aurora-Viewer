@@ -40,11 +40,57 @@ pub enum Use {
 
 #[cfg(target_os = "android")]
 #[derive(Default)]
-pub struct Backend;
+pub struct Backend {
+    prev_keys: std::sync::atomic::AtomicU32,
+    presses: std::sync::Mutex<[u64; super::BUTTONS]>,
+}
 
 #[cfg(target_os = "android")]
 impl Backend {
-    pub fn poll(&self, _mode: Use, _latest: &mut Snapshot) {}
+    pub fn poll(&self, mode: Use, latest: &mut Snapshot) {
+        if mode == Use::Off {
+            return;
+        }
+        let (seen, axes, keys) = crate::android::gamepad_state();
+        if !seen {
+            latest.devices.clear();
+            return;
+        }
+        let prev = self.prev_keys.swap(keys, std::sync::atomic::Ordering::Relaxed);
+        let rising = keys & !prev;
+        let mut presses = self.presses.lock().unwrap_or_else(|e| e.into_inner());
+        for (i, slot) in presses.iter_mut().enumerate().take(10) {
+            if rising & (1 << i) != 0 {
+                *slot = slot.wrapping_add(1);
+            }
+        }
+        let mut dev = super::Device::gamepad(
+            "android-gamepad".into(),
+            "Android VR / Gamepad".into(),
+            4,
+            [[Some(0), Some(1)], [Some(2), Some(3)]],
+            [None, None],
+            super::GamepadStyle::Generic,
+            vec![
+                super::GamepadButton::South,
+                super::GamepadButton::East,
+                super::GamepadButton::North,
+                super::GamepadButton::West,
+                super::GamepadButton::LeftBumper,
+                super::GamepadButton::RightBumper,
+                super::GamepadButton::DpadUp,
+                super::GamepadButton::DpadDown,
+                super::GamepadButton::DpadLeft,
+                super::GamepadButton::DpadRight,
+            ],
+        );
+        dev.axes[..4].copy_from_slice(&axes);
+        dev.buttons = keys;
+        dev.presses.copy_from_slice(&*presses);
+        latest.devices = vec![dev];
+        latest.updated = Some(std::time::Instant::now());
+        latest.error.clear();
+    }
 }
 
 #[cfg(not(target_os = "android"))]
