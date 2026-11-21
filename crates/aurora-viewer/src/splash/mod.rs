@@ -249,6 +249,8 @@ pub fn settings() {
 
 /// The viewer's window showed its first frame: the splash closes.
 pub fn shown() {
+    #[cfg(target_os = "android")]
+    crate::android::hide_loading_overlay();
     VIEWER.store(ViewerPhase::Shown as u8, Ordering::Relaxed);
     let started = STARTED.get().copied();
     match (SHOWN_MS.load(Ordering::Relaxed), started) {
@@ -267,6 +269,8 @@ pub fn shown() {
 /// The start failed (no renderer, no window): the splash closes before the
 /// message that says so.
 pub fn close() {
+    #[cfg(target_os = "android")]
+    crate::android::hide_loading_overlay();
     CLOSE.store(true, Ordering::Relaxed);
 }
 

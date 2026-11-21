@@ -18,6 +18,7 @@
     <application
         android:allowBackup="false"
         android:hasCode="true"
+        android:icon="@mipmap/ic_launcher"
         android:label="Aurora Viewer"
         android:theme="@style/AuroraFullscreenTheme">
 

@@ -30,3 +30,7 @@ android {
         }
     }
 }
+
+dependencies {
+    implementation("org.rustls:rustls-platform-verifier:0.2.0")
+}

@@ -12,6 +12,9 @@ static ANDROID_APP: OnceLock<AndroidApp> = OnceLock::new();
 static GAMEPAD_SEEN: AtomicBool = AtomicBool::new(false);
 static GAMEPAD_AXES: [AtomicU32; 4] = [AtomicU32::new(0), AtomicU32::new(0), AtomicU32::new(0), AtomicU32::new(0)];
 static GAMEPAD_KEYS: AtomicU32 = AtomicU32::new(0);
+static LOADING_HIDDEN: AtomicBool = AtomicBool::new(false);
+static BACK_CONSUMED: AtomicBool = AtomicBool::new(false);
+static BACK_PRESSED: AtomicBool = AtomicBool::new(false);
 
 /// Runtime (dangerous) permissions declared in `AndroidManifest.xml` that must
 /// be checked and requested before activating the main viewer.
@@ -332,6 +335,43 @@ pub(crate) fn set_landscape(landscape: bool) {
     }
 }
 
+/// Dismisses the native Android startup loading overlay once the first frame is ready.
+pub(crate) fn hide_loading_overlay() {
+    if LOADING_HIDDEN.swap(true, Ordering::Relaxed) {
+        return;
+    }
+    let Some(app) = ANDROID_APP.get() else {
+        return;
+    };
+    // SAFETY: `app` holds valid `JavaVM*` and `Activity` references; `hideLoadingOverlay`
+    // posts its UI work via `runOnUiThread` on `AuroraActivity`.
+    unsafe {
+        let Some(env) = attach_jni_env(app) else {
+            return;
+        };
+        let activity = app.activity_as_ptr();
+        if activity.is_null() {
+            return;
+        }
+        let vtable = *(env as *const *const *const c_void);
+        let get_object_class: GetObjectClassFn = std::mem::transmute(*vtable.add(31));
+        let get_method_id: GetMethodIdFn = std::mem::transmute(*vtable.add(33));
+        let call_void_method_a: CallVoidMethodAFn = std::mem::transmute(*vtable.add(63));
+        let delete_local_ref: DeleteLocalRefFn = std::mem::transmute(*vtable.add(23));
+
+        let cls = get_object_class(env, activity);
+        if cls.is_null() || clear_exception(env, vtable) {
+            return;
+        }
+        let mid = get_method_id(env, cls, c"hideLoadingOverlay".as_ptr(), c"()V".as_ptr());
+        if !mid.is_null() && !clear_exception(env, vtable) {
+            call_void_method_a(env, activity, mid, std::ptr::null());
+            let _ = clear_exception(env, vtable);
+        }
+        delete_local_ref(env, cls);
+    }
+}
+
 /// Latest Android gamepad / Bluetooth VR remote state: `(seen, [lx, ly, rx, ry], key_mask)`.
 pub(crate) fn gamepad_state() -> (bool, [f32; 4], u32) {
     let seen = GAMEPAD_SEEN.load(Ordering::Relaxed);
@@ -389,6 +429,47 @@ pub extern "C" fn Java_org_auroraviewer_aurora_AuroraActivity_nativeOnGamepadKey
     }
 }
 
+/// Controls whether Android's Back button should be intercepted to exit VR/mouselook.
+pub(crate) fn set_back_consumed(consumed: bool) {
+    BACK_CONSUMED.store(consumed, Ordering::Relaxed);
+}
+
+/// Returns `true` once if Android's Back button was pressed while intercepted.
+pub(crate) fn take_back_pressed() -> bool {
+    BACK_PRESSED.swap(false, Ordering::Relaxed)
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn Java_org_auroraviewer_aurora_AuroraActivity_nativeOnBackPressed(_env: *mut c_void, _class: *mut c_void) -> u8 {
+    if BACK_CONSUMED.load(Ordering::Relaxed) {
+        BACK_PRESSED.store(true, Ordering::Relaxed);
+        1
+    } else {
+        0
+    }
+}
+
+fn init_tls_platform_verifier(app: &AndroidApp) {
+    let vm_ptr = app.vm_as_ptr();
+    let activity = app.activity_as_ptr();
+    if vm_ptr.is_null() || activity.is_null() {
+        log::warn!("Android TLS verifier init skipped: missing JavaVM or Activity pointer");
+        return;
+    }
+    // SAFETY: `vm_ptr` is a valid `JavaVM*` supplied by `AndroidApp` for the
+    // lifetime of `android_main`.
+    let vm = unsafe { jni::JavaVM::from_raw(vm_ptr as *mut jni::sys::JavaVM) };
+    let res = vm.attach_current_thread(|env| -> jni::errors::Result<()> {
+        // SAFETY: `activity` is a valid `jobject` (`android.app.Activity`, a `Context`)
+        // alive for the duration of `android_main`.
+        let context = unsafe { jni::objects::JObject::from_raw(env, activity as jni::sys::jobject) };
+        rustls_platform_verifier::android::init_with_env(env, context)
+    });
+    if let Err(err) = res {
+        log::warn!("Failed to initialize rustls-platform-verifier on Android: {err}");
+    }
+}
+
 #[unsafe(no_mangle)]
 pub fn android_main(app: AndroidApp) {
     if let Some(dir) = app.internal_data_path().or_else(|| app.external_data_path()) {
@@ -398,6 +479,7 @@ pub fn android_main(app: AndroidApp) {
     let _ = ANDROID_APP.set(app.clone());
     aurora_i18n::select("default", None);
     crate::logging::init();
+    init_tls_platform_verifier(&app);
     if let Err(error) = crate::run_viewer_with_android(Some(app)) {
         log::error!("Android viewer error: {error:#}");
     }

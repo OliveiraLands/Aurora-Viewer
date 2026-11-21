@@ -49,18 +49,21 @@ pub fn name() -> &'static str {
 /// threads' heaps return theirs as they free. Nothing with the system's
 /// allocator, which keeps no such pages.
 pub fn collect() {
-    if use_system() {
-        return;
+    #[cfg(not(target_os = "android"))]
+    {
+        if use_system() {
+            return;
+        }
+        // mimalloc's C library, compiled in by libmimalloc-sys (Cargo.toml);
+        // the crate exposes it only behind a feature that adds nothing else
+        unsafe extern "C" {
+            fn mi_collect(force: bool);
+        }
+        // SAFETY: mimalloc is the process's allocator (`use_system` is false
+        // and never changes); mi_collect takes no pointer and may be called
+        // from any thread at any time.
+        unsafe { mi_collect(true) }
     }
-    // mimalloc's C library, compiled in by libmimalloc-sys (Cargo.toml);
-    // the crate exposes it only behind a feature that adds nothing else
-    unsafe extern "C" {
-        fn mi_collect(force: bool);
-    }
-    // SAFETY: mimalloc is the process's allocator (`use_system` is false
-    // and never changes); mi_collect takes no pointer and may be called
-    // from any thread at any time.
-    unsafe { mi_collect(true) }
 }
 
 #[inline]

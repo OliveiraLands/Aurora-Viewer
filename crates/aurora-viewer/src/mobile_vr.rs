@@ -13,6 +13,7 @@ pub struct MobileVr {
     pub enabled: bool,
     pub ipd_mm: f32,
     recenter_yaw: f32,
+    needs_recenter: bool,
     orientation: Quat,
     last_poll: Option<Instant>,
     #[cfg(target_os = "android")]
@@ -25,6 +26,7 @@ impl Default for MobileVr {
             enabled: false,
             ipd_mm: DEFAULT_IPD_MM,
             recenter_yaw: 0.0,
+            needs_recenter: false,
             orientation: Quat::IDENTITY,
             last_poll: None,
             #[cfg(target_os = "android")]
@@ -41,6 +43,7 @@ impl MobileVr {
         }
         self.enabled = enabled;
         self.last_poll = None;
+        self.needs_recenter = enabled;
         #[cfg(target_os = "android")]
         {
             if enabled {
@@ -73,7 +76,14 @@ impl MobileVr {
         self.last_poll = Some(now);
         #[cfg(target_os = "android")]
         if let Some(s) = &mut self.sensors {
-            self.orientation = s.poll(self.orientation, dt);
+            let next = s.poll(self.orientation, dt);
+            if next != self.orientation {
+                self.orientation = next;
+                if self.needs_recenter {
+                    self.needs_recenter = false;
+                    self.recenter_yaw = extract_yaw(self.orientation);
+                }
+            }
         }
         #[cfg(not(target_os = "android"))]
         let _ = dt;
@@ -100,10 +110,11 @@ pub fn sensor_quat_to_head_pose(x: f32, y: f32, z: f32, w: f32) -> Quat {
     if q.length_squared() < 1e-6 {
         return Quat::IDENTITY;
     }
-    // Remap Android landscape sensor frame (X right, Y up-screen, Z out-of-screen)
-    // to viewer head space.
-    let remap = Quat::from_rotation_x(-std::f32::consts::FRAC_PI_2);
-    (remap * q.normalize()).normalize()
+    // Remap Android world (Z-up) to viewer head space (Y-up, Z-back) and
+    // undo the 90 deg CCW landscape rotation of the phone's natural sensor frame.
+    let world_to_view = Quat::from_rotation_x(-std::f32::consts::FRAC_PI_2);
+    let landscape_to_portrait = Quat::from_rotation_z(-std::f32::consts::FRAC_PI_2);
+    (world_to_view * q.normalize() * landscape_to_portrait).normalize()
 }
 
 /// Complementary sensor fusion step combining angular velocity (rad/s) and
@@ -149,6 +160,8 @@ pub fn eye_offsets(ipd_mm: f32) -> (Vec3, Vec3) {
 mod android_sensors {
     use super::*;
     use std::ffi::{c_char, c_int, c_void};
+    use std::sync::atomic::{AtomicBool, Ordering};
+    use std::sync::{Arc, Condvar, Mutex};
 
     const ASENSOR_TYPE_ACCELEROMETER: c_int = 1;
     const ASENSOR_TYPE_GYROSCOPE: c_int = 4;
@@ -185,6 +198,7 @@ mod android_sensors {
 
     unsafe extern "C" {
         fn ALooper_prepare(opts: c_int) -> *mut c_void;
+        fn ALooper_pollOnce(timeout_millis: c_int, out_fd: *mut c_int, out_events: *mut c_int, out_data: *mut *mut c_void) -> c_int;
         fn ASensorManager_getInstanceForPackage(package_name: *const c_char) -> *mut c_void;
         fn ASensorManager_getDefaultSensor(manager: *mut c_void, sensor_type: c_int) -> *const c_void;
         fn ASensorManager_createEventQueue(
@@ -201,81 +215,94 @@ mod android_sensors {
         fn ASensorEventQueue_getEvents(queue: *mut c_void, events: *mut ASensorEvent, count: usize) -> isize;
     }
 
-    pub(super) struct SensorReader {
-        manager: *mut c_void,
-        queue: *mut c_void,
-        rot_sensor: *const c_void,
-        gyro_sensor: *const c_void,
-        accel_sensor: *const c_void,
-        last_accel: Vec3,
+    struct Shared {
+        running: AtomicBool,
+        enabled: Mutex<bool>,
+        wake: Condvar,
+        orientation: Mutex<Quat>,
     }
 
-    // SAFETY: `SensorReader` is owned and polled on the main viewer thread only.
-    unsafe impl Send for SensorReader {}
+    pub(super) struct SensorReader {
+        shared: Arc<Shared>,
+        thread: Option<std::thread::JoinHandle<()>>,
+    }
 
     impl SensorReader {
+        /// Spawns a dedicated thread with its own `ALooper` so `ASensorEventQueue`
+        /// never shares or wakes `android_main`'s `winit` / `android_activity` `ALooper`.
         pub(super) fn open() -> Option<Self> {
-            // SAFETY: NDK sensor manager C API calls with valid pointers/package name.
-            unsafe {
-                let looper = ALooper_prepare(LOOPER_PREPARE_ALLOW_NON_CALLBACKS);
-                let manager = ASensorManager_getInstanceForPackage(c"org.auroraviewer.aurora".as_ptr());
-                if manager.is_null() || looper.is_null() {
-                    log::warn!("mobile_vr: ASensorManager unavailable");
-                    return None;
-                }
-                let queue = ASensorManager_createEventQueue(manager, looper, 1, std::ptr::null(), std::ptr::null_mut());
-                if queue.is_null() {
-                    log::warn!("mobile_vr: failed to create ASensorEventQueue");
-                    return None;
-                }
-                let mut rot_sensor = ASensorManager_getDefaultSensor(manager, ASENSOR_TYPE_GAME_ROTATION_VECTOR);
-                if rot_sensor.is_null() {
-                    rot_sensor = ASensorManager_getDefaultSensor(manager, ASENSOR_TYPE_ROTATION_VECTOR);
-                }
-                let gyro_sensor = ASensorManager_getDefaultSensor(manager, ASENSOR_TYPE_GYROSCOPE);
-                let accel_sensor = ASensorManager_getDefaultSensor(manager, ASENSOR_TYPE_ACCELEROMETER);
-                Some(Self {
-                    manager,
-                    queue,
-                    rot_sensor,
-                    gyro_sensor,
-                    accel_sensor,
-                    last_accel: Vec3::Y * 9.81,
-                })
-            }
+            let shared = Arc::new(Shared {
+                running: AtomicBool::new(true),
+                enabled: Mutex::new(false),
+                wake: Condvar::new(),
+                orientation: Mutex::new(Quat::IDENTITY),
+            });
+            let worker = Arc::clone(&shared);
+            let thread = std::thread::Builder::new()
+                .name("aurora-vr-sensors".into())
+                .spawn(move || sensor_thread(worker))
+                .ok()?;
+            Some(Self {
+                shared,
+                thread: Some(thread),
+            })
         }
 
         pub(super) fn enable(&mut self) {
-            // SAFETY: `queue` and sensor pointers came from `ASensorManager`.
-            unsafe {
-                if !self.rot_sensor.is_null() {
-                    ASensorEventQueue_enableSensor(self.queue, self.rot_sensor);
-                    ASensorEventQueue_setEventRate(self.queue, self.rot_sensor, SENSOR_RATE_US);
-                } else {
-                    if !self.gyro_sensor.is_null() {
-                        ASensorEventQueue_enableSensor(self.queue, self.gyro_sensor);
-                        ASensorEventQueue_setEventRate(self.queue, self.gyro_sensor, SENSOR_RATE_US);
-                    }
-                    if !self.accel_sensor.is_null() {
-                        ASensorEventQueue_enableSensor(self.queue, self.accel_sensor);
-                        ASensorEventQueue_setEventRate(self.queue, self.accel_sensor, SENSOR_RATE_US);
-                    }
-                }
+            if let Ok(mut on) = self.shared.enabled.lock() {
+                *on = true;
+                self.shared.wake.notify_all();
             }
         }
 
         pub(super) fn disable(&mut self) {
-            // SAFETY: `queue` and sensor pointers came from `ASensorManager`.
-            unsafe {
-                for sensor in [self.rot_sensor, self.gyro_sensor, self.accel_sensor] {
-                    if !sensor.is_null() {
-                        ASensorEventQueue_disableSensor(self.queue, sensor);
-                    }
-                }
+            if let Ok(mut on) = self.shared.enabled.lock() {
+                *on = false;
+                self.shared.wake.notify_all();
             }
         }
 
-        pub(super) fn poll(&mut self, mut current: Quat, dt: f32) -> Quat {
+        pub(super) fn poll(&mut self, current: Quat, _dt: f32) -> Quat {
+            self.shared.orientation.lock().map(|q| *q).unwrap_or(current)
+        }
+    }
+
+    impl Drop for SensorReader {
+        fn drop(&mut self) {
+            self.shared.running.store(false, Ordering::Relaxed);
+            self.shared.wake.notify_all();
+            if let Some(handle) = self.thread.take() {
+                let _ = handle.join();
+            }
+        }
+    }
+
+    fn sensor_thread(shared: Arc<Shared>) {
+        // SAFETY: Runs on its own thread with a thread-local `ALooper`; all NDK
+        // handles are created, polled, and destroyed on this same thread.
+        unsafe {
+            let looper = ALooper_prepare(LOOPER_PREPARE_ALLOW_NON_CALLBACKS);
+            let manager = ASensorManager_getInstanceForPackage(c"org.auroraviewer.aurora".as_ptr());
+            if manager.is_null() || looper.is_null() {
+                log::warn!("mobile_vr: ASensorManager unavailable");
+                return;
+            }
+            let queue = ASensorManager_createEventQueue(manager, looper, 1, std::ptr::null(), std::ptr::null_mut());
+            if queue.is_null() {
+                log::warn!("mobile_vr: failed to create ASensorEventQueue");
+                return;
+            }
+            let mut rot_sensor = ASensorManager_getDefaultSensor(manager, ASENSOR_TYPE_GAME_ROTATION_VECTOR);
+            if rot_sensor.is_null() {
+                rot_sensor = ASensorManager_getDefaultSensor(manager, ASENSOR_TYPE_ROTATION_VECTOR);
+            }
+            let gyro_sensor = ASensorManager_getDefaultSensor(manager, ASENSOR_TYPE_GYROSCOPE);
+            let accel_sensor = ASensorManager_getDefaultSensor(manager, ASENSOR_TYPE_ACCELEROMETER);
+
+            let mut active = false;
+            let mut current = Quat::IDENTITY;
+            let mut last_accel = Vec3::Y * 9.81;
+            let mut last_poll = Instant::now();
             let mut buf = [ASensorEvent {
                 version: 0,
                 sensor: 0,
@@ -285,40 +312,84 @@ mod android_sensors {
                 data: ASensorEventData { raw: [0; 64] },
                 reserved1: [0; 4],
             }; 32];
-            // SAFETY: `buf` is valid writable memory of 32 `ASensorEvent`s.
-            let n = unsafe { ASensorEventQueue_getEvents(self.queue, buf.as_mut_ptr(), buf.len()) };
-            if n <= 0 {
-                return current;
-            }
-            for ev in &buf[..n as usize] {
-                // SAFETY: `ev.event_type` identifies which union field is populated.
-                let v = unsafe { ev.data.vector.v };
-                match ev.event_type {
-                    ASENSOR_TYPE_GAME_ROTATION_VECTOR | ASENSOR_TYPE_ROTATION_VECTOR => {
-                        let w_sq = (1.0 - (v[0] * v[0] + v[1] * v[1] + v[2] * v[2])).max(0.0);
-                        let w = if v[3].abs() > 1e-6 { v[3] } else { w_sq.sqrt() };
-                        current = sensor_quat_to_head_pose(v[0], v[1], v[2], w);
+
+            while shared.running.load(Ordering::Relaxed) {
+                let wanted = {
+                    let Ok(mut guard) = shared.enabled.lock() else {
+                        break;
+                    };
+                    while !*guard && shared.running.load(Ordering::Relaxed) {
+                        if active {
+                            for sensor in [rot_sensor, gyro_sensor, accel_sensor] {
+                                if !sensor.is_null() {
+                                    ASensorEventQueue_disableSensor(queue, sensor);
+                                }
+                            }
+                            active = false;
+                        }
+                        let Ok(next) = shared.wake.wait(guard) else {
+                            return;
+                        };
+                        guard = next;
                     }
-                    ASENSOR_TYPE_ACCELEROMETER => {
-                        self.last_accel = Vec3::new(v[0], v[1], v[2]);
+                    *guard
+                };
+                if !shared.running.load(Ordering::Relaxed) {
+                    break;
+                }
+                if wanted && !active {
+                    if !rot_sensor.is_null() {
+                        ASensorEventQueue_enableSensor(queue, rot_sensor);
+                        ASensorEventQueue_setEventRate(queue, rot_sensor, SENSOR_RATE_US);
+                    } else {
+                        if !gyro_sensor.is_null() {
+                            ASensorEventQueue_enableSensor(queue, gyro_sensor);
+                            ASensorEventQueue_setEventRate(queue, gyro_sensor, SENSOR_RATE_US);
+                        }
+                        if !accel_sensor.is_null() {
+                            ASensorEventQueue_enableSensor(queue, accel_sensor);
+                            ASensorEventQueue_setEventRate(queue, accel_sensor, SENSOR_RATE_US);
+                        }
                     }
-                    ASENSOR_TYPE_GYROSCOPE => {
-                        current = fuse_gyro_accel(current, Vec3::new(v[0], v[1], v[2]), self.last_accel, dt);
+                    active = true;
+                    last_poll = Instant::now();
+                }
+
+                let _ = ALooper_pollOnce(10, std::ptr::null_mut(), std::ptr::null_mut(), std::ptr::null_mut());
+                let n = ASensorEventQueue_getEvents(queue, buf.as_mut_ptr(), buf.len());
+                if n > 0 {
+                    let now = Instant::now();
+                    let dt = now.saturating_duration_since(last_poll).as_secs_f32().clamp(0.001, 0.1);
+                    last_poll = now;
+                    for ev in &buf[..n as usize] {
+                        let v = ev.data.vector.v;
+                        match ev.event_type {
+                            ASENSOR_TYPE_GAME_ROTATION_VECTOR | ASENSOR_TYPE_ROTATION_VECTOR => {
+                                let w_sq = (1.0 - (v[0] * v[0] + v[1] * v[1] + v[2] * v[2])).max(0.0);
+                                let w = if v[3].abs() > 1e-6 { v[3] } else { w_sq.sqrt() };
+                                current = sensor_quat_to_head_pose(v[0], v[1], v[2], w);
+                            }
+                            ASENSOR_TYPE_ACCELEROMETER => {
+                                last_accel = Vec3::new(v[0], v[1], v[2]);
+                            }
+                            ASENSOR_TYPE_GYROSCOPE => {
+                                current = fuse_gyro_accel(current, Vec3::new(v[0], v[1], v[2]), last_accel, dt);
+                            }
+                            _ => {}
+                        }
                     }
-                    _ => {}
+                    if let Ok(mut out) = shared.orientation.lock() {
+                        *out = current;
+                    }
                 }
             }
-            current
-        }
-    }
 
-    impl Drop for SensorReader {
-        fn drop(&mut self) {
-            self.disable();
-            // SAFETY: `manager` and `queue` are valid NDK handles.
-            unsafe {
-                ASensorManager_destroyEventQueue(self.manager, self.queue);
+            for sensor in [rot_sensor, gyro_sensor, accel_sensor] {
+                if !sensor.is_null() {
+                    ASensorEventQueue_disableSensor(queue, sensor);
+                }
             }
+            ASensorManager_destroyEventQueue(manager, queue);
         }
     }
 }
