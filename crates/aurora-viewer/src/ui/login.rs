@@ -827,7 +827,7 @@ pub fn show(
                         }
                         ui.add_space(2.0);
                         ui.label(
-                            RichText::new("Aurora Viewer")
+                            RichText::new(crate::brand::APP_NAME)
                                 .size(if compact { 24.0 } else { 34.0 })
                                 .strong()
                                 .color(p.ink),

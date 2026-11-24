@@ -3164,6 +3164,7 @@ impl Settings {
     /// Migrated and bounded, remembering a newer build's file to save over.
     fn finished(self, newer: Option<(serde_json::Value, Vec<String>)>) -> Settings {
         let mut s = self.sanitized();
+        crate::brand::seed_default_grids(&mut s.grids);
         if let Some((theirs, kept)) = newer
             && let Ok(loaded) = serde_json::to_value(&s)
         {

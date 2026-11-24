@@ -165,7 +165,7 @@ mod win {
         write(&class, None, "URL:Virtual World")?;
         write(&class, Some("URL Protocol"), "")?;
         write(&format!(r"{class}\DefaultIcon"), None, &format!("\"{exe}\",0"))?;
-        write(&format!(r"{class}\shell\open"), Some("FriendlyAppName"), "Aurora Viewer")?;
+        write(&format!(r"{class}\shell\open"), Some("FriendlyAppName"), crate::brand::APP_NAME)?;
         write(&format!(r"{class}\shell\open\command"), None, &format!("\"{exe}\" -url \"%1\""))?;
         log::info!("{scheme} links: registered for this user");
         Ok(())
@@ -417,9 +417,11 @@ mod xdg {
     pub(super) fn desktop_entry(exe: &str) -> String {
         let mimes: String = SCHEMES.iter().map(|s| format!("x-scheme-handler/{s};")).collect();
         format!(
-            "[Desktop Entry]\nType=Application\nName=Aurora Viewer\nComment=Opens Second Life and Hypergrid links\n\
-             Exec={}\nIcon=aurora-viewer\nTerminal=false\nNoDisplay=true\nMimeType={mimes}\n",
-            exec_line(exe)
+            "[Desktop Entry]\nType=Application\nName={}\nComment=Opens Second Life and Hypergrid links\n\
+             Exec={}\nIcon={}\nTerminal=false\nNoDisplay=true\nMimeType={mimes}\n",
+            crate::brand::APP_NAME,
+            exec_line(exe),
+            crate::brand::DESKTOP_ID
         )
     }
 

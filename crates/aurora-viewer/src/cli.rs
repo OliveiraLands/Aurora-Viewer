@@ -87,7 +87,7 @@ pub fn get() -> &'static Cli {
             std::process::exit(0);
         }
         if cli.version {
-            println!("{}", aurora_i18n::tr!("common-aurora-viewer", value0 = aurora_version::version()));
+            println!("{} {}", crate::brand::APP_NAME, aurora_version::version());
             std::process::exit(0);
         }
         cli
@@ -220,7 +220,7 @@ pub fn window_title() -> String {
 /// Viewer's `com.secondlife.indra.viewer` is shared by every viewer of its
 /// family, so Aurora does not take it.
 #[cfg_attr(not(target_os = "linux"), allow(dead_code))]
-pub const DESKTOP_ID: &str = "aurora-viewer";
+pub const DESKTOP_ID: &str = crate::brand::DESKTOP_ID;
 
 /// Window attributes with the [`DESKTOP_ID`] on Linux; elsewhere unchanged.
 pub fn with_desktop_id(attrs: winit::window::WindowAttributes) -> winit::window::WindowAttributes {
@@ -237,8 +237,8 @@ pub fn with_desktop_id(attrs: winit::window::WindowAttributes) -> winit::window:
 
 fn title_with(title: Option<&str>, profile_dir: &str, version: &str) -> String {
     let base = match title {
-        Some(t) => aurora_i18n::tr!("cli-aurora-viewer-2", version = version.to_string(), t = t.to_string()),
-        None => aurora_i18n::tr!("cli-aurora-viewer", version = version.to_string()),
+        Some(t) => format!("{} {version} - {t}", crate::brand::APP_NAME),
+        None => format!("{} {version}", crate::brand::APP_NAME),
     };
     match profile_label(profile_dir) {
         Some(p) => format!("{base} ({p})"),

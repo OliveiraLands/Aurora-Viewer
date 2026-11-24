@@ -27,16 +27,37 @@ New-Item -ItemType Directory -Force -Path $macos, $resources | Out-Null
 & (Join-Path $PSScriptRoot 'package.ps1') -Exe $Exe -Out $resources -Source $Source
 Move-Item -LiteralPath (Join-Path $resources (Split-Path $Exe -Leaf)) -Destination (Join-Path $macos 'aurora-viewer')
 
+# Optional local branding overrides (brand.local.json or AURORA_BRAND_CONFIG).
+$brandPath = if ($env:AURORA_BRAND_CONFIG) { $env:AURORA_BRAND_CONFIG } else { Join-Path $Source 'brand.local.json' }
+$brand = $null
+if (Test-Path -LiteralPath $brandPath) {
+    $brand = Get-Content -LiteralPath $brandPath -Raw | ConvertFrom-Json
+}
+$appName = if ($brand -and $brand.app_name) { [string]$brand.app_name } else { 'Aurora Viewer' }
+$bundleId = if ($brand -and $brand.macos_bundle_id) { [string]$brand.macos_bundle_id } else { 'org.aurora-viewer.AuroraViewer' }
+
 # MAJOR.MINOR.PATCH of the build, the only form CFBundleShortVersionString
 # takes (a beta's pre-release part and the commits since the tag are left out)
 $version = (Get-Content -LiteralPath (Join-Path $resources 'aurora-install.json') -Raw | ConvertFrom-Json).version
 if ($version -notmatch '^(\d+\.\d+\.\d+)') { throw "Invalid package version: $version" }
-$plist = Get-Content -LiteralPath (Join-Path $Source 'packaging/macos/Info.plist') -Raw
-Set-Content -LiteralPath (Join-Path $contents 'Info.plist') -Value $plist.Replace('@VERSION@', $Matches[1]) -Encoding utf8NoBOM -NoNewline
+$plist = (Get-Content -LiteralPath (Join-Path $Source 'packaging/macos/Info.plist') -Raw).Replace('@VERSION@', $Matches[1])
+if ($appName -ne 'Aurora Viewer') {
+    $plist = $plist.Replace('<string>Aurora Viewer</string>', "<string>$appName</string>")
+    $plist = $plist.Replace('Aurora Viewer uses the microphone', "$appName uses the microphone")
+}
+if ($bundleId -ne 'org.aurora-viewer.AuroraViewer') {
+    $plist = $plist.Replace('<string>org.aurora-viewer.AuroraViewer</string>', "<string>$bundleId</string>")
+}
+Set-Content -LiteralPath (Join-Path $contents 'Info.plist') -Value $plist -Encoding utf8NoBOM -NoNewline
 Set-Content -LiteralPath (Join-Path $contents 'PkgInfo') -Value 'APPL????' -Encoding ascii -NoNewline
 
-Copy-Item -LiteralPath (Join-Path $Source 'assets/branding/aurora.icns') -Destination (Join-Path $resources 'Aurora.icns')
+$icnsSource = Join-Path $Source 'assets/branding/aurora.icns'
+if ($brand -and $brand.icons -and $brand.icons.macos_icns) {
+    $candidate = if ([IO.Path]::IsPathRooted($brand.icons.macos_icns)) { $brand.icons.macos_icns } else { Join-Path $Source $brand.icons.macos_icns }
+    if (Test-Path -LiteralPath $candidate) { $icnsSource = $candidate }
+}
+Copy-Item -LiteralPath $icnsSource -Destination (Join-Path $resources 'Aurora.icns')
 Get-ChildItem -LiteralPath (Join-Path $Source 'packaging/macos') -Directory -Filter '*.lproj' | ForEach-Object {
     Copy-Item -LiteralPath $_.FullName -Destination $resources -Recurse
 }
-"${Out}: Aurora Viewer $version"
+"${Out}: $appName $version"

@@ -1,0 +1,30 @@
+{
+  "app_name": "MyViewer",
+  "channel": "MyViewer",
+  "user_agent_product": "MyViewer",
+  "android_package": "com.example.myviewer",
+  "macos_bundle_id": "com.example.MyViewer",
+  "desktop_id": "myviewer",
+  "modified_notice": "Modified version based on Aurora Viewer (2026). Not an official or endorsed Aurora Viewer build.",
+  "third_party_notice": "MyViewer is a third-party viewer, not provided or supported by Linden Lab, the makers of Second Life.",
+  "links": {
+    "github": "https://github.com/example/myviewer",
+    "new_issue": "https://github.com/example/myviewer/issues/new/choose",
+    "wiki": "",
+    "discord": "",
+    "website": "https://example.com",
+    "privacy_policy": "",
+    "news_feed": "",
+    "raw_files": "https://raw.githubusercontent.com/example/myviewer/"
+  },
+  "icons": {
+    "logo_png": "brand.local/icons/logo.png",
+    "logo_white_svg": "brand.local/icons/logo-white.svg",
+    "logo_svg": "brand.local/icons/logo.svg",
+    "windows_ico": "brand.local/icons/app.ico",
+    "macos_icns": "brand.local/icons/app.icns",
+    "android_res_dir": "brand.local/android/res"
+  },
+  "grids_file": "grids.local.json",
+  "default_grids": []
+}

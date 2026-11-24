@@ -61,7 +61,8 @@ public class AuroraActivity extends NativeActivity {
         column.setGravity(Gravity.CENTER_HORIZONTAL);
 
         ImageView logo = new ImageView(this);
-        logo.setImageResource(R.mipmap.ic_launcher);
+        int iconRes = getApplicationInfo().icon;
+        logo.setImageResource(iconRes != 0 ? iconRes : R.mipmap.ic_launcher);
         LinearLayout.LayoutParams logoParams = new LinearLayout.LayoutParams(dp(96), dp(96));
         logoParams.bottomMargin = dp(16);
         column.addView(logo, logoParams);

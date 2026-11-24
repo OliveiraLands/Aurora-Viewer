@@ -17,9 +17,19 @@ pub const fn commit() -> &'static str {
     env!("AURORA_BUILD_COMMIT")
 }
 
+/// Viewer display name (defaults to "Aurora Viewer", overridden by `brand.local.json`).
+pub const fn app_name() -> &'static str {
+    env!("AURORA_BRAND_APP_NAME")
+}
+
+/// Login channel reported to the grid (defaults to "Aurora Viewer").
+pub const fn channel() -> &'static str {
+    env!("AURORA_BRAND_CHANNEL")
+}
+
 /// HTTP clients use the same version as the interface.
 pub const fn user_agent() -> &'static str {
-    concat!("AuroraViewer/", env!("AURORA_COMPILED_VERSION"))
+    concat!(env!("AURORA_BRAND_USER_AGENT_PRODUCT"), "/", env!("AURORA_COMPILED_VERSION"))
 }
 
 /// SL's login uses four numeric components, as LLVersionInfo::getVersion:

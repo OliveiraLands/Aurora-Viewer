@@ -37,17 +37,36 @@ Get-ChildItem -LiteralPath $dictionaries -Directory -ErrorAction Stop | ForEach-
 }
 $docs = 'LICENSE', 'NOTICE.md', 'README.md' | ForEach-Object { Join-Path $Source $_ }
 Copy-Item -LiteralPath $docs -Destination $Out -ErrorAction Stop
+# Optional local branding overrides (brand.local.json or AURORA_BRAND_CONFIG).
+$brandPath = if ($env:AURORA_BRAND_CONFIG) { $env:AURORA_BRAND_CONFIG } else { Join-Path $Source 'brand.local.json' }
+$brand = $null
+if (Test-Path -LiteralPath $brandPath) {
+    $brand = Get-Content -LiteralPath $brandPath -Raw | ConvertFrom-Json
+}
+$appName = if ($brand -and $brand.app_name) { [string]$brand.app_name } else { 'Aurora Viewer' }
+$desktopId = if ($brand -and $brand.desktop_id) { [string]$brand.desktop_id } else { 'aurora-viewer' }
+
 # Linux (an executable without extension): the desktop entry and its icon,
 # named after the viewer's Wayland app_id / X11 WM_CLASS (cli.rs DESKTOP_ID)
 # so the desktop matches the window to them. docs/LINUX.md installs them.
 # (macOS has its own bundle: package-macos.ps1; $IsMacOS is unset, so
 # false, in Windows PowerShell 5.1.)
 if (-not [IO.Path]::GetExtension($Exe) -and -not $IsMacOS) {
-    Copy-Item -LiteralPath (Join-Path $Source 'packaging/linux/aurora-viewer.desktop') -Destination $Out -ErrorAction Stop
-    Copy-Item -LiteralPath (Join-Path $Source 'assets/branding/aurora-logo.svg') -Destination (Join-Path $Out 'aurora-viewer.svg') -ErrorAction Stop
+    $desktopContent = (Get-Content -LiteralPath (Join-Path $Source 'packaging/linux/aurora-viewer.desktop') -Raw) `
+        -replace '(?m)^Name=.*$', "Name=$appName" `
+        -replace '(?m)^Icon=.*$', "Icon=$desktopId" `
+        -replace '(?m)^StartupWMClass=.*$', "StartupWMClass=$desktopId"
+    [IO.File]::WriteAllText((Join-Path $Out "$desktopId.desktop"), $desktopContent, [Text.UTF8Encoding]::new($false))
+    $svgSource = Join-Path $Source 'assets/branding/aurora-logo.svg'
+    if ($brand -and $brand.icons -and $brand.icons.logo_svg) {
+        $candidate = if ([IO.Path]::IsPathRooted($brand.icons.logo_svg)) { $brand.icons.logo_svg } else { Join-Path $Source $brand.icons.logo_svg }
+        if (Test-Path -LiteralPath $candidate) { $svgSource = $candidate }
+    }
+    Copy-Item -LiteralPath $svgSource -Destination (Join-Path $Out "$desktopId.svg") -ErrorAction Stop
 }
 $taskExePath = (Resolve-Path -LiteralPath $Exe).Path
-$taskVersion = (& $taskExePath --version | Out-String).Trim() -replace '^Aurora Viewer ', ''
+$prefixPattern = '^' + [regex]::Escape($appName) + ' '
+$taskVersion = (& $taskExePath --version | Out-String).Trim() -replace $prefixPattern, ''
 if ($LASTEXITCODE -ne 0 -or $taskVersion -notmatch '^\d+\.\d+\.\d+([+-][0-9A-Za-z.+-]+)?$') { throw 'Invalid package version.' }
 $taskJson = @{ schema = 1; version = $taskVersion } | ConvertTo-Json
 $taskMetadataPath = Join-Path (Resolve-Path -LiteralPath $Out -ErrorAction Stop).Path 'aurora-install.json'

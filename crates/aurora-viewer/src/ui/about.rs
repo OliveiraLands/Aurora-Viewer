@@ -114,7 +114,7 @@ pub struct AboutUi {
 /// The release page of this version, for a published version only (a
 /// build between two tags has none).
 pub fn release_notes(version: &str) -> Option<String> {
-    let published = !version.is_empty() && !version.contains('+') && version != "0.0.0";
+    let published = !version.is_empty() && !version.contains('+') && version != "0.0.0" && !crate::links::GITHUB.is_empty();
     published.then(|| format!("{}/releases/tag/v{version}", crate::links::GITHUB))
 }
 
@@ -123,7 +123,10 @@ pub fn release_notes(version: &str) -> Option<String> {
 /// its English labels).
 pub fn copy_text(sections: &[Section]) -> String {
     let version = aurora_version::version();
-    let mut out = format!("Aurora Viewer {version}\n");
+    let mut out = format!("{} {version}\n", crate::brand::APP_NAME);
+    if crate::brand::IS_MODIFIED {
+        out.push_str("Based on Aurora Viewer (modified version)\n");
+    }
     if let Some(url) = release_notes(version) {
         out.push_str(&format!("Release notes: {url}\n"));
     }
@@ -264,16 +267,22 @@ fn hero(ui: &mut egui::Ui, p: &Palette, logo: Option<&egui::TextureHandle>) {
         }
         ui.vertical(|ui| {
             ui.spacing_mut().item_spacing.y = 4.0;
-            ui.label(sheet::semibold(ui, "Aurora Viewer", 22.0, p.ink));
+            ui.label(sheet::semibold(ui, crate::brand::APP_NAME, 22.0, p.ink));
             ui.label(RichText::new(crate::ui::login::client_tagline()).size(12.0).color(p.violet_pale));
-            ui.add(
-                egui::Label::new(
-                    RichText::new(aurora_i18n::tr!("about-third-party-viewer"))
-                        .size(11.5)
-                        .color(p.muted),
-                )
-                .wrap(),
-            );
+            if crate::brand::IS_MODIFIED {
+                let notice = if crate::brand::MODIFIED_NOTICE.is_empty() {
+                    "Modified version based on Aurora Viewer. Not an official or endorsed Aurora Viewer build."
+                } else {
+                    crate::brand::MODIFIED_NOTICE
+                };
+                ui.add(egui::Label::new(RichText::new(notice).size(11.5).color(p.ink)).wrap());
+            }
+            let tpv_notice = if crate::brand::IS_MODIFIED && !crate::brand::THIRD_PARTY_NOTICE.is_empty() {
+                crate::brand::THIRD_PARTY_NOTICE
+            } else {
+                aurora_i18n::tr!("about-third-party-viewer")
+            };
+            ui.add(egui::Label::new(RichText::new(tpv_notice).size(11.5).color(p.muted)).wrap());
             ui.add_space(4.0);
             ui.horizontal_wrapped(|ui| {
                 ui.spacing_mut().item_spacing = Vec2::new(6.0, 6.0);
@@ -287,8 +296,12 @@ fn hero(ui: &mut egui::Ui, p: &Palette, logo: Option<&egui::TextureHandle>) {
                 if let Some(url) = release_notes(aurora_version::version()) {
                     link(ui, p, "file-text-filled", aurora_i18n::tr!("about-release-notes"), &url);
                 }
-                link(ui, p, "brand-github-filled", "GitHub", crate::links::GITHUB);
-                link(ui, p, "world-filled", aurora_i18n::tr!("ui-login-website"), crate::links::WEBSITE);
+                if !crate::links::GITHUB.is_empty() {
+                    link(ui, p, "brand-github-filled", "GitHub", crate::links::GITHUB);
+                }
+                if !crate::links::WEBSITE.is_empty() {
+                    link(ui, p, "world-filled", aurora_i18n::tr!("ui-login-website"), crate::links::WEBSITE);
+                }
             });
         });
     });
@@ -359,6 +372,34 @@ fn licences(ui: &mut egui::Ui, p: &Palette, to_end: bool) {
         .id_salt("about_licences")
         .auto_shrink([false, false])
         .show(ui, |ui| {
+            if crate::brand::IS_MODIFIED {
+                let mut mod_card = sheet::card_begin(ui);
+                let mc = &mut mod_card.child;
+                sheet::card_title(mc, p, "info-circle-filled", crate::brand::APP_NAME, None);
+                mc.add_space(6.0);
+                let notice = if crate::brand::MODIFIED_NOTICE.is_empty() {
+                    "Modified version based on Aurora Viewer. Distributed under the GNU General Public License, version 3 or later. Not an official or endorsed Aurora Viewer build."
+                } else {
+                    crate::brand::MODIFIED_NOTICE
+                };
+                mc.add(egui::Label::new(RichText::new(notice).size(12.0).color(p.ink)).wrap());
+                mc.add_space(6.0);
+                mc.horizontal_wrapped(|ui| {
+                    ui.spacing_mut().item_spacing = Vec2::new(6.0, 6.0);
+                    link(ui, p, "file-text-filled", aurora_i18n::tr!("about-licence-gpl"), GPL);
+                    if !crate::links::GITHUB.is_empty() {
+                        link(
+                            ui,
+                            p,
+                            "brand-github-filled",
+                            aurora_i18n::tr!("about-source-code"),
+                            crate::links::GITHUB,
+                        );
+                    }
+                    link(ui, p, "world-filled", "Aurora Viewer", crate::brand::UPSTREAM_WEBSITE);
+                });
+                sheet::card_end(ui, p, mod_card);
+            }
             let mut card = sheet::card_begin(ui);
             let c = &mut card.child;
             sheet::card_title(c, p, "license", aurora_i18n::tr!("about-licence-title"), None);
@@ -371,7 +412,7 @@ fn licences(ui: &mut egui::Ui, p: &Palette, to_end: bool) {
                     p,
                     "brand-github-filled",
                     aurora_i18n::tr!("about-source-code"),
-                    crate::links::GITHUB,
+                    crate::brand::UPSTREAM_GITHUB,
                 );
             });
             c.add_space(8.0);
@@ -516,7 +557,7 @@ mod tests {
         ];
         let text = copy_text(&sections);
         let blocks: Vec<&str> = text.split("\n\n").collect();
-        assert!(blocks[0].starts_with(&format!("Aurora Viewer {}", aurora_version::version())));
+        assert!(blocks[0].starts_with(&format!("{} {}", crate::brand::APP_NAME, aurora_version::version())));
         assert_eq!(
             blocks[1],
             format!(

@@ -1,0 +1,9 @@
+[
+  {
+    "name": "Example Grid",
+    "nickname": "example",
+    "service": "http://grid.example.org:8002",
+    "login": "http://grid.example.org:8002/",
+    "gatekeeper": "http://grid.example.org:8002"
+  }
+]

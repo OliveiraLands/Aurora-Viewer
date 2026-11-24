@@ -62,3 +62,8 @@ __pycache__/
 /packaging/android/app/build/
 /packaging/android/app/src/main/jniLibs/
 /packaging/android/local.properties
+
+# Local downstream branding overrides (not stored in the repository)
+/brand.local.json
+/brand.local/
+/grids.local.json

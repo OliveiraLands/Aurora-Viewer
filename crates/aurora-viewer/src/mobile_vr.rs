@@ -282,7 +282,9 @@ mod android_sensors {
         // handles are created, polled, and destroyed on this same thread.
         unsafe {
             let looper = ALooper_prepare(LOOPER_PREPARE_ALLOW_NON_CALLBACKS);
-            let manager = ASensorManager_getInstanceForPackage(c"org.auroraviewer.aurora".as_ptr());
+            let pkg = std::ffi::CString::new(crate::brand::ANDROID_PACKAGE)
+                .unwrap_or_else(|_| std::ffi::CString::from(c"org.auroraviewer.aurora"));
+            let manager = ASensorManager_getInstanceForPackage(pkg.as_ptr());
             if manager.is_null() || looper.is_null() {
                 log::warn!("mobile_vr: ASensorManager unavailable");
                 return;
