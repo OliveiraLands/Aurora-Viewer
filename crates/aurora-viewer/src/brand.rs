@@ -58,8 +58,13 @@ fn parse_default_grids(json: &str) -> Vec<crate::grids::Grid> {
     let mut valid = Vec::with_capacity(array.len());
     for entry in array {
         match serde_json::from_value::<crate::grids::Grid>(entry.clone()) {
-            Ok(mut grid) if grid.validate().is_ok() => valid.push(grid),
-            Ok(grid) => log::warn!("brand default_grids entry '{}' failed validation", grid.name),
+            Ok(mut grid) => {
+                if grid.validate().is_ok() {
+                    valid.push(grid);
+                } else {
+                    log::warn!("brand default_grids entry '{}' failed validation", grid.name);
+                }
+            }
             Err(error) => log::warn!("brand default_grids entry skipped: {error}"),
         }
     }
