@@ -115,6 +115,17 @@ pub fn cards<W, S>(
 ) {
     const GAP: f32 = 12.0;
     const PAD: Vec2 = Vec2::new(12.0, 10.0);
+    if crate::touch::FormFactor::is_touch_device()
+        && crate::touch::ResponsiveLayout::from_ctx(ui.ctx()).form_factor == crate::touch::FormFactor::CompactPortrait
+    {
+        let mut c1 = card_begin(ui);
+        left(&mut c1.child, world, s);
+        card_end(ui, p, c1);
+        let mut c2 = card_begin(ui);
+        right(&mut c2.child, world, s);
+        card_end(ui, p, c2);
+        return;
+    }
     let width = ui.available_width();
     let left_w = ((width - GAP) * ratio / (ratio + 1.0)).floor();
     let right_w = width - GAP - left_w;
@@ -302,7 +313,7 @@ pub fn page_tabs<P: Copy + PartialEq>(
     role: Option<ViewAs<'_>>,
     as_visitor: &mut bool,
 ) {
-    ui.horizontal(|ui| {
+    let draw_tabs = |ui: &mut egui::Ui| {
         ui.spacing_mut().item_spacing.x = 2.0;
         for it in tabs {
             let selected = *page == it.page;
@@ -354,7 +365,12 @@ pub fn page_tabs<P: Copy + PartialEq>(
                 .on_hover_text(r.tip);
             });
         }
-    });
+    };
+    if crate::touch::FormFactor::is_touch_device() {
+        widgets::horizontal_scrollable_row(ui, "sheet_page_tabs", p.panel, draw_tabs);
+    } else {
+        ui.horizontal(draw_tabs);
+    }
 }
 
 /// Controls greyed (and faded like the mockup's read-only rows) unless
@@ -763,20 +779,27 @@ pub fn sections_with<S: Copy + PartialEq>(
         ui.vertical(|ui| {
             // the mockup's 10 px between the row and the column, exactly
             ui.spacing_mut().item_spacing.y = 0.0;
-            ui.horizontal(|ui| {
+            let draw_nav = |ui: &mut egui::Ui| {
                 ui.spacing_mut().item_spacing.x = 2.0;
-                // a long row is cut at the column's sides, never in height
-                let (mut clip, max) = (ui.clip_rect(), ui.max_rect());
-                clip.min.x = clip.min.x.max(max.min.x);
-                clip.max.x = clip.max.x.min(max.max.x);
-                ui.set_clip_rect(clip);
                 for sec in list {
                     if nav(ui, *sec, state.current == *sec).clicked() {
                         state.go(*sec);
                     }
                 }
                 tail(ui);
-            });
+            };
+            if crate::touch::FormFactor::is_touch_device() {
+                widgets::horizontal_scrollable_row(ui, id, p.panel, draw_nav);
+            } else {
+                ui.horizontal(|ui| {
+                    // a long row is cut at the column's sides, never in height
+                    let (mut clip, max) = (ui.clip_rect(), ui.max_rect());
+                    clip.min.x = clip.min.x.max(max.min.x);
+                    clip.max.x = clip.max.x.min(max.max.x);
+                    ui.set_clip_rect(clip);
+                    draw_nav(ui);
+                });
+            }
             ui.add_space(10.0);
             section_column(ui, p, id, list, state, body);
         });

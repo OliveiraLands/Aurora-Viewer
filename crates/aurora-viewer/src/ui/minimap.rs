@@ -28,6 +28,10 @@ use uuid::Uuid;
 /// (`layout::work_area`). A first launch opens it there, the radar in the
 /// opposite corner (`people::default_pos`).
 pub(crate) fn default_rect(work: Rect) -> Rect {
+    if crate::touch::FormFactor::is_touch_device() {
+        let side = 136.0_f32.min((work.width() * 0.34).max(104.0));
+        return Rect::from_min_size(pos2(work.right() - 8.0 - side, work.top() + 52.0), Vec2::splat(side));
+    }
     let gap = super::layout::GAP;
     Rect::from_min_size(pos2(work.right() - gap - 200.0, work.top() + gap), Vec2::splat(200.0))
 }
@@ -807,6 +811,14 @@ impl MiniMap {
                 {
                     let off = m - rect.center();
                     self.pan -= off * (opts.mini_scale / old) - off;
+                }
+            }
+            if crate::touch::FormFactor::is_touch_device() {
+                let pinch = ui.input(|i| i.zoom_delta());
+                if (pinch - 1.0).abs() > 1e-4 {
+                    let old = opts.mini_scale;
+                    opts.mini_scale = (old * pinch).clamp(MAP_SCALE_MIN, MAP_SCALE_MAX);
+                    self.pan *= opts.mini_scale / old;
                 }
             }
         }

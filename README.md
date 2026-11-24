@@ -1,29 +1,35 @@
 <div align="center">
 
-<img src="assets/branding/aurora-logo.svg" alt="Aurora Viewer" width="180">
+<img src="assets/branding/oliviewer-logo.png" alt="OliViewer" width="180">
 
-# Aurora Viewer
+# OliViewer
 
-**A modern Second Life viewer, written in Rust.**<br>
-A Vulkan renderer, a clean interface, and the Second Life you already know.
+**Based on [Aurora Viewer](https://github.com/Aurora-Viewer/Aurora-Viewer) — an independent Second Life & OpenSim viewer, written in Rust, with Android / mobile support.**<br>
+A Vulkan renderer, a clean interface, touch-first mobile UX, and the virtual worlds you already know.
 
-[![Download](docs/readme/button-download.svg)](https://github.com/Aurora-Viewer/Aurora-Viewer/releases/latest)&nbsp;
-[![Download for Linux](docs/readme/button-download-linux.svg)](docs/LINUX.md)&nbsp;
-[![Download for macOS (experimental)](docs/readme/button-download-macos.svg)](docs/MACOS.md)&nbsp;
-[![Discord](docs/readme/button-discord.svg)](https://discord.gg/TK4nbMGmKt)&nbsp;
-[![Website](docs/readme/button-website.svg)](https://aurora-viewer.org)
-
-[![CI](https://github.com/Aurora-Viewer/Aurora-Viewer/actions/workflows/ci.yml/badge.svg)](https://github.com/Aurora-Viewer/Aurora-Viewer/actions/workflows/ci.yml)
-[![Release](https://img.shields.io/github/v/release/Aurora-Viewer/Aurora-Viewer?include_prereleases&color=8B5CF6)](https://github.com/Aurora-Viewer/Aurora-Viewer/releases)
 [![License: GPLv3](https://img.shields.io/badge/license-GPLv3-4F46E5)](LICENSE)
 [![Rust](https://img.shields.io/badge/rust-stable-5EEAD4?logo=rust&logoColor=white)](https://www.rust-lang.org)
-[![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-070B1F)](#build)
+[![Platform](https://img.shields.io/badge/platform-Android%20%7C%20Windows%20%7C%20Linux%20%7C%20macOS-070B1F)](#build)
 
-<sub>This software is not provided or supported by Linden Lab, the makers of Second Life.</sub>
+<sub><strong>Independent fork notice:</strong> OliViewer is a modified, independent fork based on Aurora Viewer. It is <strong>not</strong> an official or endorsed build of Aurora Viewer, and is not provided or supported by Linden Lab, the makers of Second Life.</sub>
 
-[Why Aurora](#why-aurora) · [Creator tools](#creator-tools) · [Performance](#performance) · [Features](#what-works-today) · [Roadmap](#roadmap) · [Using Aurora](#using-aurora) · [Build](#build) · [Contributing](#contributing)
+[Independent Fork & License Notice](#independent-fork-license--compliance) · [Why Aurora](#why-aurora) · [Creator tools](#creator-tools) · [Performance](#performance) · [Features](#what-works-today) · [Roadmap](#roadmap) · [Using Aurora](#using-aurora) · [Build](#build) · [Contributing](#contributing)
 
 </div>
+
+## Independent Fork, License & Compliance
+
+**OliViewer** is an independent, modified fork **based on [Aurora Viewer](https://github.com/Aurora-Viewer/Aurora-Viewer)**, maintained by **OliveiraLands** to add Android / mobile touch ergonomics, Mobile VR support, and custom grid defaults while keeping the desktop experience compatible with upstream Aurora Viewer merges.
+
+In full compliance with the **GNU General Public License v3.0 (GPLv3)**, [TRADEMARKS.md](TRADEMARKS.md), and the guidance of the Aurora Viewer team:
+
+- **Not an Official Aurora Build:** OliViewer is an independent third-party project. It is **not** an official, affiliated, or endorsed build of Aurora Viewer. The Aurora Viewer team bears no responsibility or liability for OliViewer builds, modifications, or Play Store distributions. Official Aurora Viewer builds are distributed exclusively via [aurora-viewer.org](https://aurora-viewer.org) and [Aurora-Viewer/Aurora-Viewer](https://github.com/Aurora-Viewer/Aurora-Viewer/releases).
+- **Name, Logo & Trademarks:** OliViewer uses its own name and application icon/branding. The **"Aurora Viewer"** name and the **wolf logo** (`assets/branding/`) are trademarks reserved exclusively for official Aurora Viewer builds (see [TRADEMARKS.md](TRADEMARKS.md)).
+- **GPLv3 & Full Source Code:** OliViewer is free software licensed under the **GPLv3** ([LICENSE](LICENSE)). The complete source code of this modified version — **including all Android and mobile components** (`packaging/android/`, JNI bridge, touch UI, and Mobile VR) — is published openly in this repository (`https://github.com/OliveiraLands/Aurora-Viewer`) and linked from any store listing (including Google Play Store).
+- **Copyright & Modification Notices:** All original copyright, attribution, and license notices from Aurora Viewer, Firestorm, and Linden Lab are preserved in [LICENSE](LICENSE), [NOTICE.md](NOTICE.md), and the in-app **About** window, along with clear notice that OliViewer is a modified version.
+- **Second Life Third-Party Viewer Policy:** When used to connect to Second Life grids, OliViewer is subject to [Linden Lab's Third-Party Viewer Policy](https://secondlife.com/corporate/tpv.php). This software is not provided or supported by Linden Lab.
+
+---
 
 **Multi-threaded from the ground up: parallel loading, ultra fast teleports, built for today's hardware with Vulkan and Rust.**  
 <img width="1920" height="1032" alt="Aurora Viewer in a Japanese garden, with the People, Controls, Places, Inventory, Performance and Conversations windows open" src="docs/screenshots/world.webp" />  

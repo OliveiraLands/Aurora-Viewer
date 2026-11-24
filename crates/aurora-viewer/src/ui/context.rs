@@ -24,6 +24,7 @@ mod entries;
 pub use customize::{Customization, Preferences};
 mod avatar_textures;
 pub use avatar_textures::AvatarTexturesUi;
+mod mobile_sheet;
 mod object_profile;
 pub use object_profile::ObjectProfileUi;
 mod multi;
@@ -713,7 +714,12 @@ pub fn show(
     };
     let mut open = true;
     let entries = entries::world_menu(&m.target, f, m.point);
-    let hovered = if use_pie && !customization.force_list() {
+    let hovered = if crate::touch::FormFactor::is_touch_device() && !customization.force_list() {
+        let mut sheet_menu = m;
+        let hovered = mobile_sheet::show(ctx, p, &mut sheet_menu, &entries, &mut open);
+        *menu = Some(sheet_menu);
+        hovered
+    } else if use_pie && !customization.force_list() {
         let voice = match m.target {
             Target::Avatar { id, own: false, .. } => f.voice_volume.map(|v| (id, v)),
             _ => None,

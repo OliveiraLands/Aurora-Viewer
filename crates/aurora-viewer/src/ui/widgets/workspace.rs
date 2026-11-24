@@ -8,6 +8,12 @@ pub(crate) const INVENTORY_LABEL_PADDING: egui::Vec2 = egui::vec2(2.0, 1.0);
 
 /// The user tree and object contents share row density and interaction styling.
 pub(crate) fn inventory_spacing(ui: &mut egui::Ui) {
+    if crate::touch::FormFactor::is_touch_device() {
+        ui.spacing_mut().item_spacing.y = 4.0;
+        ui.spacing_mut().button_padding = egui::vec2(6.0, 6.0);
+        ui.spacing_mut().interact_size.y = 36.0;
+        return;
+    }
     ui.spacing_mut().item_spacing.y = 1.0;
     ui.spacing_mut().button_padding = INVENTORY_LABEL_PADDING;
     ui.spacing_mut().interact_size.y = 20.0;
@@ -40,7 +46,8 @@ pub(crate) fn inventory_item_label_tagged(
         let x = galley.pos_from_cursor(egui::text::CCursor::new(at)).min.x;
         (p, text, x - row_tag_width(ui, text), active)
     });
-    ui.add_sized([ui.available_width(), 20.0], |ui: &mut egui::Ui| {
+    let row_h = if crate::touch::FormFactor::is_touch_device() { 36.0 } else { 20.0 };
+    ui.add_sized([ui.available_width(), row_h], |ui: &mut egui::Ui| {
         let response = egui::Button::selectable(selected, "")
             .left_text(egui::Atom::from(label).atom_id(text_id))
             .wrap_mode(egui::TextWrapMode::Extend)
@@ -808,7 +815,18 @@ impl Modal {
         }
         let mut glass_slot = None;
         let keys = super::modal_keys::begin(ctx, self.0.area.layer());
-        let response = self.0.frame(frame).show(ctx, |ui| {
+        let mobile_bounds = crate::touch::FormFactor::is_touch_device()
+            .then(|| super::mobile_container::modal_layout(crate::touch::ResponsiveLayout::from_ctx(ctx)));
+        let modal = if let Some((offset, _)) = mobile_bounds {
+            let area = self.0.area.clone().anchor(egui::Align2::CENTER_CENTER, offset);
+            self.0.area(area)
+        } else {
+            self.0
+        };
+        let response = modal.frame(frame).show(ctx, |ui| {
+            if let Some((_, max_w)) = mobile_bounds {
+                ui.set_max_width(max_w);
+            }
             glass_slot = Some((ui.painter().clone(), ui.painter().add(egui::Shape::Noop)));
             body(ui)
         });

@@ -180,6 +180,8 @@ Actual grid login and teleporting are performed by the human.
 | `AURORA_DEMO_ALTITUDE=<m>` | Puts the whole demo location at this altitude |
 | `AURORA_FPS_LIMIT=<n>` | Frames-per-second cap for tests (0: uncapped; 10–500) |
 | `AURORA_WINDOW_SIZE="w,h"` | Window size for this launch |
+| `AURORA_MOBILE_PREVIEW=phone-portrait\|phone-landscape\|tablet` | Simulates mobile `FormFactor`, touch UI, safe-area insets and virtual pad on desktop |
+| `AURORA_MOBILE_PREVIEW_IME=<dp>` | Simulates virtual keyboard height in dp when `AURORA_MOBILE_PREVIEW` is active |
 | `AURORA_RENDER_SCALE=50..100` | World resolution percentage; turns "Match the display" off for the launch |
 | `AURORA_TEXTURE_BUDGET_MB=256..32768` | Manual texture memory budget for this launch |
 | `AURORA_MAX_TEXTURE_RES=512\|1024\|2048` | Overrides "Maximum texture resolution" (Graphics › Distance and detail) |

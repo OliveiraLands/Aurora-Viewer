@@ -253,9 +253,27 @@ fn work_area_id() -> Id {
 }
 
 /// The room left by the bars this frame: call it once they are drawn,
-/// before the windows are shown.
+/// before the windows are shown. On touch devices, intersects with the
+/// safe/IME usable viewport so windows never sit under a cutout or keyboard.
 pub(crate) fn set_work_area(ctx: &egui::Context, area: Rect) {
+    let area = if crate::touch::FormFactor::is_touch_device() {
+        let safe = usable_rect(ctx);
+        let clipped = area.intersect(safe);
+        if clipped.is_positive() { clipped } else { safe }
+    } else {
+        area
+    };
     ctx.data_mut(|d| d.insert_temp(work_area_id(), area));
+}
+
+/// Viewport rect minus safe-area insets and virtual keyboard (IME) on touch
+/// devices; identical to `ctx.content_rect()` on desktop.
+pub(crate) fn usable_rect(ctx: &egui::Context) -> Rect {
+    if crate::touch::FormFactor::is_touch_device() {
+        crate::touch::ResponsiveLayout::from_ctx(ctx).usable_rect
+    } else {
+        ctx.content_rect()
+    }
 }
 
 /// The room the bars leave this frame, from `left` (what the panels of

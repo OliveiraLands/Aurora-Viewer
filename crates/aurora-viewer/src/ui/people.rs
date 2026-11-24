@@ -632,6 +632,17 @@ fn aurora_tabs(ui: &mut egui::Ui, p: &Palette, world: &World, radar: &RadarData,
     };
     let open = tab;
     let counted = |t: u8| (t == open).then(|| count(t).map(|n| aurora_i18n::integer(n as i64))).flatten();
+    if crate::touch::FormFactor::is_touch_device() {
+        widgets::horizontal_scrollable_row(ui, "people_aurora_tabs", p.panel, |ui| {
+            ui.spacing_mut().item_spacing.x = 4.0;
+            for &t in &AURORA_TABS {
+                if widgets::pill_tab(ui, p, "", label(t), counted(t), true, t == open, true).clicked() {
+                    tab = t;
+                }
+            }
+        });
+        return tab;
+    }
     let widths: Vec<f32> = AURORA_TABS
         .iter()
         .map(|t| pill_tab_width(ui, label(*t), counted(*t).as_deref()))

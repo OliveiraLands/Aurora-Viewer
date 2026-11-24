@@ -148,8 +148,18 @@ impl Manager {
         }
         // Like the account manager, this dialog owns input and uses login glass
         // over the account cards. Its editor scrolls independently of the list.
-        let width = (ctx.content_rect().width() - 64.0).clamp(320.0, 860.0);
-        let height = (ctx.content_rect().height() - 260.0).clamp(140.0, 390.0);
+        let bounds = crate::ui::layout::usable_rect(ctx);
+        let (width, height) = if crate::touch::FormFactor::is_touch_device() {
+            (
+                (bounds.width() - 24.0).clamp(260.0, 720.0),
+                (bounds.height() - 150.0).clamp(120.0, 390.0),
+            )
+        } else {
+            (
+                (ctx.content_rect().width() - 64.0).clamp(320.0, 860.0),
+                (ctx.content_rect().height() - 260.0).clamp(140.0, 390.0),
+            )
+        };
         let editable = can_edit && self.result.is_none();
         let mut close = false;
         let dialog = widgets::Modal::new(egui::Id::unique("grid_manager"))

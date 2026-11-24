@@ -321,6 +321,7 @@ impl Theme {
         // every interface context goes through here
         crate::ui::click_away_focus::install(ctx);
         crate::ui::keyboard_focus::install(ctx, &p);
+        crate::ui::ime_composer::install(ctx);
     }
 }
 

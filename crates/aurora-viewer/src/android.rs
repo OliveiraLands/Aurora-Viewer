@@ -15,6 +15,9 @@ static GAMEPAD_KEYS: AtomicU32 = AtomicU32::new(0);
 static LOADING_HIDDEN: AtomicBool = AtomicBool::new(false);
 static BACK_CONSUMED: AtomicBool = AtomicBool::new(false);
 static BACK_PRESSED: AtomicBool = AtomicBool::new(false);
+static SAFE_INSETS_PX: [AtomicU32; 4] = [AtomicU32::new(0), AtomicU32::new(0), AtomicU32::new(0), AtomicU32::new(0)];
+static IME_BOTTOM_PX: AtomicU32 = AtomicU32::new(0);
+static SOFT_KEYBOARD_SHOWN: AtomicBool = AtomicBool::new(false);
 
 /// Runtime (dangerous) permissions declared in `AndroidManifest.xml` that must
 /// be checked and requested before activating the main viewer.
@@ -335,16 +338,12 @@ pub(crate) fn set_landscape(landscape: bool) {
     }
 }
 
-/// Dismisses the native Android startup loading overlay once the first frame is ready.
-pub(crate) fn hide_loading_overlay() {
-    if LOADING_HIDDEN.swap(true, Ordering::Relaxed) {
-        return;
-    }
+fn call_activity_void_method(method_name: &CStr) {
     let Some(app) = ANDROID_APP.get() else {
         return;
     };
-    // SAFETY: `app` holds valid `JavaVM*` and `Activity` references; `hideLoadingOverlay`
-    // posts its UI work via `runOnUiThread` on `AuroraActivity`.
+    // SAFETY: `app` holds valid `JavaVM*` and `Activity` references; the target
+    // zero-arg void method on `AuroraActivity` posts its UI work via `runOnUiThread`.
     unsafe {
         let Some(env) = attach_jni_env(app) else {
             return;
@@ -363,13 +362,108 @@ pub(crate) fn hide_loading_overlay() {
         if cls.is_null() || clear_exception(env, vtable) {
             return;
         }
-        let mid = get_method_id(env, cls, c"hideLoadingOverlay".as_ptr(), c"()V".as_ptr());
+        let mid = get_method_id(env, cls, method_name.as_ptr(), c"()V".as_ptr());
         if !mid.is_null() && !clear_exception(env, vtable) {
             call_void_method_a(env, activity, mid, std::ptr::null());
             let _ = clear_exception(env, vtable);
         }
         delete_local_ref(env, cls);
     }
+}
+
+/// Dismisses the native Android startup loading overlay once the first frame is ready.
+pub(crate) fn hide_loading_overlay() {
+    if LOADING_HIDDEN.swap(true, Ordering::Relaxed) {
+        return;
+    }
+    call_activity_void_method(c"hideLoadingOverlay");
+}
+
+/// Latest Android safe-area insets (`[top, bottom, left, right]`) and IME
+/// bottom height, all in physical pixels.
+pub(crate) fn window_insets_px() -> ([f32; 4], f32) {
+    let safe = [
+        SAFE_INSETS_PX[0].load(Ordering::Relaxed) as f32,
+        SAFE_INSETS_PX[1].load(Ordering::Relaxed) as f32,
+        SAFE_INSETS_PX[2].load(Ordering::Relaxed) as f32,
+        SAFE_INSETS_PX[3].load(Ordering::Relaxed) as f32,
+    ];
+    let ime = IME_BOTTOM_PX.load(Ordering::Relaxed) as f32;
+    (safe, ime)
+}
+
+/// Synchronizes the Android soft keyboard with egui's text focus state.
+pub(crate) fn sync_soft_keyboard(wants_keyboard: bool) {
+    let prev = SOFT_KEYBOARD_SHOWN.swap(wants_keyboard, Ordering::Relaxed);
+    if prev != wants_keyboard {
+        if wants_keyboard {
+            show_soft_keyboard();
+        } else {
+            hide_soft_keyboard();
+        }
+    }
+}
+
+/// Shows the Android soft keyboard (IME).
+pub(crate) fn show_soft_keyboard() {
+    call_activity_void_method(c"showSoftKeyboard");
+}
+
+/// Hides the Android soft keyboard (IME).
+pub(crate) fn hide_soft_keyboard() {
+    call_activity_void_method(c"hideSoftKeyboard");
+}
+
+/// Triggers a short native Android haptic feedback pulse (`0` = tap, `1` = long-press, `2` = confirm).
+pub(crate) fn perform_haptic(kind: i32) {
+    let Some(app) = ANDROID_APP.get() else {
+        return;
+    };
+    // SAFETY: `app` holds valid `JavaVM*` and `Activity` references;
+    // `performHapticFeedback(int)` posts its UI work via `runOnUiThread`.
+    unsafe {
+        let Some(env) = attach_jni_env(app) else {
+            return;
+        };
+        let activity = app.activity_as_ptr();
+        if activity.is_null() {
+            return;
+        }
+        let vtable = *(env as *const *const *const c_void);
+        let get_object_class: GetObjectClassFn = std::mem::transmute(*vtable.add(31));
+        let get_method_id: GetMethodIdFn = std::mem::transmute(*vtable.add(33));
+        let call_void_method_a: CallVoidMethodAFn = std::mem::transmute(*vtable.add(63));
+        let delete_local_ref: DeleteLocalRefFn = std::mem::transmute(*vtable.add(23));
+
+        let cls = get_object_class(env, activity);
+        if cls.is_null() || clear_exception(env, vtable) {
+            return;
+        }
+        let mid = get_method_id(env, cls, c"performHapticFeedback".as_ptr(), c"(I)V".as_ptr());
+        if !mid.is_null() && !clear_exception(env, vtable) {
+            let args = [JValue { i: kind }];
+            call_void_method_a(env, activity, mid, args.as_ptr());
+            let _ = clear_exception(env, vtable);
+        }
+        delete_local_ref(env, cls);
+    }
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn Java_org_auroraviewer_aurora_AuroraActivity_nativeOnWindowInsets(
+    _env: *mut c_void,
+    _class: *mut c_void,
+    top: i32,
+    bottom: i32,
+    left: i32,
+    right: i32,
+    ime_bottom: i32,
+) {
+    SAFE_INSETS_PX[0].store(top.max(0) as u32, Ordering::Relaxed);
+    SAFE_INSETS_PX[1].store(bottom.max(0) as u32, Ordering::Relaxed);
+    SAFE_INSETS_PX[2].store(left.max(0) as u32, Ordering::Relaxed);
+    SAFE_INSETS_PX[3].store(right.max(0) as u32, Ordering::Relaxed);
+    IME_BOTTOM_PX.store(ime_bottom.max(0) as u32, Ordering::Relaxed);
 }
 
 /// Latest Android gamepad / Bluetooth VR remote state: `(seen, [lx, ly, rx, ry], key_mask)`.

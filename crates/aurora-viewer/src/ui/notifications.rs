@@ -1129,11 +1129,16 @@ pub fn show(
             nui.open = false;
         }
     } else if !nui.toasts.is_empty() && !env.hidden {
-        let screen = ctx.content_rect();
+        let screen = super::layout::usable_rect(ctx);
+        let top_y = if crate::touch::FormFactor::is_touch_device() {
+            screen.top() + 50.0
+        } else {
+            anchor.y.min(screen.height()) + 6.0
+        };
         egui::Area::new(egui::Id::unique("notification_toasts"))
             .fade_in(false)
             .order(egui::Order::Foreground)
-            .anchor(egui::Align2::RIGHT_TOP, Vec2::new(-10.0, anchor.y.min(screen.height()) + 6.0))
+            .anchor(egui::Align2::RIGHT_TOP, Vec2::new(-10.0, top_y))
             .show(ctx, |ui| {
                 // ToastGap between the toasts of the channel
                 // (LLScreenChannel::redrawToasts)

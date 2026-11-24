@@ -25,8 +25,10 @@ impl Layout {
         let arrow_space = 52.0 + 2.0 * gap;
         // Up to three profiles form a fixed row. A carousel has an odd
         // number of full cards so its selected card can be exactly centred.
-        let paginated = count > 3;
-        let per_page = if paginated {
+        let paginated = count > 3 || (crate::touch::FormFactor::is_touch_device() && screen.width() < 600.0 && count > 1);
+        let per_page = if crate::touch::FormFactor::is_touch_device() && screen.width() < 600.0 {
+            1
+        } else if paginated {
             if main_width - arrow_space >= 3.0 * 216.0 + 2.0 * gap + 80.0 {
                 3
             } else {

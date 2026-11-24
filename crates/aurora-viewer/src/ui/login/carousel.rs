@@ -114,7 +114,7 @@ pub fn show(
     super::draw_background(ui, p);
     let ctx = ui.ctx().clone();
     let grids_open = crate::ui::grids::is_open(&ctx);
-    let screen = ctx.content_rect();
+    let screen = crate::ui::layout::usable_rect(&ctx);
     if form.block_reason.is_some() && !form.busy {
         form.transition = None;
     }

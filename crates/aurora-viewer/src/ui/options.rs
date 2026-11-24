@@ -1647,6 +1647,49 @@ fn body(ui: &mut egui::Ui, p: &Palette, s: &mut Settings, d: &Settings, st: &mut
     st.demo_open_cogs = false;
 
     let footer = Rect::from_min_max(pos2(full.left(), full.bottom() - FOOTER_H), full.right_bottom());
+    let phone_mode =
+        crate::touch::FormFactor::is_touch_device() && crate::touch::ResponsiveLayout::from_ctx(ui.ctx()).form_factor.is_phone();
+    if phone_mode {
+        const STRIP_H: f32 = 44.0;
+        let strip = Rect::from_min_max(full.left_top(), pos2(full.right(), full.top() + STRIP_H));
+        let mobile_tab_id = ui.scope_id().with("options_mobile_touch_tab");
+        let mut mobile_tab = ui.ctx().data(|d| d.get_temp::<bool>(mobile_tab_id)).unwrap_or(false);
+        let mut strip_ui = ui.new_child(
+            egui::UiBuilder::new()
+                .max_rect(strip.shrink2(vec2(4.0, 4.0)))
+                .layout(egui::Layout::left_to_right(egui::Align::Center)),
+        );
+        widgets::horizontal_scrollable_row(&mut strip_ui, "options_mobile_pages", p.panel, |ui| {
+            ui.spacing_mut().item_spacing.x = 6.0;
+            if widgets::pill_tab(ui, p, "device-mobile", "Touch / Mobile", None, false, mobile_tab, true).clicked() {
+                mobile_tab = true;
+            }
+            for &page in &Page::ALL {
+                let selected = !mobile_tab && st.page == page;
+                if widgets::pill_tab(ui, p, "", page.key(), None, false, selected, true).clicked() {
+                    mobile_tab = false;
+                    st.open(page, 0);
+                }
+            }
+        });
+        ui.ctx().data_mut(|d| d.insert_temp(mobile_tab_id, mobile_tab));
+        let main = Rect::from_min_max(pos2(full.left(), strip.bottom() + 4.0), pos2(full.right(), footer.top()));
+        if mobile_tab {
+            let mut panel_ui = ui.new_child(
+                egui::UiBuilder::new()
+                    .max_rect(main.shrink2(vec2(10.0, 8.0)))
+                    .layout(egui::Layout::top_down(egui::Align::Min)),
+            );
+            crate::ui::mobile_prefs::show_panel(&mut panel_ui, p);
+        } else {
+            let searching = !st.query.trim().is_empty();
+            let content_rect = page_area(ui, p, s, d, st, r, main, searching);
+            undo_bar(ui, p, s, st, r, content_rect);
+        }
+        footer_bar(ui, p, st, footer, !st.query.trim().is_empty(), close);
+        st.count_stale = input || r.changed;
+        return;
+    }
     let side = Rect::from_min_max(full.left_top(), pos2(full.left() + SIDEBAR_W, footer.top()));
     let main = Rect::from_min_max(pos2(side.right(), full.top()), pos2(full.right(), footer.top()));
 
@@ -1855,9 +1898,12 @@ fn page_area(
     main: Rect,
     searching: bool,
 ) -> Rect {
+    let phone_mode =
+        crate::touch::FormFactor::is_touch_device() && crate::touch::ResponsiveLayout::from_ctx(ui.ctx()).form_factor.is_phone();
+    let pad_x = if phone_mode { 10.0 } else { 28.0 };
     let mut ui = ui.new_child(
         egui::UiBuilder::new()
-            .max_rect(main.shrink2(vec2(28.0, 0.0)))
+            .max_rect(main.shrink2(vec2(pad_x, 0.0)))
             .layout(egui::Layout::top_down(egui::Align::Min)),
     );
     let page = st.page;
@@ -1895,7 +1941,7 @@ fn page_area(
     };
 
     // the head: title, its line, and the page's own buttons at the right
-    ui.add_space(18.0);
+    ui.add_space(if phone_mode { 8.0 } else { 18.0 });
     let head_w = ui.available_width();
     ui.horizontal_top(|ui| {
         ui.set_width(head_w);
@@ -1961,12 +2007,26 @@ fn page_area(
             });
         }
     });
-    ui.add_space(10.0);
+    ui.add_space(if phone_mode { 8.0 } else { 10.0 });
     if !searching && !modified_view && tabs.len() > 1 {
-        let labels: Vec<(&str, bool)> = tabs.iter().map(|t| (*t, true)).collect();
-        if super::widgets::tabs(&mut ui, p, &mut st.tab, &labels) {
-            st.cancel_capture();
-            st.flash = None;
+        if phone_mode {
+            widgets::horizontal_scrollable_row(&mut ui, page.key(), p.panel, |ui| {
+                ui.spacing_mut().item_spacing.x = 6.0;
+                for (idx, label) in tabs.iter().enumerate() {
+                    if widgets::pill_tab(ui, p, "", label, None, false, st.tab == idx, false).clicked() {
+                        st.tab = idx;
+                        st.cancel_capture();
+                        st.flash = None;
+                    }
+                }
+            });
+            ui.add_space(6.0);
+        } else {
+            let labels: Vec<(&str, bool)> = tabs.iter().map(|t| (*t, true)).collect();
+            if super::widgets::tabs(&mut ui, p, &mut st.tab, &labels) {
+                st.cancel_capture();
+                st.flash = None;
+            }
         }
     } else {
         let (line, _) = ui.allocate_exact_size(vec2(ui.available_width(), 1.0), Sense::hover());
@@ -2002,9 +2062,9 @@ fn page_area(
         .max_height(rows_h)
         .min_scrolled_height(rows_h)
         .show(&mut ui, |ui| {
-            ui.spacing_mut().item_spacing.y = 0.0;
+            ui.spacing_mut().item_spacing.y = if phone_mode { 6.0 } else { 0.0 };
             ui.set_width(rows_width);
-            ui.add_space(4.0);
+            ui.add_space(if phone_mode { 8.0 } else { 4.0 });
             let mut cx = Cx::new(ui, *p, s, d, st, r, mode, &query);
             match mode {
                 Mode::Show => run_page(&mut cx, page, Some(tab)),
@@ -2048,8 +2108,54 @@ fn footer_bar(ui: &mut egui::Ui, p: &Palette, st: &mut OptionsUi, footer: Rect, 
             .max_rect(footer.shrink2(vec2(14.0, 0.0)))
             .layout(egui::Layout::left_to_right(egui::Align::Center)),
     );
+    let phone_mode =
+        crate::touch::FormFactor::is_touch_device() && crate::touch::ResponsiveLayout::from_ctx(ui.ctx()).form_factor.is_phone();
     use super::widgets::{ActionKind, action_button};
-    let size = Vec2::new(0.0, 28.0);
+    let size = Vec2::new(0.0, if phone_mode { 34.0 } else { 28.0 });
+    if phone_mode {
+        let close_label = aurora_i18n::tr!("common-close");
+        let close_w = (ui
+            .painter()
+            .layout_no_wrap(close_label.to_owned(), egui::FontId::proportional(12.0), p.on_accent)
+            .size()
+            .x
+            + ui.spacing().button_padding.x * 2.0
+            + 8.0)
+            .max(88.0);
+        let left_w = (ui.available_width() - close_w - 10.0).max(80.0);
+        ui.allocate_ui_with_layout(
+            Vec2::new(left_w, footer.height()),
+            egui::Layout::left_to_right(egui::Align::Center),
+            |ui| {
+                widgets::horizontal_scrollable_row(ui, "options_mobile_footer", p.panel, |ui| {
+                    ui.spacing_mut().item_spacing.x = 6.0;
+                    let reset_all = action_button(
+                        ui,
+                        p,
+                        "restore",
+                        aurora_i18n::tr!("ui-options-reset-everything-2"),
+                        ActionKind::FlatDanger,
+                        size,
+                    );
+                    if reset_all.clicked() {
+                        st.confirm_reset = Some(ResetAsk::All);
+                    }
+                    if !searching && !st.modified_view {
+                        let label = aurora_i18n::tr!("ui-options-reset-page", page = st.page.name());
+                        if action_button(ui, p, "restore", &label, ActionKind::Flat, size).clicked() {
+                            st.confirm_reset = Some(ResetAsk::Page(st.page));
+                        }
+                    }
+                });
+            },
+        );
+        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+            if super::widgets::primary_button_sized(ui, p, close_label, vec2(close_w, size.y)).clicked() {
+                *close = true;
+            }
+        });
+        return;
+    }
     let reset_all = action_button(
         &mut ui,
         p,

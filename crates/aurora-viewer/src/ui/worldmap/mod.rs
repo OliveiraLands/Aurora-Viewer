@@ -318,6 +318,14 @@ impl WorldMapUi {
                 self.target_zoom = (self.target_zoom + scroll / 50.0 / 3.0).clamp(zoom_min, ZOOM_MAX);
                 self.zoom_pivot = resp.hover_pos().map(|m| m - rect.center());
             }
+            if crate::touch::FormFactor::is_touch_device() {
+                let pinch = ui.input(|i| i.zoom_delta());
+                if (pinch - 1.0).abs() > 1e-4 {
+                    input.touched = true;
+                    self.target_zoom = (self.target_zoom + pinch.log2()).clamp(zoom_min, ZOOM_MAX);
+                    self.zoom_pivot = resp.hover_pos().map(|m| m - rect.center());
+                }
+            }
         }
         self.target_zoom = self.target_zoom.clamp(zoom_min, ZOOM_MAX);
         let old_scale = 256.0 * self.zoom.exp2();

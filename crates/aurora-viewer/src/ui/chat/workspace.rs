@@ -177,8 +177,14 @@ pub(super) fn show(ui: &mut egui::Ui, env: Env, world: &mut World, st: &mut Chat
     // one on the lines (#427)
     let all = egui::Rect::from_min_size(ui.cursor().min, egui::vec2(size.x, h));
     ui.interact(all, ui.scope_id().with("workspace_still"), egui::Sense::drag());
-    ui.horizontal_top(|ui| {
-        ui.spacing_mut().item_spacing.x = 0.0;
+    // On phones (touch devices), use 2-level navigation (Conversation List <->
+    // Active Conversation Thread) instead of a cramped desktop split-view.
+    let phone_mode =
+        crate::touch::FormFactor::is_touch_device() && crate::touch::ResponsiveLayout::from_ctx(ui.ctx()).form_factor.is_phone();
+    let list_flag_id = ui.scope_id().with("mobile_chat_show_list");
+    let mut mobile_show_list = phone_mode && ui.ctx().data(|d| d.get_temp::<bool>(list_flag_id)).unwrap_or(false);
+    if phone_mode && mobile_show_list {
+        let before = (st.selected, st.contacts);
         let contacts_sub = if friends.is_some() {
             sidebar::ContactsSub::Friends
         } else {
@@ -195,13 +201,65 @@ pub(super) fn show(ui: &mut egui::Ui, env: Env, world: &mut World, st: &mut Chat
             show_contacts_tab,
             contacts_sub,
             docked,
-            rail,
-            narrow,
-            column,
+            false,
+            false,
+            size.x,
             h,
         );
         if contacts_clicked && let Some(friends) = friends.as_mut() {
             friends.st.close_sheet();
+        }
+        if (st.selected, st.contacts) != before || contacts_clicked {
+            mobile_show_list = false;
+        }
+        ui.ctx().data_mut(|d| d.insert_temp(list_flag_id, mobile_show_list));
+        return;
+    }
+    if phone_mode {
+        ui.horizontal(|ui| {
+            ui.spacing_mut().item_spacing.x = 6.0;
+            if crate::ui::widgets::action_button(
+                ui,
+                p,
+                "arrow-left",
+                aurora_i18n::tr!("common-conversations"),
+                crate::ui::widgets::ActionKind::Flat,
+                egui::vec2(0.0, 34.0),
+            )
+            .clicked()
+            {
+                ui.ctx().data_mut(|d| d.insert_temp(list_flag_id, true));
+            }
+        });
+    }
+    let h = if phone_mode { (h - 38.0).max(120.0) } else { h };
+    ui.horizontal_top(|ui| {
+        ui.spacing_mut().item_spacing.x = 0.0;
+        if !phone_mode {
+            let contacts_sub = if friends.is_some() {
+                sidebar::ContactsSub::Friends
+            } else {
+                sidebar::ContactsSub::Lists
+            };
+            let contacts_clicked = sidebar::show(
+                ui,
+                p,
+                pics,
+                images,
+                world,
+                st,
+                actions,
+                show_contacts_tab,
+                contacts_sub,
+                docked,
+                rail,
+                narrow,
+                column,
+                h,
+            );
+            if contacts_clicked && let Some(friends) = friends.as_mut() {
+                friends.st.close_sheet();
+            }
         }
         ui.vertical(|ui| {
             ui.set_width(ui.available_width());

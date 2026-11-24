@@ -501,6 +501,8 @@ pub struct App {
     vr_head_pose: Option<aurora_render::HeadPose>,
     mobile_vr: crate::mobile_vr::MobileVr,
     touch_nav: crate::touch::TouchNav,
+    touch_pad: ui::touch_pad::TouchPadState,
+    mobile_hud: ui::mobile_hud::MobileHudState,
     vr_body_follow: crate::camera::vr::BodyFollow,
     vr_walk_override: crate::camera::vr::WalkOverride,
     vr_follow_flags: Option<u32>,
@@ -1860,6 +1862,8 @@ impl App {
             gpu_losses: Default::default(),
             mobile_vr: Default::default(),
             touch_nav: Default::default(),
+            touch_pad: Default::default(),
+            mobile_hud: Default::default(),
             egui_ctx,
             logo: None,
             logo_rx: Some(rx),
@@ -8459,13 +8463,27 @@ impl App {
     fn handle_touch(&mut self, touch: winit::event::Touch) {
         if self.mobile_vr.enabled {
             self.touch_nav.clear();
+            self.touch_pad.clear();
             return;
         }
         let scale = self.gfx.as_ref().map_or(1.0, |g| g.window.scale_factor() as f32).max(0.5);
         let pos = [touch.location.x as f32 / scale, touch.location.y as f32 / scale];
+        if crate::touch::FormFactor::is_touch_device() {
+            let usable = ui::layout::usable_rect(&self.egui_ctx);
+            let claimed = self.touch_pad.handle_touch(touch.phase, touch.id, pos, usable);
+            self.touch_nav.set_reserved_finger(self.touch_pad.active_finger());
+            if claimed {
+                return;
+            }
+        }
         let action = self.touch_nav.on_touch(touch.phase, touch.id, pos, Instant::now());
         if action.orbit != [0.0, 0.0] {
-            let s = self.settings.mouse_sensitivity;
+            let touch_mult = if crate::touch::FormFactor::is_touch_device() {
+                ui::mobile_prefs::current().camera_sensitivity
+            } else {
+                1.0
+            };
+            let s = self.settings.mouse_sensitivity * touch_mult;
             self.camera.orbit_drag(action.orbit[0], action.orbit[1], s, &mut self.world.agent);
         }
         if action.zoom.abs() > 1e-4 && self.camera.free().is_none() {
@@ -9191,6 +9209,9 @@ impl App {
         i.strafe_right |= held(Action::StrafeRight);
         i.up |= held(Action::Up);
         i.down |= held(Action::Down);
+        if crate::touch::FormFactor::is_touch_device() && !typing {
+            self.touch_pad.apply_to_move_input(&mut i);
+        }
         if matches!(
             self.vr_mode,
             Some(crate::camera::VrView::FirstPerson | crate::camera::VrView::Flycam)
@@ -10966,9 +10987,12 @@ impl App {
         }
         #[cfg(target_os = "android")]
         {
-            crate::android::set_back_consumed(self.mobile_vr.enabled || self.camera.mouselook());
+            let has_sheet = ui::widgets::mobile_container::has_active_sheet(&self.egui_ctx);
+            crate::android::set_back_consumed(self.mobile_vr.enabled || self.camera.mouselook() || has_sheet);
             if crate::android::take_back_pressed() {
-                if self.mobile_vr.enabled {
+                if has_sheet {
+                    ui::widgets::mobile_container::request_close_active(&self.egui_ctx);
+                } else if self.mobile_vr.enabled {
                     self.vr_toggle = true;
                 } else if self.camera.mouselook() {
                     self.toggle_mouselook();
@@ -13359,6 +13383,8 @@ impl App {
         }
         gfx.egui_state
             .handle_platform_output_with_event_loop(&gfx.window, event_loop, full.platform_output);
+        #[cfg(target_os = "android")]
+        crate::android::sync_soft_keyboard(self.egui_ctx.egui_wants_keyboard_input());
         self.perf.ui_ms = t_ui.elapsed().as_secs_f32() * 1000.0;
         self.frame_profile.lap(Lap::Hover);
         self.evict_ui_images(&full.shapes);
@@ -18651,7 +18677,9 @@ impl App {
                 // brings the islands back) and in mouselook, like Firestorm's
                 let screen_rect = ctx.content_rect();
                 let demo_hidden = if self.demo { ui::bars::demo::get().hidden } else { None };
-                let chrome = self.interface.bars(&ui::interface::Frame {
+                let phone_hud =
+                    crate::touch::FormFactor::is_touch_device() && crate::touch::ResponsiveLayout::from_ctx(&ctx).form_factor.is_phone();
+                let mut chrome = self.interface.bars(&ui::interface::Frame {
                     classic: classic_bars,
                     mouselook: self.camera.mouselook(),
                     show_in_mouselook: self.settings.camera.show_interface_in_mouselook,
@@ -18668,6 +18696,10 @@ impl App {
                     bottom_top: self.interface.last_room.map_or(screen_rect.bottom() - 56.0, |(_, bottom)| bottom),
                     menu_open: egui::Popup::is_any_open(&ctx),
                 });
+                if phone_hud {
+                    chrome.top = false;
+                    chrome.bottom = false;
+                }
                 if chrome.top {
                     let (bar, audio_action) = ui::bars::top_bars(
                         ui,
@@ -18943,20 +18975,24 @@ impl App {
                     style: Default::default(),
                     editing: self.toolbar_ui.open && !toolbar_settings.locked,
                 };
-                let (room, side_action) = ui::bars::side::bars(
-                    ui,
-                    &p,
-                    icons,
-                    bar_layout,
-                    &mut self.toolbar_ui,
-                    toolbar_settings,
-                    &mut self.panels,
-                    &mut mic,
-                    &side_row,
-                    area,
-                    !classic_bars,
-                    sides,
-                );
+                let (room, side_action) = if phone_hud {
+                    (area, BarAction::None)
+                } else {
+                    ui::bars::side::bars(
+                        ui,
+                        &p,
+                        icons,
+                        bar_layout,
+                        &mut self.toolbar_ui,
+                        toolbar_settings,
+                        &mut self.panels,
+                        &mut mic,
+                        &side_row,
+                        area,
+                        !classic_bars,
+                        sides,
+                    )
+                };
                 area = room;
                 // a bar's button or menu entry opens its window this very frame
                 rlva::keep_windows_closed(&self.world.rlva, &mut self.panels);
@@ -19052,6 +19088,47 @@ impl App {
                 }
                 if !matches!(bar2, BarAction::None) {
                     a.bar = bar2;
+                }
+                if crate::touch::FormFactor::is_touch_device() {
+                    let pad = self.touch_pad.show(
+                        ui.ctx(),
+                        &p,
+                        self.world.agent.flying,
+                        self.world.agent.is_sitting(),
+                        self.camera.mouselook(),
+                        self.mobile_hud.collapsed,
+                    );
+                    if !matches!(pad.bar_action, BarAction::None) {
+                        a.bar = pad.bar_action;
+                    }
+                    let region = self.world.region_name();
+                    let recent_chat: Vec<(&str, &str)> = self
+                        .world
+                        .chat
+                        .iter()
+                        .rev()
+                        .take(3)
+                        .collect::<Vec<_>>()
+                        .into_iter()
+                        .rev()
+                        .map(|l| (l.from.as_str(), l.text.as_str()))
+                        .collect();
+                    let hud_ctx = ui::mobile_hud::MobileHudContext {
+                        region_name: &region,
+                        fps: self.perf.fps,
+                        unread_chat: self.world.conversations_badge(),
+                        voice_connected: self.voice.light == crate::voice::VoiceLight::Connected,
+                        mic_on: self.mic_on,
+                        recent_chat,
+                    };
+                    let hud_act = self.mobile_hud.show(ui.ctx(), &p, &hud_ctx);
+                    if hud_act.toggle_mic {
+                        self.mic_on = !self.mic_on;
+                    }
+                    hud_act.apply(ui.ctx(), &mut self.panels);
+                    if let Some(out) = ui::ime_composer::show_chat_composer(ui.ctx(), &p, &mut self.chat_ui.input) {
+                        a.chat = Some(out);
+                    }
                 }
                 t = self.ui_parts.lap(Part::UiBars, t);
                 // overlays
@@ -25196,10 +25273,12 @@ impl ApplicationHandler for App {
         crate::crash::pumped();
         if self.ui_takes_pointer() || self.mobile_vr.enabled {
             self.touch_nav.clear();
+            self.touch_pad.clear();
         } else if let Some(pos) = self.touch_nav.poll_long_press(Instant::now())
             && !self.exit_prompt.open
             && self.in_world()
         {
+            crate::touch::trigger_haptic(crate::touch::HapticKind::LongPress);
             self.cursor_pos = (pos[0], pos[1]);
             self.mouse_input(MouseButton::Right, true, false);
             self.mouse_input(MouseButton::Right, false, false);

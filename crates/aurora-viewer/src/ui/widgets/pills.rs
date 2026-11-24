@@ -325,6 +325,64 @@ pub fn chip_row(ui: &mut egui::Ui, salt: &str, add: impl FnOnce(&mut egui::Ui) -
     }
 }
 
+/// Touch-friendly horizontally scrollable row with subtle edge-fade gradients
+/// indicating overflow content on the left/right. Used by mobile tab bars and
+/// chip rows without altering desktop layout.
+#[allow(dead_code)]
+pub fn horizontal_scrollable_row<R>(ui: &mut egui::Ui, salt: &str, fade_bg: egui::Color32, add: impl FnOnce(&mut egui::Ui) -> R) -> R {
+    let either_axis = std::mem::replace(&mut ui.style_mut().always_scroll_the_only_direction, true);
+    let out = egui::ScrollArea::horizontal()
+        .id_salt(salt)
+        .scroll_bar_visibility(egui::scroll_area::ScrollBarVisibility::AlwaysHidden)
+        .scroll_source(egui::scroll_area::ScrollSource::ALL)
+        .show(ui, |ui| ui.horizontal(add).inner);
+    ui.style_mut().always_scroll_the_only_direction = either_axis;
+
+    let view = out.inner_rect;
+    let max_scroll = (out.content_size.x - view.width()).max(0.0);
+    if max_scroll > 1.0 {
+        let offset_x = out.state.clamped_offset().x;
+        let fade_w = 18.0_f32.min(view.width() * 0.25);
+        if offset_x > 1.0 {
+            paint_horizontal_fade(
+                ui.painter(),
+                Rect::from_min_max(view.min, Pos2::new(view.left() + fade_w, view.bottom())),
+                fade_bg,
+                true,
+            );
+        }
+        if offset_x < max_scroll - 1.0 {
+            paint_horizontal_fade(
+                ui.painter(),
+                Rect::from_min_max(Pos2::new(view.right() - fade_w, view.top()), view.max),
+                fade_bg,
+                false,
+            );
+        }
+    }
+    out.inner
+}
+
+fn paint_horizontal_fade(painter: &egui::Painter, rect: Rect, opaque: egui::Color32, left_to_right: bool) {
+    let clear = egui::Color32::from_rgba_unmultiplied(opaque.r(), opaque.g(), opaque.b(), 0);
+    let (left_c, right_c) = if left_to_right { (opaque, clear) } else { (clear, opaque) };
+    let v = |x: f32, y: f32, color: egui::Color32| egui::epaint::Vertex {
+        pos: Pos2::new(x, y),
+        uv: egui::epaint::WHITE_UV,
+        color,
+    };
+    let mut mesh = egui::epaint::Mesh::default();
+    mesh.vertices.extend([
+        v(rect.left(), rect.top(), left_c),
+        v(rect.right(), rect.top(), right_c),
+        v(rect.right(), rect.bottom(), right_c),
+        v(rect.left(), rect.bottom(), left_c),
+    ]);
+    mesh.add_triangle(0, 1, 2);
+    mesh.add_triangle(0, 2, 3);
+    painter.add(egui::Shape::mesh(mesh));
+}
+
 /// The width `filter_pill` takes.
 pub fn filter_pill_width(ui: &egui::Ui, icon: &str, label: &str) -> f32 {
     let font = FontId::new(12.0, crate::ui::fonts::semibold(ui.ctx()));
@@ -1030,5 +1088,29 @@ mod search_tests {
             assert_eq!(text, "unchanged");
             assert!(!field.changed());
         }
+    }
+
+    #[test]
+    fn horizontal_scrollable_row_renders_overflow_with_fade() {
+        let ctx = egui::Context::default();
+        let p = crate::theme::Theme::default().palette();
+        let mut clicked = false;
+        let output = ctx.run_ui(
+            egui::RawInput {
+                screen_rect: Some(Rect::from_min_size(Pos2::ZERO, Vec2::new(160.0, 80.0))),
+                ..Default::default()
+            },
+            |ui| {
+                horizontal_scrollable_row(ui, "test_tabs", p.panel, |ui| {
+                    for idx in 0..8 {
+                        if ui.button(format!("Tab {idx}")).clicked() {
+                            clicked = true;
+                        }
+                    }
+                });
+            },
+        );
+        assert!(!clicked);
+        assert!(!output.shapes.is_empty());
     }
 }

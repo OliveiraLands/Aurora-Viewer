@@ -28,6 +28,7 @@ pub(crate) mod elide_tests;
 pub(crate) mod hero;
 pub(crate) mod keycap;
 pub(crate) mod local_texture;
+pub(crate) mod mobile_container;
 mod modal_keys;
 pub(crate) mod pills;
 pub(crate) mod reorder;
@@ -54,9 +55,9 @@ pub use color::color_button;
 pub use copy_on_click::copy_on_click;
 pub(crate) use modal_keys::{default_button, enter_pressed};
 pub use pills::{
-    chip_row, clearable_search_box, dot_pill, dot_pill_width, filter_field, filter_pill, filter_pill_at, filter_pill_width, pill_tab,
-    pill_tab_wide, reveal_search_selection, search_box, search_cleared, search_list_item, search_scroll_to_column, search_scroll_to_row,
-    search_text_edit, search_text_edit_with_margin,
+    chip_row, clearable_search_box, dot_pill, dot_pill_width, filter_field, filter_pill, filter_pill_at, filter_pill_width,
+    horizontal_scrollable_row, pill_tab, pill_tab_wide, reveal_search_selection, search_box, search_cleared, search_list_item,
+    search_scroll_to_column, search_scroll_to_row, search_text_edit, search_text_edit_with_margin,
 };
 pub use text_field::text_field;
 pub use tracks::{
@@ -821,6 +822,9 @@ impl<'a> Floater<'a> {
                 cascade::hidden(ctx, egui::Id::unique(self.id));
             }
             return None;
+        }
+        if crate::touch::FormFactor::is_touch_device() && crate::touch::ResponsiveLayout::from_ctx(ctx).form_factor.is_phone() {
+            return mobile_container::show_floater(self, ctx, p, open, body);
         }
         let min_id = egui::Id::unique((self.id, "minimized"));
         // "Reset window positions and sizes" (`reset_windows`): back to its

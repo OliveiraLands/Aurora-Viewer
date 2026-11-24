@@ -1,30 +1,42 @@
 package org.auroraviewer.aurora;
 
 import android.app.NativeActivity;
+import android.content.Context;
 import android.graphics.Color;
+import android.graphics.Insets;
 import android.graphics.Typeface;
 import android.os.Build;
 import android.os.Bundle;
 import android.util.TypedValue;
+import android.view.DisplayCutout;
 import android.view.Gravity;
+import android.view.HapticFeedbackConstants;
 import android.view.InputDevice;
 import android.view.KeyEvent;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.WindowInsets;
+import android.view.WindowInsetsAnimation;
 import android.view.WindowInsetsController;
 import android.view.WindowManager;
+import android.view.inputmethod.InputMethodManager;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.TextView;
+import java.util.List;
 
 public class AuroraActivity extends NativeActivity {
+    static {
+        System.loadLibrary("aurora_viewer");
+    }
+
     private static native void nativeOnGamepadAxis(float lx, float ly, float rx, float ry);
     private static native void nativeOnGamepadKey(int keyCode, boolean down);
     private static native boolean nativeOnBackPressed();
+    private static native void nativeOnWindowInsets(int top, int bottom, int left, int right, int imeBottom);
 
     private FrameLayout loadingOverlay;
     private boolean backConsumedDown;
@@ -39,7 +51,119 @@ public class AuroraActivity extends NativeActivity {
             getWindow().setAttributes(lp);
         }
         applyImmersiveFullscreen();
+        installWindowInsetsBridge();
         showLoadingOverlay();
+    }
+
+    private void installWindowInsetsBridge() {
+        View decor = getWindow().getDecorView();
+        decor.setOnApplyWindowInsetsListener((v, insets) -> {
+            dispatchWindowInsets(insets);
+            return v.onApplyWindowInsets(insets);
+        });
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            decor.setWindowInsetsAnimationCallback(
+                    new WindowInsetsAnimation.Callback(
+                            WindowInsetsAnimation.Callback.DISPATCH_MODE_CONTINUE_ON_SUBTREE) {
+                        @Override
+                        public WindowInsets onProgress(
+                                WindowInsets insets,
+                                List<WindowInsetsAnimation> runningAnimations) {
+                            dispatchWindowInsets(insets);
+                            return insets;
+                        }
+                    });
+        }
+        decor.requestApplyInsets();
+    }
+
+    @SuppressWarnings("deprecation")
+    private void dispatchWindowInsets(WindowInsets insets) {
+        if (insets == null) {
+            return;
+        }
+        int top = 0;
+        int bottom = 0;
+        int left = 0;
+        int right = 0;
+        int imeBottom = 0;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            Insets safe = insets.getInsets(
+                    WindowInsets.Type.displayCutout() | WindowInsets.Type.systemBars());
+            top = safe.top;
+            bottom = safe.bottom;
+            left = safe.left;
+            right = safe.right;
+            imeBottom = insets.getInsets(WindowInsets.Type.ime()).bottom;
+        } else {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                DisplayCutout cutout = insets.getDisplayCutout();
+                if (cutout != null) {
+                    top = cutout.getSafeInsetTop();
+                    bottom = cutout.getSafeInsetBottom();
+                    left = cutout.getSafeInsetLeft();
+                    right = cutout.getSafeInsetRight();
+                }
+            }
+            int sysBottom = insets.getSystemWindowInsetBottom();
+            int stableBottom = insets.getStableInsetBottom();
+            if (sysBottom > stableBottom) {
+                imeBottom = sysBottom;
+            }
+        }
+        nativeOnWindowInsets(top, bottom, left, right, imeBottom);
+    }
+
+    public void showSoftKeyboard() {
+        runOnUiThread(() -> {
+            View decor = getWindow().getDecorView();
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                WindowInsetsController controller = getWindow().getInsetsController();
+                if (controller != null) {
+                    controller.show(WindowInsets.Type.ime());
+                    return;
+                }
+            }
+            InputMethodManager imm =
+                    (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+            if (imm != null) {
+                imm.showSoftInput(decor, InputMethodManager.SHOW_IMPLICIT);
+            }
+        });
+    }
+
+    public void hideSoftKeyboard() {
+        runOnUiThread(() -> {
+            View decor = getWindow().getDecorView();
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                WindowInsetsController controller = getWindow().getInsetsController();
+                if (controller != null) {
+                    controller.hide(WindowInsets.Type.ime());
+                }
+            } else {
+                InputMethodManager imm =
+                        (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+                if (imm != null) {
+                    imm.hideSoftInputFromWindow(decor.getWindowToken(), 0);
+                }
+            }
+            applyImmersiveFullscreen();
+        });
+    }
+
+    public void performHapticFeedback(int kind) {
+        runOnUiThread(() -> {
+            View decor = getWindow().getDecorView();
+            int flag;
+            if (kind == 1) {
+                flag = HapticFeedbackConstants.LONG_PRESS;
+            } else if (kind == 2 && Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                flag = HapticFeedbackConstants.CONFIRM;
+            } else {
+                flag = HapticFeedbackConstants.VIRTUAL_KEY;
+            }
+            decor.performHapticFeedback(flag);
+        });
     }
 
     private int dp(int value) {

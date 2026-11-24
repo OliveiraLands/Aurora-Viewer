@@ -4,6 +4,16 @@ Este documento define a arquitetura, os padrões de UX/UI estilo jogos mobile mo
 
 ---
 
+## 0. Regra de Ouro — Isolamento Mobile vs. Desktop (Compatibilidade com Merge do Projeto Pai)
+
+> **Regra obrigatória para todas as fases (P0–P7):**
+> 1. **Manter o Desktop 100% intacto:** Nenhuma implementação deste plano pode alterar comportamento, layout, estilo, espaçamentos, atalhos ou aparência no desktop (Windows, Linux e macOS). O desktop deve permanecer exatamente como o projeto pai (*Aurora-Viewer*).
+> 2. **Guarda explícita de plataforma/modo:** Toda adaptação mobile deve ser ativada **exclusivamente** no modo mobile/touch (`FormFactor::is_touch_device()`, `#[cfg(target_os = "android")]` ou flag explícita de preview mobile em desenvolvimento).
+> 3. **Isolamento de código para merges limpos:** Concentrar a lógica mobile em módulos e arquivos dedicados (ex.: `touch.rs`, `android.rs`, `ui/widgets/mobile_container.rs`, `ui/touch_pad.rs`, `ui/mobile/*`). Em arquivos compartilhados com o projeto pai (`app.rs`, `ui/widgets.rs`, `ui/layout.rs`, `ui/widgets/workspace.rs`, `ui/sheet.rs`, etc.), limitar as mudanças a **ganchos mínimos de delegação** (poucas linhas), garantindo que futuros `git merge upstream/main` do projeto pai continuem sendo aplicados com mínimo ou zero conflito.
+> 4. **Zero regressões no Desktop:** `cargo fmt --check`, `cargo clippy --workspace --all-targets --locked -- -D warnings` e os testes do workspace no desktop devem continuar passando integralmente sem modificar testes desktop existentes.
+
+---
+
 ## 1. Diagnóstico do Estado Atual
 
 O repositório já possui uma base inicial sólida na branch `feat/aurora-android`:
@@ -205,3 +215,46 @@ Expandir `FormFactor` em `crates/aurora-viewer/src/touch.rs` para considerar **l
 | **P5** | Preferências (com aba Touch/Mobile) e janelas auxiliares | Controle total de ergonomia e ajustes pelo usuário | P0 |
 | **P6** | Build, Color/Texture Picker, Scripts/Notecards, ferramentas avançadas | Paridade funcional completa em tablets e celulares | P0, P2 |
 | **P7** | Split-view tablets/dobráveis, hápticos e modo preview mobile no desktop | Acabamento profissional e manutenção sustentável | P0–P6 |
+
+---
+
+## 5. Registro de Execução
+
+- **P0 — Fundação Responsiva, Safe Areas e IME** (`feat/aurora-android`):
+  - [x] Regra de isolamento Mobile vs. Desktop adicionada ao plano (desktop 100% intacto para merges limpos do projeto pai).
+  - [x] Ponte JNI de `WindowInsets` (cutout + system bars + IME animado) e `showSoftKeyboard()` / `hideSoftKeyboard()` em `AuroraActivity.java` e `crates/aurora-viewer/src/android.rs`, com sincronização automática ao foco de texto em `app.rs`.
+  - [x] `FormFactor` expandido (`CompactPortrait`, `CompactLandscape`, `Medium`, `Expanded`), `SafeInsets`, `ResponsiveLayout` (`usable_rect`) e `apply_touch_style()` em `touch.rs` + `layout::usable_rect()` / interseção touch em `ui/layout.rs`.
+  - [x] Container mobile isolado em `crates/aurora-viewer/src/ui/widgets/mobile_container.rs` (Bottom Sheet arrastável no retrato, Side Drawer lateral na paisagem, gerenciador de janela única ativa integrado ao botão Voltar do Android, e `Modal` centralizado acima do teclado em `usable_rect`).
+  - [x] Helper `horizontal_scrollable_row` com *fade* nas bordas em `ui/widgets/pills.rs`, conectado ao modo touch em `ui/sheet.rs`.
+  - [ ] Validação visual em dispositivo Android / APK.
+- **P1 — Controles de Jogo Mobile (Virtual Pad) e HUD Retrátil** (`feat/aurora-android`):
+  - [x] Isolamento *dual-thumb* por `finger_id` em `touch.rs` (`TouchNav::set_reserved_finger`), impedindo conflito entre o analógico virtual esquerdo e a órbita de câmera no polegar direito.
+  - [x] Módulo isolado `crates/aurora-viewer/src/ui/touch_pad.rs`: analógico virtual esquerdo (*Floating*/*Fixed*, deadzone, corrida proporcional, trava de **Auto-Run**) + cluster circular direito (**Pular/Subir/Levantar**, **Voar/Pousar**, **Descer/Agachar**, **Mouselook**, **Resetar Câmera**).
+  - [x] Módulo isolado `crates/aurora-viewer/src/ui/mobile_hud.rs`: barra superior compacta retrátil (menu, pílula da região, FPS, modo Cinema/Ocultar HUD), mini-chat overlay com últimas 3 mensagens e dock inferior compacto rolável com alvos `44dp`.
+  - [x] Ganchos mínimos exclusivamente touch em `app.rs` (desktop 100% intacto).
+  - [ ] Validação visual e ergonômica em dispositivo Android / APK.
+- **P2 — Telas de Digitação Responsivas e Fluxos de Entrada (Teclado Virtual)** (`feat/aurora-android`):
+  - [x] Módulo isolado `crates/aurora-viewer/src/ui/ime_composer.rs`: `ImeComposer` flutuante ancorado imediatamente acima do teclado virtual (`usable_rect.bottom()`), com seletor Sussurrar/Falar/Gritar, botão grande de Enviar (`48dp`), botão de ocultar teclado e modo faixa única compacta em `CompactLandscape`.
+  - [x] Plugin global `MobileImePlugin` (`ime_composer::install` em `theme.rs`) + helper `keep_focused_visible(ui)` integrado aos containers mobile para auto-scroll automático de `TextEdit` focado acima do teclado.
+  - [x] Adaptação mobile exclusiva de Login (`ui/login/layout.rs`, `ui/login/carousel.rs`) e Gerenciador de Grids (`ui/grids.rs`) usando `usable_rect` (desktop 100% intacto).
+  - [ ] Validação visual com teclado virtual em dispositivo Android / APK.
+- **P3 — Janelas Sociais e Interação com o Mundo** (`feat/aurora-android`):
+  - [x] Módulo isolado `crates/aurora-viewer/src/ui/context/mobile_sheet.rs`: **Bottom Action Sheet** touch (`48dp` por ação, backdrop tocável, navegação em submenus com botão Voltar) substituindo menus cascata pequenos no toque, com gancho mínimo em `ui/context.rs`.
+  - [x] Navegação em 2 níveis no Chat em celulares (`Lista de Conversas <-> Conversa Ativa` com botão Voltar) em `ui/chat/workspace.rs`, preservando o split-view em tablets e desktop.
+  - [x] Abas horizontais roláveis em `ui/people.rs` (`horizontal_scrollable_row`) e toasts de notificação respeitando `usable_rect` / `safe_insets.top` em `ui/notifications.rs` exclusivamente no modo touch.
+  - [ ] Validação visual e ergonômica em dispositivo Android / APK.
+- **P4 — Inventário, Aparência, Mapa e Exploração** (`feat/aurora-android`):
+  - [x] Linhas touch confortáveis (`36dp` + espaçamento ergonômico) no Inventário e conteúdo de objetos em `ui/widgets/workspace.rs` exclusivamente no modo touch.
+  - [x] Zoom por gesto de pinça (*pinch-to-zoom* via `zoom_delta`) no Mapa Mundial (`ui/worldmap/mod.rs`) e no Minimapa (`ui/minimap.rs`), além de posicionamento compacto estilo jogo para o Minimapa no mobile.
+  - [x] Botão rápido de Microfone/Voz na barra superior do HUD mobile (`ui/mobile_hud.rs`) quando a voz está conectada.
+  - [ ] Validação visual e ergonômica em dispositivo Android / APK.
+- **P5 — Preferências, Configurações e Janelas Auxiliares** (`feat/aurora-android`):
+  - [x] Módulo isolado `crates/aurora-viewer/src/ui/mobile_prefs.rs` persistido em `mobile_settings.json` (sem alterar `settings.rs` do desktop): modo do pad virtual (*Floating*/*Fixed*), opacidade, sensibilidade da câmera touch, layout canhoto/destro e feedback háptico, com botões `−` / `+` para ajuste fino no toque.
+  - [x] Preferências (`ui/options.rs`): faixa horizontal rolável de categorias no topo em celulares (incluindo aba dedicada **Touch / Mobile**) em vez da barra lateral fixa; tablets e desktop mantêm o layout original.
+  - [x] Cartões em 1 coluna automática no `CompactPortrait` em `ui/sheet.rs` (`cards()`).
+- **P6 — Ferramentas de Construção, Edição e Avançadas (Touch-Adapted)** (`feat/aurora-android`):
+  - [x] `Build`, `Director` e `Dev Toolbox` herdam o Side Drawer lateral na paisagem / Bottom Sheet no retrato via `mobile_container.rs`, com aviso suave sugerindo paisagem/tablet em telas muito estreitas e auto-scroll acima do teclado em editores de texto/script via `MobileImePlugin`.
+- **P7 — Polimento para Tablets, Dobráveis, Hápticos e Modo Preview Mobile no Desktop** (`feat/aurora-android`):
+  - [x] Ponte nativa de feedback háptico (`AuroraActivity.performHapticFeedback`, `android::perform_haptic`, `touch::trigger_haptic`) conectada ao long-press e à trava de **Auto-Run**.
+  - [x] Modo preview mobile no desktop via `AURORA_MOBILE_PREVIEW=phone-portrait|phone-landscape|tablet` e `AURORA_MOBILE_PREVIEW_IME=<dp>` em `touch.rs` (documentado em `docs/TESTING.md`), 100% inativo por padrão para manter o desktop intacto.
+  - [ ] Validação visual final em dispositivo Android / APK e capturas com `AURORA_MOBILE_PREVIEW`.

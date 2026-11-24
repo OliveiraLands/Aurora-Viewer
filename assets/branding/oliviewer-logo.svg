@@ -1,0 +1,137 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    
+    <linearGradient id="grad-main" x1="15%" y1="85%" x2="85%" y2="15%">
+      <stop offset="0%" stop-color="#d9381e" />
+      <stop offset="32%" stop-color="#f26e1d" />
+      <stop offset="62%" stop-color="#9cb934" />
+      <stop offset="100%" stop-color="#589425" />
+    </linearGradient>
+
+    
+    <linearGradient id="grad-wave-top" x1="10%" y1="90%" x2="90%" y2="10%">
+      <stop offset="0%" stop-color="#e84323" />
+      <stop offset="35%" stop-color="#f57c20" />
+      <stop offset="70%" stop-color="#a8b532" />
+      <stop offset="100%" stop-color="#7eb536" />
+    </linearGradient>
+
+    
+    <linearGradient id="grad-leaf-light" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#f78b24" />
+      <stop offset="45%" stop-color="#bdd147" />
+      <stop offset="100%" stop-color="#87c43c" />
+    </linearGradient>
+
+    
+    <linearGradient id="grad-leaf-dark" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#c4301a" />
+      <stop offset="45%" stop-color="#8d6a22" />
+      <stop offset="100%" stop-color="#3f781c" />
+    </linearGradient>
+
+    
+    <linearGradient id="grad-wave-bottom" x1="0%" y1="80%" x2="100%" y2="20%">
+      <stop offset="0%" stop-color="#437c1e" />
+      <stop offset="55%" stop-color="#74ad2e" />
+      <stop offset="100%" stop-color="#9bc945" />
+    </linearGradient>
+
+    
+    <linearGradient id="grad-twig" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#8a8e2b" />
+      <stop offset="100%" stop-color="#8fc43f" />
+    </linearGradient>
+
+    <radialGradient id="grad-olive" cx="35%" cy="35%" r="65%">
+      <stop offset="0%" stop-color="#f27a24" />
+      <stop offset="55%" stop-color="#bd6e22" />
+      <stop offset="100%" stop-color="#5d8a24" />
+    </radialGradient>
+
+    
+    <clipPath id="clip-leaf">
+      <path d="M 142,374
+               C 118,274 152,182 246,134
+               C 310,102 364,90 406,68
+               C 416,164 392,268 326,336
+               C 268,394 196,400 148,386 Z" />
+    </clipPath>
+
+    
+    <mask id="mask-veins">
+      <rect width="512" height="512" fill="#ffffff" />
+      
+      <path d="M 136,382 Q 244,254 374,122 Q 252,262 148,390 Z" fill="#000000" />
+      
+      <path d="M 184,328 Q 176,278 192,238 Q 186,282 194,320 Z" fill="#000000" />
+      <path d="M 244,260 Q 256,214 282,172 Q 266,216 254,252 Z" fill="#000000" />
+      
+      <path d="M 192,334 Q 248,334 298,314 Q 248,342 184,344 Z" fill="#000000" />
+      <path d="M 262,254 Q 312,240 356,210 Q 314,248 256,264 Z" fill="#000000" />
+    </mask>
+  </defs>
+
+  
+  <path d="M 82,178 C 110,112 168,70 240,60 C 188,80 144,114 108,162 Z" fill="url(#grad-wave-top)" />
+
+  
+  <path d="M 116,382
+           C 56,314 54,212 104,160
+           C 146,116 178,120 212,90
+           C 250,58 310,60 356,88
+           C 306,76 260,82 226,118
+           C 190,154 152,152 122,192
+           C 88,238 92,316 124,372 Z" fill="url(#grad-wave-top)" />
+
+  
+  <path d="M 116,336 C 98,274 110,218 160,186 C 130,224 118,276 126,332 Z" fill="#f26a1b" opacity="0.9" />
+
+  
+  <path d="M 248,128 C 264,102 288,94 314,100 C 296,120 274,126 248,128 Z" fill="#8cb838" />
+
+  
+  <path d="M 102,424 L 146,368 C 154,360 166,370 158,378 L 116,436 C 108,444 94,434 102,424 Z" fill="#e03f20" />
+
+  
+  <g clip-path="url(#clip-leaf)" mask="url(#mask-veins)">
+    <rect x="100" y="60" width="330" height="350" fill="url(#grad-main)" />
+    
+    <path d="M 120,350 C 170,220 235,140 415,65 L 415,175 C 310,215 245,280 140,385 Z" fill="url(#grad-leaf-light)" opacity="0.85" />
+    
+    <path d="M 130,395 C 215,320 280,260 415,145 L 415,305 C 325,380 230,415 130,395 Z" fill="url(#grad-leaf-dark)" opacity="0.85" />
+    
+    <path d="M 125,390 C 185,355 245,355 310,335 C 260,395 185,405 125,390 Z" fill="#d93b1f" opacity="0.9" />
+  </g>
+
+  
+  <path d="M 148,408
+           C 214,462 302,462 362,402
+           C 386,378 408,354 438,312
+           C 402,388 342,456 266,464
+           C 214,470 174,446 148,408 Z" fill="url(#grad-wave-bottom)" />
+
+  <path d="M 152,402
+           C 228,426 286,388 320,362
+           C 344,344 364,346 378,354
+           C 334,376 312,418 256,438
+           C 212,452 174,432 152,402 Z" fill="#538f24" />
+
+  
+  <g fill="url(#grad-twig)">
+    
+    <path d="M 342,340 C 378,316 404,280 418,224 C 414,274 390,318 354,344 Z" />
+    
+    <path d="M 364,334 C 382,326 398,332 408,342 C 392,348 376,346 364,334 Z" />
+    <path d="M 380,312 C 376,288 382,268 396,256 C 400,278 394,298 380,312 Z" />
+    <path d="M 402,268 C 398,244 402,226 414,212 C 420,232 416,252 402,268 Z" />
+    <path d="M 424,228 C 418,202 422,184 432,172 C 442,190 438,212 424,228 Z" />
+    <path d="M 416,266 C 426,244 436,232 450,224 C 450,244 438,258 416,266 Z" />
+  </g>
+
+  
+  <g transform="translate(418, 302) rotate(-32)">
+    <ellipse cx="0" cy="0" rx="22" ry="17" fill="url(#grad-olive)" />
+    <ellipse cx="6" cy="-6" rx="6" ry="3" fill="#ffffff" opacity="0.45" />
+  </g>
+</svg>
