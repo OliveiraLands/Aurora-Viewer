@@ -88,37 +88,6 @@ pub(crate) fn android_skip() -> u32 {
     0
 }
 
-/// TEMPORARY Android diagnostic (CRASH-ANDROID.md): the `DIAG_BLEND` mask the
-/// scene shader module is built with (`object_shader_source`), from the system
-/// property `debug.aurora.blend`; read when the modules are made, so a change
-/// needs a restart of the app. 1 no portal surface, 2 no early discard of the
-/// glare, 4 no derez alpha, 8 no water clip, 16 a flat colour instead of the
-/// material and its lighting. Zero on every other system.
-#[cfg(target_os = "android")]
-pub(crate) fn android_blend_diag() -> u32 {
-    // PROP_VALUE_MAX
-    let mut buf = [0 as libc::c_char; 92];
-    // SAFETY: as in `android_skip`.
-    let len = unsafe { libc::__system_property_get(c"debug.aurora.blend".as_ptr(), buf.as_mut_ptr()) };
-    let mask = if len > 0 {
-        // SAFETY: the call above NUL-terminated `buf`.
-        unsafe { std::ffi::CStr::from_ptr(buf.as_ptr()) }
-            .to_str()
-            .ok()
-            .and_then(|s| s.trim().parse().ok())
-            .unwrap_or(0)
-    } else {
-        0
-    };
-    log::warn!("android diagnostic: debug.aurora.blend = {mask}");
-    mask
-}
-
-#[cfg(not(target_os = "android"))]
-pub(crate) fn android_blend_diag() -> u32 {
-    0
-}
-
 /// `AURORA_DEMO_VR_CLOSED`: the frame the VR runtime is taken as closing at.
 #[cfg(any(target_os = "linux", target_os = "windows", target_os = "macos"))]
 fn demo_vr_closed() -> Option<u64> {

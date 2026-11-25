@@ -1,4 +1,6 @@
 language-name = 日本語
+mobile-vr-recenter = 視点リセット
+mobile-vr-exit = VRを終了
 avatar-studio-title = アバタースタジオ
 avatar-studio-pose = ポーズ
 avatar-studio-pose-animated = ＡＯ／インワールド
@@ -16195,9 +16197,6 @@ game-control-action-truck-right = トラック →
 game-control-action-boom-up = ブーム ↑
 game-control-action-boom-down = ブーム ↓
 game-control-action-escape = ESC
-
-mobile-vr-recenter = 視点リセット
-mobile-vr-exit = VRを終了
 
 picker-local-newest = 追加順（新しい順）
 picker-local-name = 名前順

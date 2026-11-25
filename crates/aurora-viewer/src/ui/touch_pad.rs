@@ -21,6 +21,8 @@ use winit::event::TouchPhase;
 const STICK_OUTER_RADIUS: f32 = 58.0;
 const STICK_KNOB_RADIUS: f32 = 24.0;
 const STICK_DEADZONE: f32 = 0.16;
+const STICK_WALK_DEADZONE: f32 = 0.42;
+const STICK_TURN_CONE_RATIO: f32 = 0.95;
 const STICK_RUN_THRESHOLD: f32 = 0.82;
 const AUTO_RUN_PULL_RATIO: f32 = 1.28;
 const PRIMARY_BTN_SIZE: f32 = 54.0;
@@ -55,6 +57,11 @@ pub struct TouchPadState {
     auto_run: bool,
     jump_held: bool,
     down_held: bool,
+    jump_finger: Option<u64>,
+    down_finger: Option<u64>,
+    last_primary_rect: Option<Rect>,
+    last_down_rect: Option<Rect>,
+    last_sitting: bool,
 }
 
 impl TouchPadState {
@@ -75,18 +82,34 @@ impl TouchPadState {
         self.axes = [0.0, 0.0];
         self.jump_held = false;
         self.down_held = false;
+        self.jump_finger = None;
+        self.down_finger = None;
     }
 
     /// Process a raw touch event before `TouchNav` sees it.
     ///
-    /// Returns `true` when the touch belongs to the left virtual thumbstick so
-    /// the camera gesture recognizer ignores that finger (dual-thumb control).
+    /// Returns `true` when the touch belongs to the left virtual thumbstick or
+    /// holdable Up/Down action buttons so the camera gesture recognizer ignores
+    /// that finger (multi-touch control).
     pub fn handle_touch(&mut self, phase: TouchPhase, id: u64, pos: [f32; 2], usable: Rect) -> bool {
         let prefs = crate::ui::mobile_prefs::current();
         self.mode = prefs.pad_mode();
         let p = Pos2::new(pos[0], pos[1]);
         match phase {
             TouchPhase::Started => {
+                if !self.last_sitting
+                    && self.jump_finger.is_none()
+                    && self.last_primary_rect.is_some_and(|r| r.expand(6.0).contains(p))
+                {
+                    self.jump_finger = Some(id);
+                    self.jump_held = true;
+                    return true;
+                }
+                if self.down_finger.is_none() && self.last_down_rect.is_some_and(|r| r.expand(6.0).contains(p)) {
+                    self.down_finger = Some(id);
+                    self.down_held = true;
+                    return true;
+                }
                 if self.finger_id.is_none() && thumbstick_zone(usable, prefs.left_handed).contains(p) {
                     self.finger_id = Some(id);
                     self.origin = match self.mode {
@@ -99,6 +122,9 @@ impl TouchPadState {
                 false
             }
             TouchPhase::Moved => {
+                if self.jump_finger == Some(id) || self.down_finger == Some(id) {
+                    return true;
+                }
                 if self.finger_id == Some(id) {
                     self.update_knob(p);
                     return true;
@@ -106,6 +132,16 @@ impl TouchPadState {
                 false
             }
             TouchPhase::Ended | TouchPhase::Cancelled => {
+                if self.jump_finger == Some(id) {
+                    self.jump_finger = None;
+                    self.jump_held = false;
+                    return true;
+                }
+                if self.down_finger == Some(id) {
+                    self.down_finger = None;
+                    self.down_held = false;
+                    return true;
+                }
                 if self.finger_id == Some(id) {
                     self.finger_id = None;
                     self.axes = [0.0, 0.0];
@@ -151,9 +187,12 @@ impl TouchPadState {
     pub fn apply_to_move_input(&self, input: &mut MoveInput) {
         let [x, y] = self.axes;
         let mag = (x * x + y * y).sqrt();
-        if self.auto_run || y > STICK_DEADZONE {
+        // Horizontal drags within the turn cone only turn the avatar without
+        // walking immediately; forward/back engages once pushed past the cone.
+        let in_turn_cone = x.abs() > STICK_DEADZONE && y.abs() < x.abs() * STICK_TURN_CONE_RATIO;
+        if self.auto_run || (!in_turn_cone && y > STICK_WALK_DEADZONE) {
             input.forward = true;
-        } else if y < -STICK_DEADZONE {
+        } else if !in_turn_cone && y < -STICK_WALK_DEADZONE {
             input.back = true;
         }
         if x < -STICK_DEADZONE {
@@ -161,7 +200,7 @@ impl TouchPadState {
         } else if x > STICK_DEADZONE {
             input.turn_right = true;
         }
-        if self.auto_run || mag >= STICK_RUN_THRESHOLD {
+        if self.auto_run || ((input.forward || input.back) && mag >= STICK_RUN_THRESHOLD) {
             input.run = true;
         }
         if self.jump_held {
@@ -191,8 +230,13 @@ impl TouchPadState {
         if layout.ime_visible() || widgets::mobile_container::has_active_sheet(ctx) {
             self.jump_held = false;
             self.down_held = false;
+            self.jump_finger = None;
+            self.down_finger = None;
+            self.last_primary_rect = None;
+            self.last_down_rect = None;
             return actions;
         }
+        self.last_sitting = sitting;
 
         let prefs = crate::ui::mobile_prefs::current();
         let opacity_scale = prefs.pad_opacity.clamp(0.3, 1.0);
@@ -286,12 +330,21 @@ impl TouchPadState {
                 } else {
                     "arrow-big-up-filled"
                 };
-                let primary_resp = circle_action_button(ui, p, origin, PRIMARY_BTN_SIZE, primary_icon, false, !sitting);
+                self.last_primary_rect = Some(Rect::from_center_size(origin, Vec2::splat(PRIMARY_BTN_SIZE)));
+                let primary_resp = circle_action_button(
+                    ui,
+                    p,
+                    origin,
+                    PRIMARY_BTN_SIZE,
+                    primary_icon,
+                    self.jump_finger.is_some(),
+                    !sitting,
+                );
                 if sitting {
                     if primary_resp.clicked() {
                         actions.bar_action = BarAction::StandUp;
                     }
-                } else if primary_resp.is_pointer_button_down_on() {
+                } else if primary_resp.is_pointer_button_down_on() || primary_resp.dragged() {
                     jump_held = true;
                 }
 
@@ -304,8 +357,17 @@ impl TouchPadState {
                 // Descend / Crouch button (directly left of primary button).
                 let down_pos = origin + Vec2::new(-70.0, 32.0);
                 let down_icon = if flying { "arrow-down" } else { "chevrons-down" };
-                let down_resp = circle_action_button(ui, p, down_pos, SECONDARY_BTN_SIZE, down_icon, false, true);
-                if down_resp.is_pointer_button_down_on() {
+                self.last_down_rect = Some(Rect::from_center_size(down_pos, Vec2::splat(SECONDARY_BTN_SIZE)));
+                let down_resp = circle_action_button(
+                    ui,
+                    p,
+                    down_pos,
+                    SECONDARY_BTN_SIZE,
+                    down_icon,
+                    self.down_finger.is_some(),
+                    true,
+                );
+                if down_resp.is_pointer_button_down_on() || down_resp.dragged() {
                     down_held = true;
                 }
 
@@ -322,8 +384,8 @@ impl TouchPadState {
                 }
             });
 
-        self.jump_held = jump_held;
-        self.down_held = down_held;
+        self.jump_held = jump_held || self.jump_finger.is_some();
+        self.down_held = down_held || self.down_finger.is_some();
         actions
     }
 }
@@ -456,11 +518,44 @@ mod tests {
         pad.apply_to_move_input(&mut idle);
         assert!(!idle.forward && !idle.back && !idle.turn_left && !idle.turn_right);
 
-        // Pulling right activates turn_right.
+        // Pulling right activates turn_right without walking.
         assert!(pad.handle_touch(TouchPhase::Moved, 5, [130.0, 700.0], usable));
         let mut right = MoveInput::default();
         pad.apply_to_move_input(&mut right);
         assert!(right.turn_right);
         assert!(!right.turn_left);
+        assert!(!right.forward);
+
+        // Pulling right with slight upward angle stays turn-only (no immediate walk).
+        assert!(pad.handle_touch(TouchPhase::Moved, 5, [130.0, 682.0], usable));
+        let mut slight_diag = MoveInput::default();
+        pad.apply_to_move_input(&mut slight_diag);
+        assert!(slight_diag.turn_right);
+        assert!(!slight_diag.forward);
+    }
+
+    #[test]
+    fn multitouch_up_and_down_buttons_work_while_thumbstick_is_held() {
+        let usable = Rect::from_min_size(Pos2::ZERO, Vec2::new(844.0, 390.0));
+        let mut pad = TouchPadState {
+            last_primary_rect: Some(Rect::from_center_size(Pos2::new(797.0, 260.0), Vec2::splat(54.0))),
+            last_down_rect: Some(Rect::from_center_size(Pos2::new(727.0, 292.0), Vec2::splat(46.0))),
+            ..Default::default()
+        };
+
+        // Left thumb holds the thumbstick.
+        assert!(pad.handle_touch(TouchPhase::Started, 1, [100.0, 280.0], usable));
+        // Right thumb simultaneously holds Up, then Down.
+        assert!(pad.handle_touch(TouchPhase::Started, 2, [797.0, 260.0], usable));
+        let mut up_input = MoveInput::default();
+        pad.apply_to_move_input(&mut up_input);
+        assert!(up_input.up);
+        assert!(pad.handle_touch(TouchPhase::Ended, 2, [797.0, 260.0], usable));
+
+        assert!(pad.handle_touch(TouchPhase::Started, 3, [727.0, 292.0], usable));
+        let mut down_input = MoveInput::default();
+        pad.apply_to_move_input(&mut down_input);
+        assert!(down_input.down);
+        assert!(pad.handle_touch(TouchPhase::Ended, 3, [727.0, 292.0], usable));
     }
 }

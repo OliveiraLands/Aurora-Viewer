@@ -1,4 +1,6 @@
 language-name = English
+mobile-vr-recenter = Recenter
+mobile-vr-exit = Exit VR
 avatar-studio-title = Avatar Studio
 avatar-studio-pose = Pose
 avatar-studio-pose-animated = AO / In-world
@@ -16356,9 +16358,6 @@ game-control-action-truck-right = Truck →
 game-control-action-boom-up = Boom ↑
 game-control-action-boom-down = Boom ↓
 game-control-action-escape = ESC
-
-mobile-vr-recenter = Recenter
-mobile-vr-exit = Exit VR
 
 picker-local-newest = Newest first
 picker-local-name = Name A–Z

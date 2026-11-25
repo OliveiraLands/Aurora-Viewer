@@ -1952,11 +1952,6 @@ override BLEND_EARLY_DISCARD: bool = true;
 // covered (writing their depth as they are drawn), 2 only the fainter ones
 // (depth tested, nothing written); 0, every other use, draws them all.
 override BLEND_SPLIT: u32 = 0u;
-// TEMPORARY Android diagnostic (CRASH-ANDROID.md): parts of fs_blend left out
-// (lib.rs object_shader_source rewrites this line on Android): 1 portal
-// surface, 2 early discard of the glare, 4 derez alpha, 8 water clip, 16 the
-// material and its lighting (a flat colour instead).
-const DIAG_BLEND: u32 = 0u;
 
 @fragment
 fn fs_blend(in: VsOut, @builtin(front_facing) front: bool) -> @location(0) vec4<f32> {
@@ -1964,7 +1959,7 @@ fn fs_blend(in: VsOut, @builtin(front_facing) front: bool) -> @location(0) vec4<
     // texture samples, keeping glTF doubleSided backs and their flipped normals.
     if (!front && (records[in.record].flags.x & FLAG_DOUBLE_SIDED) == 0u) { discard; }
     let portal_aa = max(length(fwidth(in.uv)) * 2.0 * PORTAL_SURFACE_SCALE, 0.001);
-    if ((DIAG_BLEND & 1u) == 0u && (records[in.record].flags.x & FLAG_PORTAL_EFFECT) != 0u) {
+    if ((records[in.record].flags.x & FLAG_PORTAL_EFFECT) != 0u) {
         let surface = portal_surface(records[in.record], in.uv, portal_aa);
         if (surface.alpha < 0.004) { discard; }
         let color = apply_fog(surface.color * frame.sky_cloud_pd2.w, in.world_pos);
@@ -1974,9 +1969,7 @@ fn fs_blend(in: VsOut, @builtin(front_facing) front: bool) -> @location(0) vec4<
     // stay drawn whole after it, as before. The ban lines are clipped to the
     // camera's side: the Legacy Viewer draws them after the scene, behind
     // the water's depth)
-    if ((DIAG_BLEND & 8u) == 0u) {
-        water_clip(in.world_pos);
-    }
+    water_clip(in.world_pos);
     // RiggedBlendDepth::Split: the texels at least half covered, then the
     // fainter ones, by the alpha of fs_depth_contact; tested before the
     // material, which the other pass's texels then never evaluate
@@ -1987,13 +1980,10 @@ fn fs_blend(in: VsOut, @builtin(front_facing) front: bool) -> @location(0) vec4<
             discard;
         }
     }
-    if ((DIAG_BLEND & 16u) != 0u) {
-        return vec4<f32>(0.1, 0.1, 0.1, 0.5);
-    }
     let m = eval_material(in, front);
     // a legacy material's empty texels may still glare (materialF.glsl has
     // no early test): lit first, their alpha is known after shade_material
-    if (BLEND_EARLY_DISCARD && (DIAG_BLEND & 2u) == 0u && m.color.a < 0.004 && !legacy_may_glare(records[in.record], m, in.world_pos, in.clip.xy)) {
+    if (BLEND_EARLY_DISCARD && m.color.a < 0.004 && !legacy_may_glare(records[in.record], m, in.world_pos, in.clip.xy)) {
         discard;
     }
     // Blended and alpha-tested: the hair, eyelashes and skirt of a system
@@ -2003,9 +1993,7 @@ fn fs_blend(in: VsOut, @builtin(front_facing) front: bool) -> @location(0) vec4<
         discard;
     }
     var c = shade_material(in, m).color;
-    if ((DIAG_BLEND & 4u) == 0u) {
-        c.a = c.a * rez_alpha_of(rec.rez, in.world_pos.z);
-    }
+    c.a = c.a * rez_alpha_of(rec.rez, in.world_pos.z);
     if (c.a < 0.004) {
         discard;
     }

@@ -1,4 +1,6 @@
 language-name = Français
+mobile-vr-recenter = Recentrer
+mobile-vr-exit = Quitter la VR
 avatar-studio-title = Studio avatar
 avatar-studio-pose = Pose
 avatar-studio-pose-animated = AO / En monde
@@ -16362,9 +16364,6 @@ game-control-action-truck-right = Travelling latéral →
 game-control-action-boom-up = Grue ↑
 game-control-action-boom-down = Grue ↓
 game-control-action-escape = Échap
-
-mobile-vr-recenter = Recentrer
-mobile-vr-exit = Quitter la VR
 
 picker-local-newest = Plus récentes
 picker-local-name = Nom A–Z
