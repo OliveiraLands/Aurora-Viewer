@@ -52,6 +52,7 @@ pub struct MobileHudAction {
     pub open_photo: bool,
     pub open_options: bool,
     pub toggle_mic: bool,
+    pub toggle_vr: bool,
 }
 
 impl MobileHudAction {
@@ -251,6 +252,10 @@ impl MobileHudState {
                             }
                             if dock_button(ui, p, "camera-filled", 0).clicked() {
                                 action.open_photo = true;
+                            }
+                            #[cfg(target_os = "android")]
+                            if dock_button(ui, p, "device-vision-pro-filled", 0).clicked() {
+                                action.toggle_vr = true;
                             }
                             if dock_button(ui, p, "settings-filled", 0).clicked() {
                                 action.open_options = true;

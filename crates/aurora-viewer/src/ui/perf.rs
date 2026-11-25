@@ -819,6 +819,7 @@ mod tests {
             adapters: vec!["Test GPU".into()],
             notice: None,
             vulkan: None,
+            ray_tracing: Default::default(),
         };
         let data = PerfData::default();
         for tab in super::super::monitor::Tab::ALL {
