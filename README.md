@@ -1073,7 +1073,7 @@ an "Open folder" button: quit Aurora, then delete them and the viewer.
 
 **Rendering engine**
 
-- Vulkan (through wgpu) instead of OpenGL.
+- Vulkan (through wgpu) as the primary renderer, with an automatic OpenGL 3.3+ Core compatibility fallback (`glow` + `glutin`) for older pre-Vulkan or non-bindless GPUs (can also be forced with `AURORA_BACKEND=gl`).
 - The GPU does the heavy lifting: it decides what is visible (culling in
   compute shaders) and builds its own draw lists.
 - Bindless textures and multi-draw-indirect let thousands of objects be
@@ -1153,6 +1153,48 @@ bundle and its signing: [Installing on macOS](docs/MACOS.md). The macOS
 workflow (`.github/workflows/macos.yml`) checks every pull request with
 clippy on a Mac, and the merge queue runs the tests and draws a demo frame on
 an Apple GPU.
+
+### OpenGL compatibility backend (older GPUs)
+
+Systems without Vulkan or modern bindless GPU features (such as Intel HD 4000 /
+Ivy Bridge, Intel HD 3000 / Sandy Bridge, or legacy OpenGL 3.3+ drivers)
+automatically fall back from `wgpu` to the OpenGL 3.3+ Core compatibility
+backend (`glow` + `glutin` + `egui_glow`).
+
+You can also select the backend explicitly via `AURORA_BACKEND`:
+
+```powershell
+# PowerShell (Windows)
+$env:AURORA_BACKEND = "gl"
+cargo run -p aurora-viewer
+```
+
+Accepted values are `auto` (default), `vulkan` (`vk`), `metal` (`mtl`), and
+`gl` (`opengl`, `glow`). Because this compatibility tier uses CPU-culled,
+non-bindless rendering without `wgpu::Device`, advanced `wgpu`-only features
+(bindless texture arrays, compute culling, shadow cascades, SSR, GTAO, and
+OIT) are omitted on OpenGL.
+
+### Android & Mobile
+
+OliViewer includes native Android support (`packaging/android/` and
+`crates/aurora-viewer/src/android.rs`) alongside a touch-first mobile
+experience:
+
+- **Collapsible Mobile HUD & Dock:** Compact top bar (region pill, FPS badge,
+  voice mic toggle, and Cinema Mode collapse/restore) and a horizontally
+  scrollable 44 dp bottom dock (`crates/aurora-viewer/src/ui/mobile_hud.rs`).
+- **Virtual Touch Controls & Mobile Sheets:** Twin-stick virtual pad for
+  movement and camera look, touch-friendly bottom sheets/drawers, and an
+  IME-aware chat composer.
+- **Mobile VR (Android-only):** Cardboard / phone-in-headset stereoscopic mode
+  with Android sensor head tracking, recenter/exit controls, and a dedicated
+  VR toggle button (`device-vision-pro-filled`) in the mobile dock.
+- **Custom Branding & Default Grids:** Supports external local branding and
+  grid presets (`brand.example.json`, `grids.example.json`).
+
+For Android NDK, `cargo-ndk`, and Gradle APK build instructions, see
+[docs/ANDROID.md](docs/ANDROID.md).
 
 Preferences › Graphics › Smoothness offers a 50–100% **3D render scale**.
 At lower scales, the world is reconstructed and sharpened in one AMD CAS spatial
