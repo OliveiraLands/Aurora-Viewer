@@ -394,17 +394,16 @@ fn banner(
     }
 
     // bottom right: the region on the world map, and the progress in figures
+    // (on narrow portrait screens, place the map above the name + progress area)
+    let portrait = screen.width() < 600.0;
     let base = track.top() - margin * 0.8;
     let mut right = screen.right() - margin;
-    if let Some(tile) = place.tile {
-        let [w, h] = tile.size();
-        let (size, uv) = map_frame(w, h, 132.0 * k);
-        let rect = Rect::from_min_size(Pos2::new(right - size.x, base - size.y), size);
+    let draw_map = |painter: &egui::Painter, rect: Rect, uv: Rect, radius: egui::CornerRadius| {
         let mut shadow = ctx.global_style().visuals.window_shadow;
         shadow.color = shadow.color.gamma_multiply(a);
         painter.add(shadow.as_shape(rect, radius));
         painter
-            .add(egui::epaint::RectShape::filled(rect, radius, super::widgets::PICTURE_TINT.gamma_multiply(a)).with_texture(tile.id(), uv));
+            .add(egui::epaint::RectShape::filled(rect, radius, super::widgets::PICTURE_TINT.gamma_multiply(a)).with_texture(place.tile.expect("tile").id(), uv));
         painter.rect_stroke(
             rect,
             radius,
@@ -417,8 +416,15 @@ fn banner(
             painter.circle_filled(at, 3.5 * k, p.ink.gamma_multiply(a));
             painter.circle_stroke(at, 3.5 * k, egui::Stroke::new(1.5 * k, p.violet.gamma_multiply(a)));
         }
+    };
+    if !portrait && let Some(tile) = place.tile {
+        let [w, h] = tile.size();
+        let (size, uv) = map_frame(w, h, 132.0 * k);
+        let rect = Rect::from_min_size(Pos2::new(right - size.x, base - size.y), size);
+        draw_map(&painter, rect, uv, radius);
         right = rect.left() - 20.0 * k;
     }
+    let mut figures_top = base;
     if let Some(f) = fraction {
         let muted = p.muted.gamma_multiply(a);
         let ink = p.ink.gamma_multiply(a);
@@ -429,6 +435,7 @@ fn banner(
         let figures_at = Pos2::new(sign_at.x - figures.size().x, base - figures.size().y + 3.0 * k);
         painter.galley(sign_at, sign, muted);
         painter.galley(figures_at, figures, ink);
+        figures_top = figures_at.y;
         right = figures_at.x - 24.0 * k;
     }
 
@@ -491,6 +498,13 @@ fn banner(
         let galley = column.layout_job(job);
         y -= galley.size().y;
         column.galley(Pos2::new(left, y), galley, accent);
+    }
+    if portrait && let Some(tile) = place.tile {
+        let [w, h] = tile.size();
+        let (size, uv) = map_frame(w, h, 132.0 * k);
+        let map_bottom = y.min(figures_top) - 16.0 * k;
+        let rect = Rect::from_min_size(Pos2::new(left, map_bottom - size.y), size);
+        draw_map(&painter, rect, uv, radius);
     }
     Pos2::new(screen.right() - margin, screen.top() + margin * 0.85)
 }
