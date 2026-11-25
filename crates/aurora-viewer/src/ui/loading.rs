@@ -421,7 +421,7 @@ fn banner(
         let [w, h] = tile.size();
         let (size, uv) = map_frame(w, h, 132.0 * k);
         let rect = Rect::from_min_size(Pos2::new(right - size.x, base - size.y), size);
-        draw_map(&painter, rect, uv, radius);
+        draw_map(painter, rect, uv, radius);
         right = rect.left() - 20.0 * k;
     }
     let mut figures_top = base;
@@ -504,7 +504,7 @@ fn banner(
         let (size, uv) = map_frame(w, h, 132.0 * k);
         let map_bottom = y.min(figures_top) - 16.0 * k;
         let rect = Rect::from_min_size(Pos2::new(left, map_bottom - size.y), size);
-        draw_map(&painter, rect, uv, radius);
+        draw_map(painter, rect, uv, radius);
     }
     Pos2::new(screen.right() - margin, screen.top() + margin * 0.85)
 }
