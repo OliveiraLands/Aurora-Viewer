@@ -13,7 +13,7 @@ A Vulkan renderer, a clean interface, touch-first mobile UX, and the virtual wor
 
 <sub><strong>Independent fork notice:</strong> OliViewer is a modified, independent fork based on Aurora Viewer. It is <strong>not</strong> an official or endorsed build of Aurora Viewer, and is not provided or supported by Linden Lab, the makers of Second Life.</sub>
 
-[Independent Fork & License Notice](#independent-fork-license--compliance) · [Why Aurora](#why-aurora) · [Creator tools](#creator-tools) · [Performance](#performance) · [Features](#what-works-today) · [Roadmap](#roadmap) · [Using Aurora](#using-aurora) · [Build](#build) · [Contributing](#contributing) · [Code signing policy](https://aurora-viewer.org/code-signing/)
+[Independent Fork & License Notice](#independent-fork-license--compliance) · [Why OliViewer](#why-oliviewer) · [Creator tools](#creator-tools) · [Performance](#performance) · [Features](#what-works-today) · [Roadmap](#roadmap) · [Using OliViewer](#using-oliviewer) · [Build](#build) · [Contributing](#contributing) · [Code signing policy](https://aurora-viewer.org/code-signing/)
 
 </div>
 
@@ -32,7 +32,7 @@ In full compliance with the **GNU General Public License v3.0 (GPLv3)**, [TRADEM
 ---
 
 **Multi-threaded from the ground up: parallel loading, ultra fast teleports, built for today's hardware with Vulkan and Rust.**  
-<img width="1920" height="1032" alt="Aurora Viewer in a Japanese garden, with the People, Controls, Places, Inventory, Performance and Conversations windows open" src="docs/screenshots/world.webp" />  
+<img width="1920" height="1032" alt="OliViewer in a Japanese garden, with the People, Controls, Places, Inventory, Performance and Conversations windows open" src="docs/screenshots/world.webp" />  
 
 
 **All the tools you need to experience SecondLife the way it's meant to be experienced, Photo tools, Auto Hover Height, tons of QoL !**  
@@ -83,7 +83,7 @@ In full compliance with the **GNU General Public License v3.0 (GPLv3)**, [TRADEM
 </details>
 
 
-Aurora Viewer is a Second Life client written in Rust, with a modern GPU
+OliViewer is a Second Life & OpenSim client written in Rust, with a modern GPU
 renderer (wgpu on Vulkan) and a clean, flat interface. It is a new codebase,
 not a fork: many of its parts are Rust ports of code from the Second Life
 viewer and the Legacy Viewer, credited file by file ([NOTICE.md](NOTICE.md)). It follows the
@@ -94,7 +94,7 @@ while rethinking the user interface.
 > testing. Some implemented features still await live-grid validation — see
 > [TASKS.md](TASKS.md).
 
-## Why Aurora
+## Why OliViewer
 
 <table>
   <tr>
@@ -778,7 +778,7 @@ Voice is WebRTC only; Vivox is not supported.
 The detailed list of what is done, in progress and to do is in
 [TASKS.md](TASKS.md).
 
-## Using Aurora
+## Using OliViewer
 
 ### Accounts and login
 
@@ -1224,7 +1224,7 @@ exe before publishing; the local build also writes it to `version.txt`.
 
 | Argument | Effect |
 |---|---|
-| `--title <text>` | Names the window "Aurora Viewer <version> - <text> (Dev)" and its log file |
+| `--title <text>` | Names the window "OliViewer <version> - <text> (Dev)" and its log file |
 | `--fps-limit <fps>` | Caps this instance at 1–500 fps without changing saved preferences |
 | `--vr-mode=first-person\|avatar\|flycam` | Starting camera mode when used with `--vr` |
 | `--vr` | Enters VR once the world shows, with a headset connected (Windows and Linux) |
@@ -1379,7 +1379,7 @@ Privacy. Questions about it: [contact@aurora-viewer.org](mailto:contact@aurora-v
 
 Copyright © 2026 the Aurora Viewer contributors.
 
-Aurora Viewer is free software under the
+OliViewer is free software under the
 [GNU General Public License v3](LICENSE). Parts of it are ported
 from the Second Life viewer and Firestorm (originally LGPL 2.1); see
 [NOTICE.md](NOTICE.md) for details and third-party licenses.
@@ -1389,7 +1389,7 @@ takes its own name and icon, see [TRADEMARKS.md](TRADEMARKS.md). The only
 official downloads are on [aurora-viewer.org](https://aurora-viewer.org) and in
 this repository's [releases](https://github.com/Aurora-Viewer/Aurora-Viewer/releases).
 
-Aurora Viewer is not affiliated with Linden Lab or the Firestorm project.
+OliViewer is not affiliated with Linden Lab or the Firestorm project.
 Second Life® is a trademark of Linden Research, Inc.
 
 Experimental headset viewing: [cross-platform VR setup and limitations](docs/VR.md).

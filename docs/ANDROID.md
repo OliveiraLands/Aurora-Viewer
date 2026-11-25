@@ -1,7 +1,7 @@
 # Android port, responsive touch UI, and direct mobile VR
 
 This document describes the architecture, build setup, and phased roadmap for
-running Aurora Viewer natively on Android (`aarch64-linux-android` /
+running OliViewer natively on Android (`aarch64-linux-android` /
 `arm64-v8a`, Android 8.0+ / API 26), including touch-friendly responsive UI
 for phones and tablets and direct mobile VR.
 
