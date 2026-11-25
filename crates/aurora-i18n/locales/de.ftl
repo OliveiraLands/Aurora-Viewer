@@ -1801,15 +1801,15 @@ script-experiences-unavailable = Ihre Erlebnisse können nicht geladen werden. D
 script-experience-demo = Demo-Erlebnis
 script-disconnected = Nicht verbunden. Die nicht gespeicherte Quelle wurde beibehalten; Sie können sie kopieren, und bei der nächsten Anmeldung wird sie wieder angeboten.
 script-recovery-title = Skriptwiederherstellung
-script-recovery-intro = Aurora Viewer hat Skripte mit nicht gespeicherten Änderungen gefunden, die wahrscheinlich durch einen Absturz oder einen Verbindungsverlust entstanden sind. Die von Ihnen wiederhergestellten Skripte werden im Ordner „Fundbüro“ Ihres Inventars abgelegt.
+script-recovery-intro = OliViewer hat Skripte mit nicht gespeicherten Änderungen gefunden, die wahrscheinlich durch einen Absturz oder einen Verbindungsverlust entstanden sind. Die von Ihnen wiederhergestellten Skripte werden im Ordner „Fundbüro“ Ihres Inventars abgelegt.
 script-recovery-recover = Wiederherstellen
 script-recovery-unknown = (Unbekanntes Skript)
 script-recovery-no-folder = Der Ordner „Fundbüro“ ist noch nicht geladen. Versuchen Sie es gleich noch einmal.
 script-recovery-failed = { $name } konnte nicht wiederhergestellt werden: { $reason } Die Kopie wird für die nächste Anmeldung aufbewahrt.
 script-recovery-demo-name = Demo-Türskript
-exit-title = Aurora Viewer schließen?
+exit-title = OliViewer schließen?
 exit-world-body = Viewer beenden oder zum Anmeldebildschirm zurückkehren?
-exit-login-body = Möchten Sie Aurora Viewer beenden?
+exit-login-body = Möchten Sie OliViewer beenden?
 exit-waiting = Wird abgemeldet…
 exit-logout = Abmelden
 exit-logout-hint = Beenden Sie die Sitzung und kehren Sie zum Anmeldebildschirm zurück.
@@ -2568,13 +2568,13 @@ ui-texture-picker-no-textures-in-the-loaded-inventory = Keine Texturen im gelade
 world-tphistory-today = Heute
 app-aurora-elsewhere = Aurora anderswo
 common-aurora-demo = Aurora-Demo
-demo-aurora-viewer-rust-vulkan = { "Aurora Viewer\u000ARust · Vulkan" }
-demo-aurora-viewer-rust-metal = { "Aurora Viewer\u000ARust · Metal" }
-ui-login-aurora-viewer-v = Aurora Viewer v{ $value0 }
-cli-aurora-viewer = { "Aurora Viewer " }{ $version }
-cli-aurora-viewer-2 = { "Aurora Viewer " }{ $version }{ " - " }{ $t }
-common-aurora-viewer = { "Aurora Viewer " }{ $value0 }
-app-aurora-viewer-unable-to-initialize-vulkan = { "Aurora Viewer: Vulkan kann nicht initialisiert werden: " }{ $e }
+demo-aurora-viewer-rust-vulkan = { "OliViewer\u000ARust · Vulkan" }
+demo-aurora-viewer-rust-metal = { "OliViewer\u000ARust · Metal" }
+ui-login-aurora-viewer-v = OliViewer v{ $value0 }
+cli-aurora-viewer = { "OliViewer " }{ $version }
+cli-aurora-viewer-2 = { "OliViewer " }{ $version }{ " - " }{ $t }
+common-aurora-viewer = { "OliViewer " }{ $value0 }
+app-aurora-viewer-unable-to-initialize-vulkan = { "OliViewer: Vulkan kann nicht initialisiert werden: " }{ $e }
 splash-starting = Wird gestartet…
 splash-settings = Einstellungen werden gelesen…
 splash-gpu = Vorbereiten der Grafikkarte…
@@ -2585,18 +2585,18 @@ splash-update-closing = Schließen der vorherigen Version…
 splash-update-installing = Update wird installiert…
 splash-update-cache = Cache wird geleert…
 splash-update-launching = Starten der neuen Version…
-app-aurora-viewer-unable-to-initialize-metal = { "Aurora Viewer: Metal kann nicht initialisiert werden: " }{ $e }
+app-aurora-viewer-unable-to-initialize-metal = { "OliViewer: Metal kann nicht initialisiert werden: " }{ $e }
 app-graphics-start-memory-full =
-    Für Aurora Viewer ist kein Grafikspeicher mehr frei. Ein anderes Programm belegt ihn.
+    Für OliViewer ist kein Grafikspeicher mehr frei. Ein anderes Programm belegt ihn.
 
     Mögliche Abhilfen:
-    • Schließen Sie Programme, die die Grafikkarte nutzen, etwa einen anderen Viewer, ein Spiel oder einen Video- oder 3D-Editor. Starten Sie Aurora Viewer danach erneut.
-    • Prüfen Sie bei einem Laptop mit zwei Grafikkarten, welche Karte Aurora Viewer verwendet.
+    • Schließen Sie Programme, die die Grafikkarte nutzen, etwa einen anderen Viewer, ein Spiel oder einen Video- oder 3D-Editor. Starten Sie OliViewer danach erneut.
+    • Prüfen Sie bei einem Laptop mit zwei Grafikkarten, welche Karte OliViewer verwendet.
 
     Protokoll dieses Starts: { $log }
-app-graphics-start-failed-title = Aurora Viewer kann nicht gestartet werden
+app-graphics-start-failed-title = OliViewer kann nicht gestartet werden
 app-graphics-start-failed =
-    Aurora Viewer konnte keine Grafikkarte zum Zeichnen des Fensters öffnen.
+    OliViewer konnte keine Grafikkarte zum Zeichnen des Fensters öffnen.
 
     Mögliche Abhilfen:
     • Aktualisieren Sie den Grafikkartentreiber.
@@ -2607,7 +2607,7 @@ app-graphics-start-failed =
     Details: { $e }
 
     Protokoll dieses Starts: { $log }
-app-gpu-stall-title = Aurora Viewer: Die Grafikkarte reagiert nicht
+app-gpu-stall-title = OliViewer: Die Grafikkarte reagiert nicht
 app-gpu-stall =
     Die Grafikkarte hat { $seconds } Sekunden lang kein Bild fertiggestellt. Aurora funktioniert weiterhin (die Welt, der Ton und der Chat laufen weiter), aber es kann nichts gezeichnet werden, bis die Karte wieder antwortet.
 
@@ -2624,7 +2624,7 @@ app-gpu-recovered-safe = Der Treiber der Grafikkarte wurde innerhalb weniger Min
 app-vr-runtime-closed-title = VR-Software beendet
 app-vr-runtime-closed = Ihre VR-Software, etwa SteamVR, wurde beendet. Aurora hat sein Fenster ohne VR neu geöffnet. Sie bleiben angemeldet und die Welt lädt gleich wieder. Beim nächsten Start steht VR wieder zur Verfügung.
 app-vr-runtime-closed-at-start = Ihre VR-Software, etwa SteamVR, wurde beendet. Aurora hat sein Fenster ohne VR neu geöffnet. Sie bleiben angemeldet und die Welt lädt gleich wieder. Beim nächsten Start steht VR wieder zur Verfügung. Aurora lädt Ihre VR-Software bei jedem Start: Um das zu verhindern, deaktivieren Sie Einstellungen › Kamera › VR › VR beim Start einrichten.
-app-gpu-lost-title = Aurora Viewer: Die Grafikkarte ist nicht mehr verfügbar
+app-gpu-lost-title = OliViewer: Die Grafikkarte ist nicht mehr verfügbar
 app-gpu-lost =
     Die Grafikkarte funktioniert für Aurora nicht mehr: Ihr Treiber wurde zurückgesetzt (das Zeichnen eines Bildes dauerte zu lange oder der Videospeicher war voll), oder die Karte wurde entfernt oder von einem anderen Programm übernommen. Es kann nichts mehr gezeichnet werden: Aurora wird geschlossen, wenn Sie OK drücken (Sie werden ordnungsgemäß abgemeldet).
 
@@ -2847,7 +2847,7 @@ ui-environment-based-on-day-cycle = Basierend auf dem Tageszyklus
 build-ui-object-bias = Bias
 common-library = Bibliothek
 app-welcome = Willkommen!
-demo-welcome-to-the-aurora-viewer-demo = Willkommen zur Aurora Viewer-Demo! 🐺✨❤️
+demo-welcome-to-the-aurora-viewer-demo = Willkommen zur OliViewer-Demo! 🐺✨❤️
 demo-region-day-cycle = Nordische Morgendämmerung
 demo-region-telehub = Ankunftsort
 demo-region-telehub-object = Ankunftsstein
@@ -3394,7 +3394,7 @@ ui-options-flash-conversations-nearby-hint = Auch eine Zeile eines Einwohners im
 ui-options-announce-incoming-im = Eingehende IMs ankündigen, sobald der Absender zu tippen beginnt
 ui-options-announce-incoming-im-hint = Wenn ein Einwohner anfängt, eine IM an Sie zu schreiben, wird seine Unterhaltung sofort mit „Eingehende Nachricht von“ und seinem Namen geöffnet, bevor die Nachricht eintrifft.
 ui-options-unread-ims-in-window-title = Anzahl ungelesener IMs im Fenstertitel anzeigen
-ui-options-unread-ims-in-window-title-hint = Während private Nachrichten, Gruppenchats oder Konferenzen ungelesen warten, steht ihre Anzahl am Anfang des Fenstertitels, etwa „(3) Aurora Viewer“, den auch die Taskleiste anzeigt.
+ui-options-unread-ims-in-window-title-hint = Während private Nachrichten, Gruppenchats oder Konferenzen ungelesen warten, steht ihre Anzahl am Anfang des Fenstertitels, etwa „(3) OliViewer“, den auch die Taskleiste anzeigt.
 ui-options-im-tab-order = Unterhaltungsregister nach Typ sortieren
 ui-options-im-tab-order-hint = Eine neue Unterhaltung erscheint nach dem letzten Register ihres Typs in der unten gewählten Reihenfolge. Manuell verschobene Register behalten ihren Platz.
 ui-options-im-tab-order-kinds = Reihenfolge
@@ -4132,7 +4132,7 @@ ui-place-details-location-details-2 = { "Standortangaben: " }{ $value0 }
 common-expand = Erweitern
 ui-inventory-controls-expand-displayed-folders = Angezeigte Ordner erweitern
 ui-places-expand-all-folders = Alle Ordner erweitern
-demo-aurora-viewer-developer = Aurora Viewer Entwickler.
+demo-aurora-viewer-developer = OliViewer Entwickler.
 common-water = Wasser
 world-inventory-preview-water-haze-density-refraction-wave-scale-normal-texture = { "Wasser\u000A\u000ADunstdichte: " }{ $value0 }{ "\u000ABrechung: " }{ $value1 }{ "\u000AWellenmaßstab: " }{ $value2 }{ "\u000ANormal-Textur: " }{ $value3 }
 demo-env-turquoise-water = Türkisfarbenes Wasser
@@ -5169,9 +5169,9 @@ build-ui-general-next-owner = Nächster Eigentümer:
 build-ui-floaters-next-owner-can = Der nächste Eigentümer kann:
 world-mod-could-not-save-the-profile = Das Profil konnte nicht gespeichert werden ({ $reason }).
 ui-land-general-owner-contributes-when-deeding-land = Eigentümer leistet Beitrag durch Übertragung
-world-status-the-resident-you-messaged-has-enabled-aurora-viewer-s = Der Einwohner, den Sie angeschrieben haben, hat den Modus von Aurora Viewer aktiviert, der alle Freundschaftsanfragen ablehnt. Er möchte nicht durch Freundschaftsanfragen gestört werden, aber Sie können ihm trotzdem eine IM senden.
-world-status-the-resident-you-messaged-has-enabled-aurora-viewer-s-2 = Der Einwohner, den Sie angeschrieben haben, hat den Modus von Aurora Viewer aktiviert, der alle Teleportangebote und -anfragen ablehnt. Er möchte nicht durch Teleportanfragen gestört werden, aber Sie können ihm trotzdem eine IM senden.
-world-status-the-resident-you-messaged-has-enabled-aurora-viewer-s-3 = Der Einwohner, den Sie angeschrieben haben, hat den automatischen Antwortmodus von Aurora Viewer aktiviert und möchte nicht gestört werden. Ihre Nachricht erscheint trotzdem in seinem IM-Fenster, damit er sie später lesen kann.
+world-status-the-resident-you-messaged-has-enabled-aurora-viewer-s = Der Einwohner, den Sie angeschrieben haben, hat den Modus von OliViewer aktiviert, der alle Freundschaftsanfragen ablehnt. Er möchte nicht durch Freundschaftsanfragen gestört werden, aber Sie können ihm trotzdem eine IM senden.
+world-status-the-resident-you-messaged-has-enabled-aurora-viewer-s-2 = Der Einwohner, den Sie angeschrieben haben, hat den Modus von OliViewer aktiviert, der alle Teleportangebote und -anfragen ablehnt. Er möchte nicht durch Teleportanfragen gestört werden, aber Sie können ihm trotzdem eine IM senden.
+world-status-the-resident-you-messaged-has-enabled-aurora-viewer-s-3 = Der Einwohner, den Sie angeschrieben haben, hat den automatischen Antwortmodus von OliViewer aktiviert und möchte nicht gestört werden. Ihre Nachricht erscheint trotzdem in seinem IM-Fenster, damit er sie später lesen kann.
 world-status-the-resident-you-messaged-is-away-your-message-will = Der Einwohner, den Sie angeschrieben haben, ist abwesend. Ihre Nachricht erscheint in seinem IM-Fenster, damit er sie später lesen kann.
 world-status-the-resident-you-messaged-has-blocked-all-messages-from = Der Einwohner, dem Sie eine Nachricht geschickt haben, hat alle Nachrichten von Ihnen blockiert.
 inventory-operations-the-script-contains-compilation-errors-check-the-code-and = Das Skript enthält Kompilierungsfehler. Überprüfen Sie den Code und versuchen Sie es erneut.
@@ -5895,8 +5895,8 @@ demo-fav-cats-island = Katzeninsel
 demo-fav-prism-gallery = Prisma-Galerie
 demo-fav-shadow-forest = Schattenwald
 demo-fav-orbital-station = Orbitalstation
-demo-land-aurora-viewer-s-offline-demo-parcel-visit-the-fountain = { "Offline-Demoparzelle von Aurora Viewer.\u000ABesuchen Sie den Brunnen, den Strand und den Hügel." }
-demo-aurora-viewer-s-offline-demo-parcel = Offline-Demoparzelle von Aurora Viewer.
+demo-land-aurora-viewer-s-offline-demo-parcel-visit-the-fountain = { "Offline-Demoparzelle von OliViewer.\u000ABesuchen Sie den Brunnen, den Strand und den Hügel." }
+demo-aurora-viewer-s-offline-demo-parcel = Offline-Demoparzelle von OliViewer.
 ui-parcel-icons-isolated-parcel-you-cannot-see-residents-on-other-parcels = Isolierte Parzelle: Sie können die Einwohner anderer Parzellen nicht sehen, diese können Sie nicht sehen und der Chat in der Nähe überschreitet die Grenze nicht.
 ui-parcel-icons-frozen-you-cannot-move-or-interact = Eingefroren durch einen Parzelleneigentümer oder einen Grundbesitzverwalter: Sie können sich nicht bewegen oder mit der Welt interagieren, bis Sie freigegeben werden.
 ui-minimap-banned-parcels = Parzellen mit Verbannung
@@ -6317,7 +6317,7 @@ world-mod-someone = Jemand
 demo-has-anyone-seen-the-new-eep-sky = Hat jemand den neuen EEP-Himmel gesehen?
 demo-conference-invitation = Hat jemand Lust auf einen Rundgang über den Platz?
 common-quit = Beenden
-ui-bars-quit-aurora-viewer = Aurora Viewer beenden
+ui-bars-quit-aurora-viewer = OliViewer beenden
 ui-options-camera-exit-with-mouse-wheel = Mit dem Mausrad beenden
 ui-contacts-leave-group = Gruppe verlassen
 ui-contacts-leave-group-2 = Gruppe '{ $n }' verlassen?
@@ -6774,7 +6774,7 @@ ui-options-no-neighbour-regions = Nur die Region, in der ich mich befinde
 ui-options-no-neighbour-regions-help = Keine Verbindung zu den Nachbarregionen herstellen: entlastet Netzwerk und Computer, aber diese Regionen werden nicht angezeigt, Übergänge zu Fuß oder in Fahrzeugen sind weniger zuverlässig und möglicherweise ist ein Teleport nötig. Wirkt vollständig erst nach dem nächsten Teleport.
 ui-perf-network-to-world = Netzwerk zur Welt
 common-resident = Einwohner
-demo-resident-in-aurora-viewer-s-offline-demo = Einwohner der Offline-Demo von Aurora Viewer 🐺✨
+demo-resident-in-aurora-viewer-s-offline-demo = Einwohner der Offline-Demo von OliViewer 🐺✨
 ui-land-options-residential = Wohngebiet
 ui-options-residents = Einwohner
 ui-options-cascaded-shadow-resolution-and-distance = Kaskadierte Schattenauflösung und -entfernung
@@ -7132,7 +7132,7 @@ ui-bars-script-library = Skriptbibliothek
 ui-bars-message-of-the-day = Nachricht des Tages
 ui-bars-wiki = Aurora Viewer Wiki
 ui-bars-knowledge-base = Wissensdatenbank
-ui-bars-about = Über Aurora Viewer
+ui-bars-about = Über OliViewer
 cmdline-dice-successes = { "Erfolge: " }{ $successes }
 build-manip-south = Süden
 common-next = Weiter
@@ -9429,7 +9429,7 @@ hud-move-locked = Schnelle Bewegung sperren
 hud-local-scale-reset = Auf 100 % zurücksetzen
 hud-local-scale-forget = Gespeicherte Größe vergessen
 hud-local-scale-help = Halten Sie die HUD-Taste gedrückt: Ziehen mit der linken Maustaste verschiebt, das Mausrad ändert die Größe, Umschalt für feinere Schritte. Die Größe wird auf diesem PC nach Name und Ersteller für dieses Konto gespeichert. Beim Bearbeiten eines HUDs zoomt das Mausrad ohne diese Taste die Ansicht aller HUDs.
-cli-help = { "Aurora Viewer\u000A\u000AVerwendung: aurora-viewer [--title <text>] [--fps-limit <fps>] [--vr] [--language <code>] [--grid <name>]\u000A                     [--login <first> <last> <password>] [--version] [--uninstall] [<slurl>]\u000A\u000A  --title <text>   Benennt dieses Fenster (\"Aurora Viewer <version> - <text>\") und seine\u000A                   Protokolldatei (aurora-<text>.log, aurora-demo-<text>.log im Demomodus)\u000A  --fps-limit <fps>  Begrenzt diesen Prozess auf 1..500 FPS, ohne die Einstellungen zu speichern\u000A  --language <code>  Überschreibt die Sprache der Benutzeroberfläche dieses Prozesses (" }{ $languages }{ ")\u000A  --grid <name>    Startet auf agni, aditi, einem gespeicherten Grid-Namen oder einer Anmelde-URI (auch --loginuri <uri>)\u000A  --login <first> <last> <password>  Meldet sich sofort mit diesem Konto an\u000A  <slurl>, --url <slurl>  Startet an diesem Ort; danach wird nichts mehr gelesen. Ein bereits\u000A                   laufender Viewer erhält ihn stattdessen\u000A  --vr             Wechselt in VR, sobald die Welt erscheint (Headset angeschlossen)\u000A  -V, --version   Zeigt die kompilierte Viewer-Version an, ohne ihn zu starten\u000A  --uninstall      Entfernt, was Aurora außerhalb seiner Ordner registriert hat (Link-Handler,\u000A                   Anmeldedatenspeicher, Blender-Add-on), gibt dies und die verbleibenden Ordner aus und beendet sich dann\u000A  -h, --help       Zeigt diese Hilfe an\u000A\u000ATestschalter sind Umgebungsvariablen (AURORA_DEMO=1, AURORA_CAPTURE=...):\u000Asiehe README.md." }
+cli-help = { "OliViewer\u000A\u000AVerwendung: aurora-viewer [--title <text>] [--fps-limit <fps>] [--vr] [--language <code>] [--grid <name>]\u000A                     [--login <first> <last> <password>] [--version] [--uninstall] [<slurl>]\u000A\u000A  --title <text>   Benennt dieses Fenster (\"OliViewer <version> - <text>\") und seine\u000A                   Protokolldatei (aurora-<text>.log, aurora-demo-<text>.log im Demomodus)\u000A  --fps-limit <fps>  Begrenzt diesen Prozess auf 1..500 FPS, ohne die Einstellungen zu speichern\u000A  --language <code>  Überschreibt die Sprache der Benutzeroberfläche dieses Prozesses (" }{ $languages }{ ")\u000A  --grid <name>    Startet auf agni, aditi, einem gespeicherten Grid-Namen oder einer Anmelde-URI (auch --loginuri <uri>)\u000A  --login <first> <last> <password>  Meldet sich sofort mit diesem Konto an\u000A  <slurl>, --url <slurl>  Startet an diesem Ort; danach wird nichts mehr gelesen. Ein bereits\u000A                   laufender Viewer erhält ihn stattdessen\u000A  --vr             Wechselt in VR, sobald die Welt erscheint (Headset angeschlossen)\u000A  -V, --version   Zeigt die kompilierte Viewer-Version an, ohne ihn zu starten\u000A  --uninstall      Entfernt, was Aurora außerhalb seiner Ordner registriert hat (Link-Handler,\u000A                   Anmeldedatenspeicher, Blender-Add-on), gibt dies und die verbleibenden Ordner aus und beendet sich dann\u000A  -h, --help       Zeigt diese Hilfe an\u000A\u000ATestschalter sind Umgebungsvariablen (AURORA_DEMO=1, AURORA_CAPTURE=...):\u000Asiehe README.md." }
 demo-media-page = { "data:text/html;charset=utf-8,<html><body style='margin:0;height:100vh;background:linear-gradient(135deg,%232a1f4a,%230f6d6d);color:white;font:56px sans-serif;text-align:center'><h1 style='margin:40px 0 10px'>Aurora media</h1><p id='t' style='font-size:90px;margin:10px'>--</p><button onclick=\"document.body.style.background='%237a3b9c';this.textContent='Geklickt!'\" style='font-size:48px;padding:10px 40px'>Klicken</button><br><input placeholder='Hier tippen' style='font-size:44px;margin-top:30px;width:70%'><script>setInterval(function(){document.getElementById('t').textContent=new Date().toLocaleTimeString()},250)</script></body></html>" }
 demo-nearby-media-page-cinema = { "data:text/html;charset=utf-8,<html><head><title>Plaza-Kino</title></head><body style='margin:0;height:100vh;background:%23402060;color:white;font:64px sans-serif;text-align:center'><h1 style='margin-top:180px'>Kino</h1></body></html>" }
 demo-nearby-media-page-next-door = { "data:text/html;charset=utf-8,<html><head><title>Parzelle nebenan</title></head><body style='margin:0;height:100vh;background:%23205040;color:white;font:64px sans-serif;text-align:center'><h1 style='margin-top:180px'>Nebenan</h1></body></html>" }
@@ -9469,7 +9469,7 @@ status-fps-fps = { $fps }{ " fps" }
 status-unknown = (unbekannt)
 status-public = (öffentlich)
 status-readme-txt = README.txt
-status-aurora-viewer-skin-theme-json-colors = { "Aurora Viewer-Skin\u000A\u000Atheme.json  : Farben (#RRGGBB), Ecken, Schriftgrößen\u000Alayout.json : Symbolleistenschaltflächen (Symbol + Befehl), Chat-Optionen\u000A(Kopieren Sie die *.example.json-Dateien, um mit den Standardwerten zu beginnen.)\u000Aicons/      : PNG-Dateien, die integrierte Symbole ersetzen (gleicher Dateiname)\u000A\u000AÄnderungen werden in der Welt automatisch neu geladen.\u000ABefehle: help, conversations, speak, fly, mouselook, people, friends, inventory,\u000Aappearance, search, worldmap, minimap, performance, sit, home, preferences.\u000A" }
+status-aurora-viewer-skin-theme-json-colors = { "OliViewer-Skin\u000A\u000Atheme.json  : Farben (#RRGGBB), Ecken, Schriftgrößen\u000Alayout.json : Symbolleistenschaltflächen (Symbol + Befehl), Chat-Optionen\u000A(Kopieren Sie die *.example.json-Dateien, um mit den Standardwerten zu beginnen.)\u000Aicons/      : PNG-Dateien, die integrierte Symbole ersetzen (gleicher Dateiname)\u000A\u000AÄnderungen werden in der Welt automatisch neu geladen.\u000ABefehle: help, conversations, speak, fly, mouselook, people, friends, inventory,\u000Aappearance, search, worldmap, minimap, performance, sit, home, preferences.\u000A" }
 status-area-m-l-price-l-m = { $value0 }{ "\u000A" }{ $area }{ " m² L$ " }{ $price }{ " (" }{ $value1 }{ " L$/m²)" }
 status-days = { " Tage" }
 status-hours = { " Stunden" }
@@ -9979,8 +9979,8 @@ monitor-media-face = Medienfläche · { $what }
 monitor-media-search = Suchseite
 monitor-media-marketplace = Marktplatz
 monitor-media-profile = Profil-Webseite
-crash-title = Aurora Viewer – Absturzbericht
-crash-heading = Aurora Viewer wurde unerwartet beendet
+crash-title = OliViewer – Absturzbericht
+crash-heading = OliViewer wurde unerwartet beendet
 crash-explanation = Ihre Sitzung wurde beendet. Die folgenden Angaben können bei der Fehlersuche helfen.
 crash-local-only = Diese Angaben liegen auf diesem Computer. Es wurde nichts gesendet.
 crash-details = Technische Details
@@ -10021,9 +10021,9 @@ crash-publish = Auf GitHub veröffentlichen
 crash-open-browser = Im Browser öffnen
 crash-body-copied = Der Bericht ist in der Zwischenablage. Fügen Sie ihn in das gerade geöffnete Issue ein.
 crash-back = Zurück
-crash-report-summary = Absturz von Aurora Viewer
+crash-report-summary = Absturz von OliViewer
 crash-report-expected = Der Viewer sollte weiterlaufen.
-crash-report-actual = Aurora Viewer wurde unerwartet beendet.
+crash-report-actual = OliViewer wurde unerwartet beendet.
 crash-report-reason = Absturztyp
 crash-report-exit-code = Prozess-Exitcode
 bug-log-native = native Ausnahme
@@ -10081,8 +10081,8 @@ update-error-filesystem = Die Installation kann nicht vorbereitet werden. Überp
 update-error-package = Das Paket ist unvollständig oder ungültig. Die aktuelle Installation bleibt erhalten.
 update-error-unsupported = Diese Version kann nicht automatisch aus diesem Ordner installiert werden. Laden Sie sie von ihrer Seite herunter und entpacken Sie sie in einen eigenen Ordner.
 update-error-protected = Aurora kann sich in diesem Ordner nicht selbst aktualisieren. Der Ordner gehört zu einem Flatpak-, Snap- oder AppImage-Paket oder Ihr Konto hat keine Schreibrechte. Aktualisieren Sie Aurora auf demselben Weg wie bei der Installation oder laden Sie die neue Version von der Veröffentlichungsseite herunter.
-update-error-drive-root = Aurora kann sich in einem Ordner im Stammverzeichnis eines Laufwerks, z. B. E:\Aurora Viewer, nicht selbst aktualisieren. Verschieben Sie den Ordner eine Ebene nach unten, zum Beispiel nach E:\Spiele\Aurora Viewer, starten Sie Aurora von dort aus und aktualisieren Sie dann.
-update-error-unsupported-macos = Unter macOS wird eine neue Version manuell installiert. Laden Sie sie von ihrer Seite herunter und ersetzen Sie dann Aurora Viewer in Ihrem Programme-Ordner durch die neue.
+update-error-drive-root = Aurora kann sich in einem Ordner im Stammverzeichnis eines Laufwerks, z. B. E:\OliViewer, nicht selbst aktualisieren. Verschieben Sie den Ordner eine Ebene nach unten, zum Beispiel nach E:\Spiele\OliViewer, starten Sie Aurora von dort aus und aktualisieren Sie dann.
+update-error-unsupported-macos = Unter macOS wird eine neue Version manuell installiert. Laden Sie sie von ihrer Seite herunter und ersetzen Sie dann OliViewer in Ihrem Programme-Ordner durch die neue.
 update-error-startup = Der Update-Helfer konnte nicht gestartet werden. Die aktuelle Installation bleibt erhalten.
 update-rollback = Die neue Version wurde nicht korrekt gestartet. Die vorherige Installation wurde wiederhergestellt.
 update-rollback-install = Die neue Version konnte nicht installiert werden. Die bisherige Installation bleibt erhalten.
@@ -12734,7 +12734,7 @@ buy-land-can-not-change = Darf nicht zusammengefügt oder unterteilt werden.
 buy-land-covenant-section = Grundbesitzvertrag
 buy-land-must-agree = Sie müssen dem Grundbesitzvertrag zustimmen:
 buy-land-agree-covenant = Ich stimme dem oben festgelegten Vertrag zu.
-buy-land-cannot-close = Sie können das Fenster „Land kaufen“ erst schließen, wenn Aurora Viewer den Preis dieser Transaktion geschätzt hat.
+buy-land-cannot-close = Sie können das Fenster „Land kaufen“ erst schließen, wenn OliViewer den Preis dieser Transaktion geschätzt hat.
 buy-land-nothing-selected = Land kann nicht gekauft werden: Keine Parzelle ausgewählt.
 buy-land-across-regions = Es kann kein Land gekauft werden, da sich die Auswahl über mehrere Regionen erstreckt. Bitte wählen Sie einen kleineren Bereich aus und versuchen Sie es erneut.
 buy-land-only-officer = Für die Gruppe kann kein Land gekauft werden: Sie haben keine Erlaubnis, für Ihre aktive Gruppe Land zu kaufen.
@@ -14974,9 +14974,9 @@ about-copied = Kopiert
 about-copy-hint = Kopiert alle oben genannten Informationen auf Englisch für eine Supportanfrage oder einen Fehlerbericht.
 about-click-to-copy = Klicken Sie, um diesen Wert zu kopieren
 about-build-pill = { $profile }-Build
-about-third-party-viewer = Aurora Viewer ist ein Drittanbieter-Viewer, der nicht von Linden Lab, den Herstellern von Second Life, bereitgestellt oder unterstützt wird.
+about-third-party-viewer = OliViewer ist ein Drittanbieter-Viewer, der nicht von Linden Lab, den Herstellern von Second Life, bereitgestellt oder unterstützt wird.
 about-release-notes = Versionshinweise
-about-licence-title = Lizenz von Aurora Viewer
+about-licence-title = Lizenz von OliViewer
 about-licence-gpl = GNU GPL v3
 about-source-code = Quellcode
 about-section-viewer = Viewer

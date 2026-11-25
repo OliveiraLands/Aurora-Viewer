@@ -51,7 +51,7 @@ impl Cancellation {
             }
             #[cfg(not(any(target_os = "macos", target_os = "linux")))]
             {
-                let mut dialog = rfd::FileDialog::new().set_title(request.title);
+                let mut dialog = crate::file_dialog::FileDialog::new().set_title(request.title);
                 if !request.extensions.is_empty() {
                     dialog = dialog.add_filter(request.label, &request.extensions);
                 }

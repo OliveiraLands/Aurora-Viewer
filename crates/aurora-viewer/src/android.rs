@@ -371,6 +371,54 @@ fn call_activity_void_method(method_name: &CStr) {
     }
 }
 
+/// Updates the native Android startup loading overlay progress bar and status text.
+pub(crate) fn update_loading_progress(percent: i32, status: &str) {
+    if LOADING_HIDDEN.load(Ordering::Relaxed) {
+        return;
+    }
+    let Some(app) = ANDROID_APP.get() else {
+        return;
+    };
+    let Ok(status_c) = CString::new(status) else {
+        return;
+    };
+    // SAFETY: `app` holds valid `JavaVM*` and `Activity` references; `updateLoadingProgress`
+    // posts its UI updates via `runOnUiThread`.
+    unsafe {
+        let Some(env) = attach_jni_env(app) else {
+            return;
+        };
+        let activity = app.activity_as_ptr();
+        if activity.is_null() {
+            return;
+        }
+        let vtable = *(env as *const *const *const c_void);
+        let get_object_class: GetObjectClassFn = std::mem::transmute(*vtable.add(31));
+        let get_method_id: GetMethodIdFn = std::mem::transmute(*vtable.add(33));
+        let call_void_method_a: CallVoidMethodAFn = std::mem::transmute(*vtable.add(63));
+        let delete_local_ref: DeleteLocalRefFn = std::mem::transmute(*vtable.add(23));
+        let new_string_utf: NewStringUtfFn = std::mem::transmute(*vtable.add(167));
+
+        let jstatus = new_string_utf(env, status_c.as_ptr());
+        if jstatus.is_null() || clear_exception(env, vtable) {
+            return;
+        }
+        let cls = get_object_class(env, activity);
+        if cls.is_null() || clear_exception(env, vtable) {
+            delete_local_ref(env, jstatus);
+            return;
+        }
+        let mid = get_method_id(env, cls, c"updateLoadingProgress".as_ptr(), c"(ILjava/lang/String;)V".as_ptr());
+        if !mid.is_null() && !clear_exception(env, vtable) {
+            let args = [JValue { i: percent }, JValue { l: jstatus }];
+            call_void_method_a(env, activity, mid, args.as_ptr());
+            let _ = clear_exception(env, vtable);
+        }
+        delete_local_ref(env, cls);
+        delete_local_ref(env, jstatus);
+    }
+}
+
 /// Dismisses the native Android startup loading overlay once the first frame is ready.
 pub(crate) fn hide_loading_overlay() {
     if LOADING_HIDDEN.swap(true, Ordering::Relaxed) {
@@ -393,14 +441,25 @@ pub(crate) fn window_insets_px() -> ([f32; 4], f32) {
 }
 
 /// Synchronizes the Android soft keyboard with egui's text focus state.
+///
+/// Uses a short debounce before hiding so a 1-frame focus flicker (for example
+/// while tapping a `TextEdit` or resizing a mobile sheet) does not dismiss the IME.
 pub(crate) fn sync_soft_keyboard(wants_keyboard: bool) {
-    let prev = SOFT_KEYBOARD_SHOWN.swap(wants_keyboard, Ordering::Relaxed);
-    if prev != wants_keyboard {
-        if wants_keyboard {
+    static HIDE_STREAK: std::sync::atomic::AtomicU8 = std::sync::atomic::AtomicU8::new(0);
+    if wants_keyboard {
+        HIDE_STREAK.store(0, Ordering::Relaxed);
+        if !SOFT_KEYBOARD_SHOWN.swap(true, Ordering::Relaxed) {
             show_soft_keyboard();
-        } else {
+        }
+    } else if SOFT_KEYBOARD_SHOWN.load(Ordering::Relaxed) {
+        let streak = HIDE_STREAK.fetch_add(1, Ordering::Relaxed).saturating_add(1);
+        if streak >= 4 {
+            HIDE_STREAK.store(0, Ordering::Relaxed);
+            SOFT_KEYBOARD_SHOWN.store(false, Ordering::Relaxed);
             hide_soft_keyboard();
         }
+    } else {
+        HIDE_STREAK.store(0, Ordering::Relaxed);
     }
 }
 
@@ -463,7 +522,11 @@ pub extern "C" fn Java_org_auroraviewer_aurora_AuroraActivity_nativeOnWindowInse
     SAFE_INSETS_PX[1].store(bottom.max(0) as u32, Ordering::Relaxed);
     SAFE_INSETS_PX[2].store(left.max(0) as u32, Ordering::Relaxed);
     SAFE_INSETS_PX[3].store(right.max(0) as u32, Ordering::Relaxed);
-    IME_BOTTOM_PX.store(ime_bottom.max(0) as u32, Ordering::Relaxed);
+    let new_ime = ime_bottom.max(0) as u32;
+    let prev_ime = IME_BOTTOM_PX.swap(new_ime, Ordering::Relaxed);
+    if prev_ime > 0 && new_ime == 0 {
+        SOFT_KEYBOARD_SHOWN.store(false, Ordering::Relaxed);
+    }
 }
 
 /// Latest Android gamepad / Bluetooth VR remote state: `(seen, [lx, ly, rx, ry], key_mask)`.

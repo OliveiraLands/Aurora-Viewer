@@ -1,5 +1,5 @@
-## Unofficial Aurora Viewer translation preview.
-## Adapted from Aurora Viewer PR #2678 (bd3265a400b51f26d2ab75c1136c1511379b0b08).
+## Unofficial OliViewer translation preview.
+## Adapted from OliViewer PR #2678 (bd3265a400b51f26d2ab75c1136c1511379b0b08).
 ## Missing messages use the viewer's English catalog.
 
 language-name = 简体中文
@@ -1784,15 +1784,15 @@ script-experiences-unavailable = 无法加载您的体验。当前关联已保�
 script-experience-demo = 演示体验
 script-disconnected = 已断开连接。未保存的源文本已保留，您可以复制它，下次登录时会提示恢复。
 script-recovery-title = 脚本恢复
-script-recovery-intro = Aurora Viewer 发现了带有未保存改动的脚本，可能是崩溃或断线后遗留的。您恢复的脚本会放入库存的“失物招领”文件夹。
+script-recovery-intro = OliViewer 发现了带有未保存改动的脚本，可能是崩溃或断线后遗留的。您恢复的脚本会放入库存的“失物招领”文件夹。
 script-recovery-recover = 恢复
 script-recovery-unknown = （未知脚本）
 script-recovery-no-folder = “失物招领”文件夹尚未加载。请稍后重试。
 script-recovery-failed = { $name } 无法恢复：{ $reason } 其副本会保留到下次登录。
 script-recovery-demo-name = 演示门脚本
-exit-title = 关闭 Aurora Viewer？
+exit-title = 关闭 OliViewer？
 exit-world-body = 退出查看器还是返回登录界面？
-exit-login-body = 要退出 Aurora Viewer 吗？
+exit-login-body = 要退出 OliViewer 吗？
 exit-waiting = 正在退出登录…
 exit-logout = 退出登录
 exit-logout-hint = 退出登录并返回登录界面。
@@ -2535,13 +2535,13 @@ ui-texture-picker-no-textures-in-the-loaded-inventory = 已加载的库存中没
 world-tphistory-today = 今天
 app-aurora-elsewhere = Aurora Elsewhere
 common-aurora-demo = Aurora 演示
-demo-aurora-viewer-rust-vulkan = { "Aurora Viewer\u000ARust · Vulkan" }
-demo-aurora-viewer-rust-metal = { "Aurora Viewer\u000ARust · Metal" }
-ui-login-aurora-viewer-v = Aurora Viewer v{ $value0 }
-cli-aurora-viewer = { "Aurora Viewer " }{ $version }
-cli-aurora-viewer-2 = { "Aurora Viewer " }{ $version }{ " - " }{ $t }
-common-aurora-viewer = { "Aurora Viewer " }{ $value0 }
-app-aurora-viewer-unable-to-initialize-vulkan = { "Aurora Viewer：无法初始化 Vulkan：" }{ $e }
+demo-aurora-viewer-rust-vulkan = { "OliViewer\u000ARust · Vulkan" }
+demo-aurora-viewer-rust-metal = { "OliViewer\u000ARust · Metal" }
+ui-login-aurora-viewer-v = OliViewer v{ $value0 }
+cli-aurora-viewer = { "OliViewer " }{ $version }
+cli-aurora-viewer-2 = { "OliViewer " }{ $version }{ " - " }{ $t }
+common-aurora-viewer = { "OliViewer " }{ $value0 }
+app-aurora-viewer-unable-to-initialize-vulkan = { "OliViewer：无法初始化 Vulkan：" }{ $e }
 splash-starting = 正在启动…
 splash-settings = 正在读取设置…
 splash-gpu = 正在准备显卡…
@@ -2552,18 +2552,18 @@ splash-update-closing = 正在关闭旧版本…
 splash-update-installing = 正在安装更新…
 splash-update-cache = 正在清理缓存…
 splash-update-launching = 正在启动新版本…
-app-aurora-viewer-unable-to-initialize-metal = { "Aurora Viewer：无法初始化 Metal：" }{ $e }
+app-aurora-viewer-unable-to-initialize-metal = { "OliViewer：无法初始化 Metal：" }{ $e }
 app-graphics-start-memory-full =
-    显卡没有可供 Aurora Viewer 使用的显存了。另一个程序正在占用显存。
+    显卡没有可供 OliViewer 使用的显存了。另一个程序正在占用显存。
 
     可以尝试：
-    • 关闭正在使用显卡的程序（例如其他查看器、游戏、视频编辑器或 3D 编辑器），再启动 Aurora Viewer。
-    • 如果笔记本电脑有两块显卡，请检查 Aurora Viewer 正在使用哪一块。
+    • 关闭正在使用显卡的程序（例如其他查看器、游戏、视频编辑器或 3D 编辑器），再启动 OliViewer。
+    • 如果笔记本电脑有两块显卡，请检查 OliViewer 正在使用哪一块。
 
     本次启动的日志：{ $log }
-app-graphics-start-failed-title = Aurora Viewer 无法启动
+app-graphics-start-failed-title = OliViewer 无法启动
 app-graphics-start-failed =
-    Aurora Viewer 无法初始化用于绘制窗口的显卡。
+    OliViewer 无法初始化用于绘制窗口的显卡。
 
     可以尝试以下方法：
     • 更新显卡驱动。
@@ -2574,7 +2574,7 @@ app-graphics-start-failed =
     详细信息：{ $e }
 
     本次启动的日志：{ $log }
-app-gpu-stall-title = Aurora Viewer：显卡无响应
+app-gpu-stall-title = OliViewer：显卡无响应
 app-gpu-stall =
     显卡已持续 { $seconds } 秒未能完成一帧画面。Aurora 仍在工作（世界、声音、聊天照常），但在显卡重新响应前无法绘制任何内容。
 
@@ -2591,7 +2591,7 @@ app-gpu-recovered-safe = 显卡驱动在几分钟内再次被重置。Aurora 已
 app-vr-runtime-closed-title = VR 软件已关闭
 app-vr-runtime-closed = 您的 VR 软件（例如 SteamVR）已关闭。Aurora 已在不使用它的情况下重新打开窗口：您仍保持登录，世界稍后会重新载入。下次启动 Aurora 时 VR 会恢复。
 app-vr-runtime-closed-at-start = 您的 VR 软件（例如 SteamVR）已关闭。Aurora 已在不使用它的情况下重新打开窗口：您仍保持登录，世界稍后会重新载入。下次启动 Aurora 时 VR 会恢复。Aurora 每次启动都会加载您的 VR 软件：如需停止，请关闭“偏好设置 › 相机 › VR › 启动时初始化 VR”。
-app-gpu-lost-title = Aurora Viewer：显卡已丢失
+app-gpu-lost-title = OliViewer：显卡已丢失
 app-gpu-lost =
     显卡已停止为 Aurora 工作：其驱动被重置（绘制一帧耗时过长，或显存已满），或显卡被移除、被其他程序占用。已无法绘制任何内容：按下“确定”后 Aurora 将关闭（会正常退出登录）。
 
@@ -2814,7 +2814,7 @@ ui-environment-based-on-day-cycle = 基于昼夜循环
 build-ui-object-bias = 偏移
 common-library = 素材库
 app-welcome = 欢迎！
-demo-welcome-to-the-aurora-viewer-demo = 欢迎来到 Aurora Viewer 演示！🐺✨❤️
+demo-welcome-to-the-aurora-viewer-demo = 欢迎来到 OliViewer 演示！🐺✨❤️
 demo-region-day-cycle = 北境黎明
 demo-region-telehub = 抵达点
 demo-region-telehub-object = 抵达石
@@ -3359,7 +3359,7 @@ ui-options-flash-conversations-nearby-hint = 对话窗口关闭时，附近聊�
 ui-options-announce-incoming-im = 发送方一开始输入就提示收到私聊
 ui-options-announce-incoming-im-hint = 某居民开始给您输入私聊时，对话会立即以“收到来自”加其名字打开，在消息本身到达之前。
 ui-options-unread-ims-in-window-title = 在窗口标题中显示未读私聊数
-ui-options-unread-ims-in-window-title-hint = 当私聊、群组聊天或会议有未读消息时，其数量会显示在窗口标题最前，如“(3) Aurora Viewer”，任务栏也会显示。
+ui-options-unread-ims-in-window-title-hint = 当私聊、群组聊天或会议有未读消息时，其数量会显示在窗口标题最前，如“(3) OliViewer”，任务栏也会显示。
 ui-options-im-tab-order = 按类型排列对话标签
 ui-options-im-tab-order-hint = 新对话标签会插入同类型标签之后，顺序如下，而非排在末尾。您手动移动过的标签保持原位。
 ui-options-im-tab-order-kinds = 顺序
@@ -4085,7 +4085,7 @@ ui-place-details-location-details-2 = { "位置详情：" }{ $value0 }
 common-expand = 展开
 ui-inventory-controls-expand-displayed-folders = 展开显示的文件夹
 ui-places-expand-all-folders = 展开所有文件夹
-demo-aurora-viewer-developer = Aurora Viewer 开发者。
+demo-aurora-viewer-developer = OliViewer 开发者。
 common-water = 水
 world-inventory-preview-water-haze-density-refraction-wave-scale-normal-texture = { "水\u000A\u000A雾密度：" }{ $value0 }{ "\u000A折射：" }{ $value1 }{ "\u000A波浪尺度：" }{ $value2 }{ "\u000A法线贴图：" }{ $value3 }
 demo-env-turquoise-water = 青绿海水
@@ -5111,9 +5111,9 @@ build-ui-general-next-owner = 下一个所有者：
 build-ui-floaters-next-owner-can = 下一个所有者可以：
 world-mod-could-not-save-the-profile = 无法保存个人档案（{ $reason }）。
 ui-land-general-owner-contributes-when-deeding-land = 转让土地时由所有者贡献
-world-status-the-resident-you-messaged-has-enabled-aurora-viewer-s = 您发消息的居民已启用 Aurora Viewer 的拒绝所有好友请求模式。他们不希望被好友请求打扰，但您仍可发送私聊。
-world-status-the-resident-you-messaged-has-enabled-aurora-viewer-s-2 = 您发消息的居民已启用 Aurora Viewer 的拒绝所有瞬间传送邀请和请求模式。他们不希望被瞬间传送请求打扰，但您仍可发送私聊。
-world-status-the-resident-you-messaged-has-enabled-aurora-viewer-s-3 = 您发消息的居民已启用 Aurora Viewer 的自动回复模式，不希望被打扰。您的消息仍会显示在其私聊窗口中供稍后阅读。
+world-status-the-resident-you-messaged-has-enabled-aurora-viewer-s = 您发消息的居民已启用 OliViewer 的拒绝所有好友请求模式。他们不希望被好友请求打扰，但您仍可发送私聊。
+world-status-the-resident-you-messaged-has-enabled-aurora-viewer-s-2 = 您发消息的居民已启用 OliViewer 的拒绝所有瞬间传送邀请和请求模式。他们不希望被瞬间传送请求打扰，但您仍可发送私聊。
+world-status-the-resident-you-messaged-has-enabled-aurora-viewer-s-3 = 您发消息的居民已启用 OliViewer 的自动回复模式，不希望被打扰。您的消息仍会显示在其私聊窗口中供稍后阅读。
 world-status-the-resident-you-messaged-is-away-your-message-will = 您发消息的居民处于离开状态。您的消息仍会显示在其私聊窗口中供稍后阅读。
 world-status-the-resident-you-messaged-has-blocked-all-messages-from = 您发消息的居民已封锁来自您的所有消息。
 inventory-operations-the-script-contains-compilation-errors-check-the-code-and = 脚本含有编译错误。请检查代码后重试。
@@ -5832,8 +5832,8 @@ demo-fav-cats-island = 猫岛
 demo-fav-prism-gallery = 棱镜画廊
 demo-fav-shadow-forest = 暗影森林
 demo-fav-orbital-station = 轨道空间站
-demo-land-aurora-viewer-s-offline-demo-parcel-visit-the-fountain = { "Aurora Viewer 的离线演示地块。\u000A来看看喷泉、海滩和小山。" }
-demo-aurora-viewer-s-offline-demo-parcel = Aurora Viewer 的离线演示地块。
+demo-land-aurora-viewer-s-offline-demo-parcel-visit-the-fountain = { "OliViewer 的离线演示地块。\u000A来看看喷泉、海滩和小山。" }
+demo-aurora-viewer-s-offline-demo-parcel = OliViewer 的离线演示地块。
 ui-parcel-icons-isolated-parcel-you-cannot-see-residents-on-other-parcels = 隔离地块：您看不到其他地块上的居民，他们也看不到您，附近聊天不会跨越边界。
 ui-parcel-icons-frozen-you-cannot-move-or-interact = 被地块所有者或领地管理员冻结：在解除前您无法移动或与世界交互。
 ui-minimap-banned-parcels = 封锁地块
@@ -6250,7 +6250,7 @@ world-mod-someone = 某人
 demo-has-anyone-seen-the-new-eep-sky = 有人见过新的 EEP 天空吗？
 demo-conference-invitation = 有人想逛逛广场吗？
 common-quit = 退出
-ui-bars-quit-aurora-viewer = 退出 Aurora Viewer
+ui-bars-quit-aurora-viewer = 退出 OliViewer
 ui-options-camera-exit-with-mouse-wheel = 用鼠标滚轮退出
 ui-contacts-leave-group = 离开群组
 ui-contacts-leave-group-2 = 离开群组“{ $n }”？
@@ -6701,7 +6701,7 @@ ui-options-no-neighbour-regions = 仅所在区域
 ui-options-no-neighbour-regions-help = 不连接相邻区域：网络与电脑负担更轻，但它们不显示，徒步或乘车过境会更不可靠，可能需要瞬间传送。下次瞬间传送后完全生效。
 ui-perf-network-to-world = 网络至世界
 common-resident = 居民
-demo-resident-in-aurora-viewer-s-offline-demo = Aurora Viewer 离线演示中的居民 🐺✨
+demo-resident-in-aurora-viewer-s-offline-demo = OliViewer 离线演示中的居民 🐺✨
 ui-land-options-residential = 住宅
 ui-options-residents = 居民
 ui-options-cascaded-shadow-resolution-and-distance = 级联阴影分辨率与距离
@@ -7054,7 +7054,7 @@ ui-bars-script-library = 脚本库
 ui-bars-message-of-the-day = 每日消息
 ui-bars-wiki = Aurora Viewer 维基
 ui-bars-knowledge-base = 知识库
-ui-bars-about = 关于 Aurora Viewer
+ui-bars-about = 关于 OliViewer
 cmdline-dice-successes = { "成功数：" }{ $successes }
 build-manip-south = 南
 common-next = 下一个
@@ -9341,7 +9341,7 @@ hud-move-locked = 锁定快速移动
 hud-local-scale-reset = 重置为 100%
 hud-local-scale-forget = 清除已保存的大小
 hud-local-scale-help = 按住 HUD 键：左键拖动可移动，滚轮可调整大小，Shift 进行更精细的步进。大小按名称和创造者保存在此电脑上，仅对应此账号。编辑 HUD 时，不按此键的滚轮会缩放所有 HUD 的视图。
-cli-help = { "Aurora Viewer\u000A\u000A用法：aurora-viewer [--title <text>] [--fps-limit <fps>] [--vr] [--language <code>] [--grid <name>]\u000A                     [--login <first> <last> <password>] [--version] [--uninstall] [<slurl>]\u000A\u000A  --title <text>   为窗口命名（\"Aurora Viewer <version> - <text>\"）并命名其日志\u000A                   文件（aurora-<text>.log，演示模式下为 aurora-demo-<text>.log）\u000A  --fps-limit <fps>  将本进程限制在 1..500 FPS，不保存偏好设置\u000A  --language <code>  覆盖本进程的界面语言（" }{ $languages }{ "）\u000A  --grid <name>    以 agni、aditi、已保存的服务器名或登录 URI 启动（亦可用 --loginuri <uri>）\u000A  --login <first> <last> <password>  立即以此账号登录\u000A  <slurl>, --url <slurl>  以此地点启动；其后的参数不再读取。若已有查看器在运行，则由它接收\u000A  --vr             世界显示后进入 VR（需已连接头显）\u000A  -V, --version   显示编译的查看器版本后退出\u000A  --uninstall      移除 Aurora 在其文件夹之外登记的内容（链接处理程序、\u000A                   凭据存储、Blender 插件），列出这些内容与剩余的文件夹，然后退出\u000A  -h, --help       显示此帮助\u000A\u000A测试开关为环境变量（AURORA_DEMO=1、AURORA_CAPTURE=...）：\u000A参见 README.md。" }
+cli-help = { "OliViewer\u000A\u000A用法：aurora-viewer [--title <text>] [--fps-limit <fps>] [--vr] [--language <code>] [--grid <name>]\u000A                     [--login <first> <last> <password>] [--version] [--uninstall] [<slurl>]\u000A\u000A  --title <text>   为窗口命名（\"OliViewer <version> - <text>\"）并命名其日志\u000A                   文件（aurora-<text>.log，演示模式下为 aurora-demo-<text>.log）\u000A  --fps-limit <fps>  将本进程限制在 1..500 FPS，不保存偏好设置\u000A  --language <code>  覆盖本进程的界面语言（" }{ $languages }{ "）\u000A  --grid <name>    以 agni、aditi、已保存的服务器名或登录 URI 启动（亦可用 --loginuri <uri>）\u000A  --login <first> <last> <password>  立即以此账号登录\u000A  <slurl>, --url <slurl>  以此地点启动；其后的参数不再读取。若已有查看器在运行，则由它接收\u000A  --vr             世界显示后进入 VR（需已连接头显）\u000A  -V, --version   显示编译的查看器版本后退出\u000A  --uninstall      移除 Aurora 在其文件夹之外登记的内容（链接处理程序、\u000A                   凭据存储、Blender 插件），列出这些内容与剩余的文件夹，然后退出\u000A  -h, --help       显示此帮助\u000A\u000A测试开关为环境变量（AURORA_DEMO=1、AURORA_CAPTURE=...）：\u000A参见 README.md。" }
 demo-media-page = { "data:text/html;charset=utf-8,<html><body style='margin:0;height:100vh;background:linear-gradient(135deg,%232a1f4a,%230f6d6d);color:white;font:56px sans-serif;text-align:center'><h1 style='margin:40px 0 10px'>Aurora media</h1><p id='t' style='font-size:90px;margin:10px'>--</p><button onclick=\"document.body.style.background='%237a3b9c';this.textContent='Clicked!'\" style='font-size:48px;padding:10px 40px'>Click</button><br><input placeholder='Type here' style='font-size:44px;margin-top:30px;width:70%'><script>setInterval(function(){document.getElementById('t').textContent=new Date().toLocaleTimeString()},250)</script></body></html>" }
 demo-nearby-media-page-cinema = { "data:text/html;charset=utf-8,<html><head><title>广场影院</title></head><body style='margin:0;height:100vh;background:%23402060;color:white;font:64px sans-serif;text-align:center'><h1 style='margin-top:180px'>影院</h1></body></html>" }
 demo-nearby-media-page-next-door = { "data:text/html;charset=utf-8,<html><head><title>隔壁地块</title></head><body style='margin:0;height:100vh;background:%23205040;color:white;font:64px sans-serif;text-align:center'><h1 style='margin-top:180px'>隔壁</h1></body></html>" }
@@ -9381,7 +9381,7 @@ status-fps-fps = { $fps }{ " fps" }
 status-unknown = （未知）
 status-public = （公开）
 status-readme-txt = README.txt
-status-aurora-viewer-skin-theme-json-colors = { "Aurora Viewer 皮肤\u000A\u000Atheme.json  ：颜色（#RRGGBB）、圆角、字号\u000Alayout.json ：工具栏按钮（图标 + 命令）、对话选项\u000A（将 *.example.json 文件复制一份即可使用默认值）\u000Aicons/      ：替换内置图标的 PNG 文件（文件名相同）\u000A\u000A进入世界后更改会自动重新加载。\u000A命令：help、conversations、speak、fly、mouselook、people、friends、inventory、\u000Aappearance、search、worldmap、minimap、performance、sit、home、preferences。\u000A" }
+status-aurora-viewer-skin-theme-json-colors = { "OliViewer 皮肤\u000A\u000Atheme.json  ：颜色（#RRGGBB）、圆角、字号\u000Alayout.json ：工具栏按钮（图标 + 命令）、对话选项\u000A（将 *.example.json 文件复制一份即可使用默认值）\u000Aicons/      ：替换内置图标的 PNG 文件（文件名相同）\u000A\u000A进入世界后更改会自动重新加载。\u000A命令：help、conversations、speak、fly、mouselook、people、friends、inventory、\u000Aappearance、search、worldmap、minimap、performance、sit、home、preferences。\u000A" }
 status-area-m-l-price-l-m = { $value0 }{ "\u000A" }{ $area }{ " 平方米 L$ " }{ $price }{ "（" }{ $value1 }{ " L$/平方米）" }
 status-days = { " 天" }
 status-hours = { " 小时" }
@@ -9881,8 +9881,8 @@ monitor-media-face = 媒体面 · { $what }
 monitor-media-search = 搜索页
 monitor-media-marketplace = 市场
 monitor-media-profile = 个人档案网页
-crash-title = Aurora Viewer — 崩溃报告
-crash-heading = Aurora Viewer 意外停止
+crash-title = OliViewer — 崩溃报告
+crash-heading = OliViewer 意外停止
 crash-explanation = 您的会话已结束。以下详情有助于查明问题。
 crash-local-only = 这些详情保存在本机，未发送任何内容。
 crash-details = 技术详情
@@ -9923,9 +9923,9 @@ crash-publish = 发布到 GitHub
 crash-open-browser = 在浏览器中打开
 crash-body-copied = 报告已复制到剪贴板：请将其粘贴到刚刚打开的议题中。
 crash-back = 返回
-crash-report-summary = Aurora Viewer 崩溃
+crash-report-summary = OliViewer 崩溃
 crash-report-expected = 查看器应继续运行。
-crash-report-actual = Aurora Viewer 意外停止。
+crash-report-actual = OliViewer 意外停止。
 crash-report-reason = 崩溃类型
 crash-report-exit-code = 进程退出码
 bug-log-native = 原生异常
@@ -9983,8 +9983,8 @@ update-error-filesystem = 无法准备安装。请检查可用空间与文件夹
 update-error-package = 安装包不完整或无效。当前安装已保留。
 update-error-unsupported = 无法从此文件夹自动安装该版本。请从其页面下载并解压到专门的文件夹。
 update-error-protected = Aurora 无法在此位置自行更新。此文件夹位于沙盒软件包（Flatpak、Snap 或 AppImage）内，或当前账号没有写入权限。请使用原安装方式更新，或从发布页面下载新版。
-update-error-drive-root = Aurora 无法在驱动器根目录下的文件夹（如 E:\Aurora Viewer）中直接进行自我更新。请将文件夹下移一层（例如移至 E:\Games\Aurora Viewer），从新位置启动 Aurora 后再执行更新。
-update-error-unsupported-macos = 在 macOS 上，新版本需要手动安装。请从其页面下载，然后用新版本替换“应用程序”文件夹中的 Aurora Viewer。
+update-error-drive-root = Aurora 无法在驱动器根目录下的文件夹（如 E:\OliViewer）中直接进行自我更新。请将文件夹下移一层（例如移至 E:\Games\OliViewer），从新位置启动 Aurora 后再执行更新。
+update-error-unsupported-macos = 在 macOS 上，新版本需要手动安装。请从其页面下载，然后用新版本替换“应用程序”文件夹中的 OliViewer。
 update-error-startup = 更新助手无法启动。当前安装已保留。
 update-rollback = 新版本未能正常启动，已恢复之前的安装。
 update-rollback-install = 无法安装新版本。已保留之前的安装。
@@ -12572,7 +12572,7 @@ buy-land-can-not-change = 不可合并或分割。
 buy-land-covenant-section = 领地契约
 buy-land-must-agree = 您必须同意领地契约：
 buy-land-agree-covenant = 我同意上述契约。
-buy-land-cannot-close = 在 Aurora Viewer 估算出此交易价格前，您无法关闭“购买土地”窗口。
+buy-land-cannot-close = 在 OliViewer 估算出此交易价格前，您无法关闭“购买土地”窗口。
 buy-land-nothing-selected = 无法购买土地：未选择地块。
 buy-land-across-regions = 因所选范围跨越多个区域，无法购买土地。请选择更小的区域后重试。
 buy-land-only-officer = 无法为群组购买土地：您没有为您当前群组购买土地的权限。
@@ -14794,9 +14794,9 @@ about-copied = 已复制
 about-copy-hint = 以英文复制以上全部内容，用于支持请求或错误报告。
 about-click-to-copy = 单击以复制此值
 about-build-pill = { $profile } 构建
-about-third-party-viewer = Aurora Viewer 是第三方查看器，不由 Second Life 的制作者 Linden Lab 提供或支持。
+about-third-party-viewer = OliViewer 是第三方查看器，不由 Second Life 的制作者 Linden Lab 提供或支持。
 about-release-notes = 发行说明
-about-licence-title = Aurora Viewer 的许可证
+about-licence-title = OliViewer 的许可证
 about-licence-gpl = GNU GPL v3
 about-source-code = 源代码
 about-section-viewer = 查看器

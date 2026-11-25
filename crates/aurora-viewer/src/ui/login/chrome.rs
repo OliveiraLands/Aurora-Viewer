@@ -41,7 +41,7 @@ pub fn sidebar(ctx: &Context, p: &Palette, icons: &Icons, info: &LoginInfo, card
 }
 
 fn version(ui: &mut egui::Ui, p: &Palette) {
-    let label = aurora_i18n::tr!("ui-login-aurora-viewer-v", value0 = aurora_version::version().to_string());
+    let label = format!("{} v{}", crate::brand::APP_NAME, aurora_version::version());
     ui.label(RichText::new(label).size(11.5).color(p.muted_dim));
 }
 
@@ -72,51 +72,63 @@ pub fn footer(ctx: &Context, p: &Palette, icons: &Icons, info: &LoginInfo, sideb
             }
         });
     }
+    let phone = crate::touch::FormFactor::is_touch_device() && crate::touch::ResponsiveLayout::from_ctx(ctx).form_factor.is_phone();
+    let edge_x = if phone { 12.0 } else { 25.0 };
+    let edge_y = if phone { 12.0 } else { 20.0 };
+    let btn_h = if phone { 26.0 } else { 30.0 };
     egui::Area::new(Id::unique("login_links"))
-        .anchor(egui::Align2::LEFT_BOTTOM, Vec2::new(25.0, -20.0))
+        .anchor(egui::Align2::LEFT_BOTTOM, Vec2::new(edge_x, -edge_y))
         .show(ctx, |ui| {
-            ui.label(
-                RichText::new(aurora_i18n::tr!("ui-login-join-the-community"))
-                    .size(11.5)
-                    .color(p.muted),
-            );
-            ui.add_space(4.0);
-            ui.horizontal(|ui| {
-                ui.spacing_mut().item_spacing.x = 6.0;
-                super::link_button(ui, p, "brand-discord-filled", "Discord", crate::links::DISCORD);
-                super::link_button(ui, p, "brand-github-filled", "GitHub", crate::links::GITHUB);
-                super::link_button(ui, p, "world-filled", aurora_i18n::tr!("ui-login-website"), crate::links::WEBSITE);
-                let bug = widgets::action_button(
-                    ui,
-                    p,
-                    "bug-filled",
-                    aurora_i18n::tr!("bug-title"),
-                    ActionKind::Caution,
-                    Vec2::new(0.0, 30.0),
+            if !phone {
+                ui.label(
+                    RichText::new(aurora_i18n::tr!("ui-login-join-the-community"))
+                        .size(11.5)
+                        .color(p.muted),
                 );
+                ui.add_space(4.0);
+            }
+            ui.horizontal(|ui| {
+                ui.spacing_mut().item_spacing.x = if phone { 4.0 } else { 6.0 };
+                if phone {
+                    footer_icon_link(ui, p, "brand-discord-filled", "Discord", crate::links::DISCORD, btn_h);
+                    footer_icon_link(ui, p, "brand-github-filled", "GitHub", crate::links::GITHUB, btn_h);
+                    footer_icon_link(
+                        ui,
+                        p,
+                        "world-filled",
+                        aurora_i18n::tr!("ui-login-website"),
+                        crate::links::WEBSITE,
+                        btn_h,
+                    );
+                } else {
+                    super::link_button(ui, p, "brand-discord-filled", "Discord", crate::links::DISCORD);
+                    super::link_button(ui, p, "brand-github-filled", "GitHub", crate::links::GITHUB);
+                    super::link_button(ui, p, "world-filled", aurora_i18n::tr!("ui-login-website"), crate::links::WEBSITE);
+                }
+                let bug_label = if phone { "" } else { aurora_i18n::tr!("bug-title") };
+                let bug_size = if phone { Vec2::splat(btn_h) } else { Vec2::new(0.0, btn_h) };
+                let bug = widgets::action_button(ui, p, "bug-filled", bug_label, ActionKind::Caution, bug_size)
+                    .on_hover_text(aurora_i18n::tr!("bug-title"));
                 if bug.clicked() {
                     action = LoginAction::ReportBug;
                 } else if bug.secondary_clicked() {
                     action = LoginAction::CopyVersion;
                 }
+                let news_label = if phone { "" } else { aurora_i18n::tr!("ui-login-news") };
+                let news_size = if phone { Vec2::splat(btn_h) } else { Vec2::new(0.0, btn_h) };
                 if !sidebar_visible
-                    && widgets::action_button(
-                        ui,
-                        p,
-                        "article-filled",
-                        aurora_i18n::tr!("ui-login-news"),
-                        ActionKind::Flat,
-                        Vec2::new(0.0, 30.0),
-                    )
-                    .clicked()
+                    && widgets::action_button(ui, p, "article-filled", news_label, ActionKind::Flat, news_size)
+                        .on_hover_text(aurora_i18n::tr!("ui-login-news"))
+                        .clicked()
                 {
                     form.show_info = true;
                 }
             });
         });
     if screen.width() < 1100.0 {
+        let ver_y = if phone { -44.0 } else { -59.0 };
         egui::Area::new(Id::unique("login_footer_version"))
-            .anchor(egui::Align2::RIGHT_BOTTOM, Vec2::new(-25.0, -59.0))
+            .anchor(egui::Align2::RIGHT_BOTTOM, Vec2::new(-edge_x, ver_y))
             .show(ctx, |ui| version(ui, p));
     }
     // The preferences before login (Firestorm opens them from the menu bar of
@@ -144,21 +156,17 @@ pub fn footer(ctx: &Context, p: &Palette, icons: &Icons, info: &LoginInfo, sideb
             }
         });
     egui::Area::new(Id::unique("login_quit"))
-        .anchor(egui::Align2::RIGHT_BOTTOM, Vec2::new(-25.0, -20.0))
+        .anchor(egui::Align2::RIGHT_BOTTOM, Vec2::new(-edge_x, -edge_y))
         .show(ctx, |ui| {
             ui.horizontal(|ui| {
                 ui.spacing_mut().item_spacing.x = 14.0;
                 if screen.width() >= 1100.0 {
                     version(ui, p);
                 }
-                if widgets::action_button(
-                    ui,
-                    p,
-                    "power",
-                    aurora_i18n::tr!("common-quit"),
-                    ActionKind::FlatDanger,
-                    Vec2::new(0.0, 30.0),
-                )
+                let quit_label = if phone { "" } else { aurora_i18n::tr!("common-quit") };
+                let quit_size = if phone { Vec2::splat(btn_h) } else { Vec2::new(0.0, btn_h) };
+                if widgets::action_button(ui, p, "power", quit_label, ActionKind::FlatDanger, quit_size)
+                    .on_hover_text(aurora_i18n::tr!("common-quit"))
                 .clicked()
                 {
                     action = LoginAction::Quit;
@@ -182,4 +190,18 @@ pub fn footer(ctx: &Context, p: &Palette, icons: &Icons, info: &LoginInfo, sideb
         }
     }
     action
+}
+
+fn footer_icon_link(ui: &mut egui::Ui, p: &Palette, icon: &str, name: &str, url: &str, size: f32) {
+    let enabled = !url.is_empty();
+    let resp = ui
+        .add_enabled_ui(enabled, |ui| {
+            widgets::action_button(ui, p, icon, "", ActionKind::Flat, Vec2::splat(size))
+        })
+        .inner
+        .on_hover_text(url)
+        .on_disabled_hover_text(aurora_i18n::tr!("ui-login-pending-link", name = name.to_string()));
+    if resp.clicked() && enabled {
+        ui.ctx().open_url(egui::OpenUrl::new_tab(url));
+    }
 }

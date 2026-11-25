@@ -1837,15 +1837,15 @@ script-experiences-unavailable = Не удалось загрузить ваши
 script-experience-demo = Тестовое приключение
 script-disconnected = Связь прервана. Несохранённый код сохранён локально. Его можно скопировать сейчас или восстановить при следующем входе.
 script-recovery-title = Восстановление скриптов
-script-recovery-intro = Aurora Viewer обнаружил скрипты с несохранёнными изменениями. Возможно, они остались после сбоя или потери связи. Восстановленные скрипты появятся в папке «Найденные вещи» в инвентаре.
+script-recovery-intro = OliViewer обнаружил скрипты с несохранёнными изменениями. Возможно, они остались после сбоя или потери связи. Восстановленные скрипты появятся в папке «Найденные вещи» в инвентаре.
 script-recovery-recover = Восстановить
 script-recovery-unknown = (неизвестный скрипт)
 script-recovery-no-folder = Папка «Найденные вещи» ещё не загрузилась. Повторите попытку чуть позже.
 script-recovery-failed = Не удалось восстановить { $name }: { $reason } Копия сохранена до следующего входа.
 script-recovery-demo-name = Тестовый скрипт двери
-exit-title = Закрыть Aurora Viewer?
+exit-title = Закрыть OliViewer?
 exit-world-body = Закрыть вьюер или вернуться на экран входа?
-exit-login-body = Закрыть Aurora Viewer?
+exit-login-body = Закрыть OliViewer?
 exit-waiting = Выход из аккаунта…
 exit-logout = Выйти из аккаунта
 exit-logout-hint = Завершить сеанс и вернуться на экран входа.
@@ -2628,13 +2628,13 @@ ui-texture-picker-no-textures-in-the-loaded-inventory = В загруженно�
 world-tphistory-today = Сегодня
 app-aurora-elsewhere = Aurora Elsewhere
 common-aurora-demo = Демонстрация Aurora
-demo-aurora-viewer-rust-vulkan = { "Aurora Viewer\u000ARust · Vulkan" }
-demo-aurora-viewer-rust-metal = { "Aurora Viewer\u000ARust · Metal" }
-ui-login-aurora-viewer-v = Aurora Viewer v{ $value0 }
-cli-aurora-viewer = { "Aurora Viewer " }{ $version }
-cli-aurora-viewer-2 = { "Aurora Viewer " }{ $version }{ " - " }{ $t }
-common-aurora-viewer = { "Aurora Viewer " }{ $value0 }
-app-aurora-viewer-unable-to-initialize-vulkan = { "Aurora Viewer: не удалось запустить Vulkan. " }{ $e }
+demo-aurora-viewer-rust-vulkan = { "OliViewer\u000ARust · Vulkan" }
+demo-aurora-viewer-rust-metal = { "OliViewer\u000ARust · Metal" }
+ui-login-aurora-viewer-v = OliViewer v{ $value0 }
+cli-aurora-viewer = { "OliViewer " }{ $version }
+cli-aurora-viewer-2 = { "OliViewer " }{ $version }{ " - " }{ $t }
+common-aurora-viewer = { "OliViewer " }{ $value0 }
+app-aurora-viewer-unable-to-initialize-vulkan = { "OliViewer: не удалось запустить Vulkan. " }{ $e }
 splash-starting = Запуск…
 splash-settings = Чтение настроек…
 splash-gpu = Подготовка видеокарты…
@@ -2645,18 +2645,18 @@ splash-update-closing = Закрытие предыдущей версии…
 splash-update-installing = Установка обновления…
 splash-update-cache = Очистка кеша…
 splash-update-launching = Запуск новой версии…
-app-aurora-viewer-unable-to-initialize-metal = { "Aurora Viewer: не удалось запустить Metal. " }{ $e }
+app-aurora-viewer-unable-to-initialize-metal = { "OliViewer: не удалось запустить Metal. " }{ $e }
 app-graphics-start-memory-full =
-    Для Aurora Viewer не осталось свободной видеопамяти. Она занята другой программой.
+    Для OliViewer не осталось свободной видеопамяти. Она занята другой программой.
 
     Что можно сделать:
-    • закройте программы, использующие видеокарту, например другой клиент, игру или редактор видео или 3D, а затем снова запустите Aurora Viewer;
-    • на ноутбуке с двумя видеокартами проверьте, какую из них использует Aurora Viewer.
+    • закройте программы, использующие видеокарту, например другой клиент, игру или редактор видео или 3D, а затем снова запустите OliViewer;
+    • на ноутбуке с двумя видеокартами проверьте, какую из них использует OliViewer.
 
     Журнал этого запуска: { $log }
-app-graphics-start-failed-title = Не удалось запустить Aurora Viewer
+app-graphics-start-failed-title = Не удалось запустить OliViewer
 app-graphics-start-failed =
-    Aurora Viewer не удалось получить доступ к видеокарте для отрисовки окна.
+    OliViewer не удалось получить доступ к видеокарте для отрисовки окна.
 
     Что можно сделать:
     • обновите драйвер видеокарты;
@@ -2667,7 +2667,7 @@ app-graphics-start-failed =
     Подробности: { $e }
 
     Журнал этого запуска: { $log }
-app-gpu-stall-title = Aurora Viewer: видеокарта не отвечает
+app-gpu-stall-title = OliViewer: видеокарта не отвечает
 app-gpu-stall =
     Видеокарта не смогла отрисовать кадр за { $seconds } с. Мир, звук и чат продолжают работать. Изображение появится, когда видеокарта снова ответит.
 
@@ -2684,7 +2684,7 @@ app-gpu-recovered-safe = Драйвер видеокарты снова пере
 app-vr-runtime-closed-title = Программа VR закрыта
 app-vr-runtime-closed = Программа VR (например, SteamVR) закрылась. Aurora заново открыла окно без VR. Сеанс продолжается, мир скоро загрузится заново. VR снова будет доступна при следующем запуске Aurora.
 app-vr-runtime-closed-at-start = Программа VR (например, SteamVR) закрылась. Aurora заново открыла окно без VR. Сеанс продолжается, мир скоро загрузится заново. VR снова будет доступна при следующем запуске Aurora. Чтобы Aurora не загружала программу VR при каждом запуске, отключите «Настройки → Камера → VR → Настраивать VR при запуске».
-app-gpu-lost-title = Aurora Viewer: потеряна связь с видеокартой
+app-gpu-lost-title = OliViewer: потеряна связь с видеокартой
 app-gpu-lost =
     Видеокарта стала недоступна. Возможно, драйвер перезапустился из-за долгой отрисовки или нехватки видеопамяти, карту отключили или её заняла другая программа. Отрисовка больше невозможна. Нажмите «ОК», чтобы завершить сеанс и закрыть Aurora.
 
@@ -2907,7 +2907,7 @@ ui-environment-based-on-day-cycle = По суточному циклу
 build-ui-object-bias = Смещение
 common-library = Библиотека
 app-welcome = Добро пожаловать!
-demo-welcome-to-the-aurora-viewer-demo = Добро пожаловать в демонстрацию Aurora Viewer! 🐺✨❤️
+demo-welcome-to-the-aurora-viewer-demo = Добро пожаловать в демонстрацию OliViewer! 🐺✨❤️
 demo-region-day-cycle = Северный рассвет
 demo-region-telehub = Точка прибытия
 demo-region-telehub-object = Камень прибытия
@@ -3458,7 +3458,7 @@ ui-options-flash-conversations-nearby-hint = Пока окно «Разгово�
 ui-options-announce-incoming-im = Сообщать о входящих ЛС сразу, как собеседник начнёт печатать
 ui-options-announce-incoming-im-hint = Если житель начинает писать вам личное сообщение, разговор открывается до его получения с надписью «Входящее сообщение от» и именем собеседника.
 ui-options-unread-ims-in-window-title = Показывать число непрочитанных ЛС в заголовке окна
-ui-options-unread-ims-in-window-title-hint = Число непрочитанных сообщений в личных разговорах, групповых чатах и конференциях показывается перед названием окна, например «(3) Aurora Viewer». Оно видно и на панели задач.
+ui-options-unread-ims-in-window-title-hint = Число непрочитанных сообщений в личных разговорах, групповых чатах и конференциях показывается перед названием окна, например «(3) OliViewer». Оно видно и на панели задач.
 ui-options-im-tab-order = Сортировать вкладки разговоров по типу
 ui-options-im-tab-order-hint = Новая вкладка добавляется после последней вкладки своего типа в порядке, заданном ниже. Перемещённые вручную вкладки сохраняют своё место.
 ui-options-im-tab-order-kinds = Порядок
@@ -4216,7 +4216,7 @@ ui-place-details-location-details-2 = { "Сведения о месте: " }{ $v
 common-expand = Развернуть
 ui-inventory-controls-expand-displayed-folders = Развернуть показанные папки
 ui-places-expand-all-folders = Развернуть все папки
-demo-aurora-viewer-developer = Разработчик Aurora Viewer.
+demo-aurora-viewer-developer = Разработчик OliViewer.
 common-water = Вода
 world-inventory-preview-water-haze-density-refraction-wave-scale-normal-texture = { "Вода\u000A\u000AПлотность дымки: " }{ $value0 }{ "\u000AПреломление: " }{ $value1 }{ "\u000AМасштаб волн: " }{ $value2 }{ "\u000AКарта нормалей: " }{ $value3 }
 demo-env-turquoise-water = Бирюзовая вода
@@ -5265,9 +5265,9 @@ build-ui-general-next-owner = Следующий владелец:
 build-ui-floaters-next-owner-can = Следующий владелец может:
 world-mod-could-not-save-the-profile = Не удалось сохранить профиль ({ $reason }).
 ui-land-general-owner-contributes-when-deeding-land = Внести земельный лимит владельца при передаче группе
-world-status-the-resident-you-messaged-has-enabled-aurora-viewer-s = Житель включил в Aurora Viewer режим отклонения всех предложений дружбы. Вы по-прежнему можете написать ему личное сообщение.
-world-status-the-resident-you-messaged-has-enabled-aurora-viewer-s-2 = Житель включил в Aurora Viewer режим отклонения всех предложений и запросов телепорта. Вы по-прежнему можете написать ему личное сообщение.
-world-status-the-resident-you-messaged-has-enabled-aurora-viewer-s-3 = Житель включил автоответ Aurora Viewer и просит его не беспокоить. Сообщение появится в личном разговоре, где его можно будет прочитать позже.
+world-status-the-resident-you-messaged-has-enabled-aurora-viewer-s = Житель включил в OliViewer режим отклонения всех предложений дружбы. Вы по-прежнему можете написать ему личное сообщение.
+world-status-the-resident-you-messaged-has-enabled-aurora-viewer-s-2 = Житель включил в OliViewer режим отклонения всех предложений и запросов телепорта. Вы по-прежнему можете написать ему личное сообщение.
+world-status-the-resident-you-messaged-has-enabled-aurora-viewer-s-3 = Житель включил автоответ OliViewer и просит его не беспокоить. Сообщение появится в личном разговоре, где его можно будет прочитать позже.
 world-status-the-resident-you-messaged-is-away-your-message-will = Житель отошёл. Сообщение появится в личном разговоре, где его можно будет прочитать позже.
 world-status-the-resident-you-messaged-has-blocked-all-messages-from = Житель заблокировал все ваши сообщения.
 inventory-operations-the-script-contains-compilation-errors-check-the-code-and = В скрипте есть ошибки компиляции. Проверьте код и повторите попытку.
@@ -6004,8 +6004,8 @@ demo-fav-cats-island = Кошачий остров
 demo-fav-prism-gallery = Галерея «Призма»
 demo-fav-shadow-forest = Тенистый лес
 demo-fav-orbital-station = Орбитальная станция
-demo-land-aurora-viewer-s-offline-demo-parcel-visit-the-fountain = { "Участок автономной демонстрации Aurora Viewer.\u000AПосетите фонтан, пляж и холм." }
-demo-aurora-viewer-s-offline-demo-parcel = Участок автономной демонстрации Aurora Viewer.
+demo-land-aurora-viewer-s-offline-demo-parcel-visit-the-fountain = { "Участок автономной демонстрации OliViewer.\u000AПосетите фонтан, пляж и холм." }
+demo-aurora-viewer-s-offline-demo-parcel = Участок автономной демонстрации OliViewer.
 ui-parcel-icons-isolated-parcel-you-cannot-see-residents-on-other-parcels = Изолированный участок. Вы и жители других участков не видите друг друга. Общий чат не пересекает границы участка.
 ui-parcel-icons-frozen-you-cannot-move-or-interact = Владелец участка или управляющий землевладением заморозил вашего аватара. Двигаться и взаимодействовать с миром можно после снятия заморозки.
 ui-minimap-banned-parcels = Участки с запретом доступа
@@ -6434,7 +6434,7 @@ world-mod-someone = Кто-то
 demo-has-anyone-seen-the-new-eep-sky = Кто-нибудь видел новое небо EEP?
 demo-conference-invitation = Кто хочет прогуляться по площади?
 common-quit = Закрыть вьюер
-ui-bars-quit-aurora-viewer = Закрыть Aurora Viewer
+ui-bars-quit-aurora-viewer = Закрыть OliViewer
 ui-options-camera-exit-with-mouse-wheel = Выход колёсиком мыши
 ui-contacts-leave-group = Покинуть группу
 ui-contacts-leave-group-2 = Покинуть группу «{ $n }»?
@@ -6899,7 +6899,7 @@ ui-options-no-neighbour-regions = Только текущий регион
 ui-options-no-neighbour-regions-help = Отключает связь с соседними регионами, снижая нагрузку на сеть и компьютер. Соседние регионы скрыты, переходы пешком и на транспорте менее надёжны, может понадобиться телепорт. Полностью применяется после следующего телепорта.
 ui-perf-network-to-world = Сетевые данные для мира
 common-resident = Житель
-demo-resident-in-aurora-viewer-s-offline-demo = Житель в автономной демонстрации Aurora Viewer 🐺✨
+demo-resident-in-aurora-viewer-s-offline-demo = Житель в автономной демонстрации OliViewer 🐺✨
 ui-land-options-residential = Жилой
 ui-options-residents = Жители
 ui-options-cascaded-shadow-resolution-and-distance = Разрешение и дальность каскадов теней
@@ -7267,7 +7267,7 @@ ui-bars-script-library = Библиотека скриптов
 ui-bars-message-of-the-day = Сообщение дня
 ui-bars-wiki = Вики Aurora Viewer
 ui-bars-knowledge-base = База знаний
-ui-bars-about = О программе Aurora Viewer
+ui-bars-about = О программе OliViewer
 cmdline-dice-successes = { "Успехов: " }{ $successes }
 build-manip-south = Юг
 common-next = Далее
@@ -9584,7 +9584,7 @@ hud-move-locked = Заблокировать быстрое перемещени
 hud-local-scale-reset = Сбросить до 100%
 hud-local-scale-forget = Удалить сохранённый размер
 hud-local-scale-help = Удерживайте клавишу HUD. Перетаскивание левой кнопкой перемещает, колёсико меняет размер, Shift уменьшает шаг. Размер сохраняется на этом компьютере для аккаунта по имени и создателю HUD. При редактировании HUD колёсико без этой клавиши меняет масштаб просмотра всех HUD.
-cli-help = { "Aurora Viewer\u000A\u000AИспользование: aurora-viewer [--title <text>] [--fps-limit <fps>] [--vr] [--language <code>] [--grid <name>]\u000A                            [--login <first> <last> <password>] [--version] [--uninstall] [<slurl>]\u000A\u000A  --title <text>   Задать название окна (\"Aurora Viewer <version> - <text>\") и журнала\u000A                   (aurora-<text>.log, в демонстрации — aurora-demo-<text>.log)\u000A  --fps-limit <fps>  Ограничить частоту кадров этого процесса (1–500 FPS) без сохранения настроек\u000A  --language <code>  Задать язык интерфейса для этого запуска (" }{ $languages }{ ")\u000A  --grid <name>    Запуститься в agni, aditi, сохранённом гриде или по URI входа (также --loginuri <uri>)\u000A  --login <first> <last> <password>  Сразу войти в этот аккаунт\u000A  <slurl>, --url <slurl>  Войти в указанное место. Аргументы после него игнорируются.\u000A                   Если вьюер уже открыт, ссылка передаётся ему\u000A  --vr             Включить VR после загрузки мира (при подключённой гарнитуре)\u000A  -V, --version   Показать версию сборки без запуска вьюера\u000A  --uninstall      Удалить компоненты, зарегистрированные вне папок Aurora (обработчик ссылок,\u000A                   хранилище учётных данных, дополнение Blender), вывести список удалённого\u000A                   и оставшихся папок, затем выйти\u000A  -h, --help       Показать справку\u000A\u000AРежимы тестирования задаются переменными среды (AURORA_DEMO=1, AURORA_CAPTURE=...):\u000Aсм. README.md." }
+cli-help = { "OliViewer\u000A\u000AИспользование: aurora-viewer [--title <text>] [--fps-limit <fps>] [--vr] [--language <code>] [--grid <name>]\u000A                            [--login <first> <last> <password>] [--version] [--uninstall] [<slurl>]\u000A\u000A  --title <text>   Задать название окна (\"OliViewer <version> - <text>\") и журнала\u000A                   (aurora-<text>.log, в демонстрации — aurora-demo-<text>.log)\u000A  --fps-limit <fps>  Ограничить частоту кадров этого процесса (1–500 FPS) без сохранения настроек\u000A  --language <code>  Задать язык интерфейса для этого запуска (" }{ $languages }{ ")\u000A  --grid <name>    Запуститься в agni, aditi, сохранённом гриде или по URI входа (также --loginuri <uri>)\u000A  --login <first> <last> <password>  Сразу войти в этот аккаунт\u000A  <slurl>, --url <slurl>  Войти в указанное место. Аргументы после него игнорируются.\u000A                   Если вьюер уже открыт, ссылка передаётся ему\u000A  --vr             Включить VR после загрузки мира (при подключённой гарнитуре)\u000A  -V, --version   Показать версию сборки без запуска вьюера\u000A  --uninstall      Удалить компоненты, зарегистрированные вне папок Aurora (обработчик ссылок,\u000A                   хранилище учётных данных, дополнение Blender), вывести список удалённого\u000A                   и оставшихся папок, затем выйти\u000A  -h, --help       Показать справку\u000A\u000AРежимы тестирования задаются переменными среды (AURORA_DEMO=1, AURORA_CAPTURE=...):\u000Aсм. README.md." }
 demo-media-page = { "data:text/html;charset=utf-8,<html><body style='margin:0;height:100vh;background:linear-gradient(135deg,%232a1f4a,%230f6d6d);color:white;font:56px sans-serif;text-align:center'><h1 style='margin:40px 0 10px'>Медиа Aurora</h1><p id='t' style='font-size:90px;margin:10px'>--</p><button onclick=\"document.body.style.background='%237a3b9c';this.textContent='Нажато!'\" style='font-size:48px;padding:10px 40px'>Нажать</button><br><input placeholder='Введите текст' style='font-size:44px;margin-top:30px;width:70%'><script>setInterval(function(){document.getElementById('t').textContent=new Date().toLocaleTimeString()},250)</script></body></html>" }
 demo-nearby-media-page-cinema = { "data:text/html;charset=utf-8,<html><head><title>Кинотеатр на площади</title></head><body style='margin:0;height:100vh;background:%23402060;color:white;font:64px sans-serif;text-align:center'><h1 style='margin-top:180px'>Кинотеатр</h1></body></html>" }
 demo-nearby-media-page-next-door = { "data:text/html;charset=utf-8,<html><head><title>Соседний участок</title></head><body style='margin:0;height:100vh;background:%23205040;color:white;font:64px sans-serif;text-align:center'><h1 style='margin-top:180px'>По соседству</h1></body></html>" }
@@ -9624,7 +9624,7 @@ status-fps-fps = { $fps }{ " кадр/с" }
 status-unknown = (неизвестно)
 status-public = (публично)
 status-readme-txt = README.txt
-status-aurora-viewer-skin-theme-json-colors = { "Оформление Aurora Viewer\u000A\u000Atheme.json  : цвета (#RRGGBB), углы, размеры шрифтов\u000Alayout.json : кнопки панелей (значок + команда), параметры чата\u000A(скопируйте файлы *.example.json для начальных значений)\u000Aicons/      : файлы PNG вместо встроенных значков (с теми же именами)\u000A\u000AВ мире изменения подхватываются автоматически.\u000AКоманды: help, conversations, speak, fly, mouselook, people, friends, inventory,\u000Aappearance, search, worldmap, minimap, performance, sit, home, preferences.\u000A" }
+status-aurora-viewer-skin-theme-json-colors = { "Оформление OliViewer\u000A\u000Atheme.json  : цвета (#RRGGBB), углы, размеры шрифтов\u000Alayout.json : кнопки панелей (значок + команда), параметры чата\u000A(скопируйте файлы *.example.json для начальных значений)\u000Aicons/      : файлы PNG вместо встроенных значков (с теми же именами)\u000A\u000AВ мире изменения подхватываются автоматически.\u000AКоманды: help, conversations, speak, fly, mouselook, people, friends, inventory,\u000Aappearance, search, worldmap, minimap, performance, sit, home, preferences.\u000A" }
 status-area-m-l-price-l-m = { $value0 }{ "\u000A" }{ $area }{ " м² · L$ " }{ $price }{ " (" }{ $value1 }{ " L$/м²)" }
 status-days = { " дн." }
 status-hours = { " ч" }
@@ -10154,8 +10154,8 @@ monitor-media-face = Грань с медиа · { $what }
 monitor-media-search = Страница поиска
 monitor-media-marketplace = Marketplace
 monitor-media-profile = Страница веб-профиля
-crash-title = Aurora Viewer — Отчёт о сбое
-crash-heading = Aurora Viewer неожиданно завершил работу
+crash-title = OliViewer — Отчёт о сбое
+crash-heading = OliViewer неожиданно завершил работу
 crash-explanation = Сеанс завершён. Сведения ниже помогут определить причину сбоя.
 crash-local-only = Эти сведения сохранены на этом компьютере. Ничего не отправлено.
 crash-details = Технические сведения
@@ -10196,9 +10196,9 @@ crash-publish = Опубликовать на GitHub
 crash-open-browser = Открыть в браузере
 crash-body-copied = Отчёт скопирован в буфер обмена. Вставьте его в открывшееся обращение.
 crash-back = Назад
-crash-report-summary = Сбой Aurora Viewer
+crash-report-summary = Сбой OliViewer
 crash-report-expected = Программа должна продолжать работу.
-crash-report-actual = Aurora Viewer неожиданно завершил работу.
+crash-report-actual = OliViewer неожиданно завершил работу.
 crash-report-reason = Тип сбоя
 crash-report-exit-code = Код завершения процесса
 bug-log-native = исключение нативного кода
@@ -10256,8 +10256,8 @@ update-error-filesystem = Не удалось подготовить устан�
 update-error-package = Пакет неполный или некорректный. Текущая установка сохранена.
 update-error-unsupported = Из этой папки выпуск нельзя установить автоматически. Загрузите его со страницы выпуска и распакуйте в отдельную папку.
 update-error-protected = Aurora не может обновиться в этой папке. Она относится к пакету Flatpak, Snap или AppImage либо у вашей учётной записи нет прав на запись. Обновите Aurora тем же способом, которым установили её, или загрузите новую версию со страницы выпуска.
-update-error-drive-root = Aurora не может обновиться в папке прямо в корне диска, например E:\Aurora Viewer. Переместите её на уровень глубже, например в E:\Games\Aurora Viewer. Запустите Aurora оттуда и обновите.
-update-error-unsupported-macos = На macOS новая версия устанавливается вручную. Загрузите её со страницы выпуска и замените Aurora Viewer в папке «Программы».
+update-error-drive-root = Aurora не может обновиться в папке прямо в корне диска, например E:\OliViewer. Переместите её на уровень глубже, например в E:\Games\OliViewer. Запустите Aurora оттуда и обновите.
+update-error-unsupported-macos = На macOS новая версия устанавливается вручную. Загрузите её со страницы выпуска и замените OliViewer в папке «Программы».
 update-error-startup = Не удалось запустить программу обновления. Текущая установка сохранена.
 update-rollback = Новая версия не запустилась. Предыдущая установка восстановлена.
 update-rollback-install = Не удалось установить новую версию. Предыдущая установка сохранена.
@@ -13040,7 +13040,7 @@ buy-land-can-not-change = Объединение и разделение зап�
 buy-land-covenant-section = Соглашение по землевладению
 buy-land-must-agree = Необходимо принять соглашение по землевладению:
 buy-land-agree-covenant = Я принимаю соглашение, приведённое выше.
-buy-land-cannot-close = Закрыть окно покупки земли можно после того, как Aurora Viewer рассчитает стоимость операции.
+buy-land-cannot-close = Закрыть окно покупки земли можно после того, как OliViewer рассчитает стоимость операции.
 buy-land-nothing-selected = Не удалось купить землю: участок не выбран.
 buy-land-across-regions = Выделение охватывает несколько регионов. Выделите меньшую область и повторите покупку.
 buy-land-only-officer = Не удалось купить землю для группы: у вас нет права покупать землю для активной группы.
@@ -15320,9 +15320,9 @@ about-copied = Скопировано
 about-copy-hint = Копирует все сведения выше на английском для обращения в поддержку или отчёта об ошибке.
 about-click-to-copy = Нажмите, чтобы скопировать это значение
 about-build-pill = Сборка { $profile }
-about-third-party-viewer = Aurora Viewer — сторонний вьюер. Linden Lab, создатель Second Life, его не выпускает и не поддерживает.
+about-third-party-viewer = OliViewer — сторонний вьюер. Linden Lab, создатель Second Life, его не выпускает и не поддерживает.
 about-release-notes = Примечания к выпуску
-about-licence-title = Лицензия Aurora Viewer
+about-licence-title = Лицензия OliViewer
 about-licence-gpl = GNU GPL v3
 about-source-code = Исходный код
 about-section-viewer = Вьюер

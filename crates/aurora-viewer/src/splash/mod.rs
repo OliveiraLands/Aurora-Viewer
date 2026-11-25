@@ -169,14 +169,44 @@ impl Drop for UpdateWindow {
 /// Starts the splash, when wanted; never waits for it.
 pub fn start() {
     let started = *STARTED.get_or_init(Instant::now);
-    if !wanted_here() {
+    #[cfg(target_os = "android")]
+    {
+        let _ = std::thread::Builder::new().name("aurora-splash-android".into()).spawn(feed_android);
+        let _ = started;
         return;
     }
-    let spawned = std::thread::Builder::new()
-        .name("aurora-splash".into())
-        .spawn(move || feed(started));
-    if let Err(e) = spawned {
-        eprintln!("startup splash: no thread ({e})");
+    #[cfg(not(target_os = "android"))]
+    {
+        if !wanted_here() {
+            return;
+        }
+        let spawned = std::thread::Builder::new()
+            .name("aurora-splash".into())
+            .spawn(move || feed(started));
+        if let Err(e) = spawned {
+            eprintln!("startup splash: no thread ({e})");
+        }
+    }
+}
+
+#[cfg(target_os = "android")]
+fn feed_android() {
+    let mut sent: Option<Step> = None;
+    loop {
+        if CLOSE.load(Ordering::Relaxed) {
+            break;
+        }
+        let viewer = ViewerPhase::from_u8(VIEWER.load(Ordering::Relaxed));
+        let step = progress::step_of(viewer, aurora_render::start_progress::snapshot());
+        if sent != Some(step) {
+            let pct = (step.fraction() * 100.0).round() as i32;
+            crate::android::update_loading_progress(pct, &step.status());
+            sent = Some(step);
+        }
+        if viewer == ViewerPhase::Shown {
+            break;
+        }
+        std::thread::sleep(Duration::from_millis(50));
     }
 }
 

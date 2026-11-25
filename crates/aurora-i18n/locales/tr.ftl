@@ -1785,15 +1785,15 @@ script-experiences-unavailable = Deneyimleriniz yüklenemedi. Geçerli ilişki k
 script-experience-demo = Demo deneyimi
 script-disconnected = Bağlantı kesildi. Kaydedilmemiş kaynak korundu; onu kopyalayabilirsiniz, bir sonraki oturum açmada size yeniden sunulur.
 script-recovery-title = Komut dosyası kurtarma
-script-recovery-intro = Aurora Viewer, büyük olasılıkla bir çökme veya bağlantı kaybından kalan, kaydedilmemiş değişiklikler içeren komut dosyaları buldu. Kurtardığınız komut dosyaları envanterinizdeki Kaybedip Bulduklarım klasörüne konur.
+script-recovery-intro = OliViewer, büyük olasılıkla bir çökme veya bağlantı kaybından kalan, kaydedilmemiş değişiklikler içeren komut dosyaları buldu. Kurtardığınız komut dosyaları envanterinizdeki Kaybedip Bulduklarım klasörüne konur.
 script-recovery-recover = Kurtar
 script-recovery-unknown = (Bilinmeyen komut dosyası)
 script-recovery-no-folder = Kaybedip Bulduklarım klasörü henüz yüklenmedi. Birazdan tekrar deneyin.
 script-recovery-failed = Şu komut dosyası kurtarılamadı: { $name }. { $reason } Kopyası bir sonraki oturum açma için saklanır.
 script-recovery-demo-name = Demo kapı komut dosyası
-exit-title = Aurora Viewer kapatılsın mı?
+exit-title = OliViewer kapatılsın mı?
 exit-world-body = Görüntüleyiciden çıkılsın mı, yoksa oturum açma ekranına mı dönülsün?
-exit-login-body = Aurora Viewer'dan çıkmak istiyor musunuz?
+exit-login-body = OliViewer'dan çıkmak istiyor musunuz?
 exit-waiting = Oturum kapatılıyor…
 exit-logout = Oturumu Kapat
 exit-logout-hint = Oturumu sonlandırın ve oturum açma ekranına dönün.
@@ -2543,13 +2543,13 @@ ui-texture-picker-no-textures-in-the-loaded-inventory = Yüklenen envanterde dok
 world-tphistory-today = Bugün
 app-aurora-elsewhere = Aurora Elsewhere
 common-aurora-demo = Aurora Demo
-demo-aurora-viewer-rust-vulkan = { "Aurora Viewer\u000ARust · Vulkan" }
-demo-aurora-viewer-rust-metal = { "Aurora Viewer\u000ARust · Metal" }
-ui-login-aurora-viewer-v = Aurora Viewer v{ $value0 }
-cli-aurora-viewer = { "Aurora Viewer " }{ $version }
-cli-aurora-viewer-2 = { "Aurora Viewer " }{ $version }{ " - " }{ $t }
-common-aurora-viewer = { "Aurora Viewer " }{ $value0 }
-app-aurora-viewer-unable-to-initialize-vulkan = { "Aurora Viewer: Vulkan başlatılamadı: " }{ $e }
+demo-aurora-viewer-rust-vulkan = { "OliViewer\u000ARust · Vulkan" }
+demo-aurora-viewer-rust-metal = { "OliViewer\u000ARust · Metal" }
+ui-login-aurora-viewer-v = OliViewer v{ $value0 }
+cli-aurora-viewer = { "OliViewer " }{ $version }
+cli-aurora-viewer-2 = { "OliViewer " }{ $version }{ " - " }{ $t }
+common-aurora-viewer = { "OliViewer " }{ $value0 }
+app-aurora-viewer-unable-to-initialize-vulkan = { "OliViewer: Vulkan başlatılamadı: " }{ $e }
 splash-starting = Başlatılıyor…
 splash-settings = Ayarlar okunuyor…
 splash-gpu = Grafik kartı hazırlanıyor…
@@ -2560,18 +2560,18 @@ splash-update-closing = Önceki sürüm kapatılıyor…
 splash-update-installing = Güncelleme kuruluyor…
 splash-update-cache = Önbellek temizleniyor…
 splash-update-launching = Yeni sürüm başlatılıyor…
-app-aurora-viewer-unable-to-initialize-metal = { "Aurora Viewer: Metal başlatılamadı: " }{ $e }
+app-aurora-viewer-unable-to-initialize-metal = { "OliViewer: Metal başlatılamadı: " }{ $e }
 app-graphics-start-memory-full =
-    Grafik kartında Aurora Viewer için video belleği kalmadı: başka bir program onu tutuyor.
+    Grafik kartında OliViewer için video belleği kalmadı: başka bir program onu tutuyor.
 
     Deneyebilecekleriniz:
-    • grafik kartını kullanan programları (başka bir görüntüleyici, bir oyun, bir video veya 3D düzenleyici) kapatın, ardından Aurora Viewer'ı yeniden başlatın;
-    • iki grafik kartlı bir dizüstü bilgisayarda Aurora Viewer'ın hangisinde çalıştığını kontrol edin.
+    • grafik kartını kullanan programları (başka bir görüntüleyici, bir oyun, bir video veya 3D düzenleyici) kapatın, ardından OliViewer'ı yeniden başlatın;
+    • iki grafik kartlı bir dizüstü bilgisayarda OliViewer'ın hangisinde çalıştığını kontrol edin.
 
     Bu başlatmanın günlüğü: { $log }
-app-graphics-start-failed-title = Aurora Viewer başlatılamıyor
+app-graphics-start-failed-title = OliViewer başlatılamıyor
 app-graphics-start-failed =
-    Aurora Viewer penceresini çizmek için bir grafik kartı açamadı.
+    OliViewer penceresini çizmek için bir grafik kartı açamadı.
 
     Deneyebilecekleriniz:
     • grafik kartı sürücüsünü güncelleyin;
@@ -2582,7 +2582,7 @@ app-graphics-start-failed =
     Ayrıntılar: { $e }
 
     Bu başlatmanın günlüğü: { $log }
-app-gpu-stall-title = Aurora Viewer: grafik kartı yanıt vermiyor
+app-gpu-stall-title = OliViewer: grafik kartı yanıt vermiyor
 app-gpu-stall =
     Grafik kartı { $seconds } saniyedir bir görüntüyü bitiremedi. Aurora hâlâ çalışıyor (dünya, ses ve sohbet devam ediyor) ama kart yeniden yanıt verene kadar hiçbir şey çizilemez.
 
@@ -2599,7 +2599,7 @@ app-gpu-recovered-safe = Grafik kartının sürücüsü birkaç dakika içinde y
 app-vr-runtime-closed-title = VR yazılımı kapatıldı
 app-vr-runtime-closed = VR yazılımınız (örneğin SteamVR) kapatıldı. Aurora penceresini onsuz yeniden açtı: oturumunuz açık kaldı ve dünya birazdan yeniden yüklenir. VR, Aurora'nın bir sonraki başlatılmasında geri gelir.
 app-vr-runtime-closed-at-start = VR yazılımınız (örneğin SteamVR) kapatıldı. Aurora penceresini onsuz yeniden açtı: oturumunuz açık kaldı ve dünya birazdan yeniden yüklenir. VR, Aurora'nın bir sonraki başlatılmasında geri gelir. Aurora her başlatmada VR yazılımınızı yükler: bunu durdurmak için Tercihler › Kamera › VR › “Başlangıçta VR'ı hazırla” seçeneğini kapatın.
-app-gpu-lost-title = Aurora Viewer: grafik kartı kaybedildi
+app-gpu-lost-title = OliViewer: grafik kartı kaybedildi
 app-gpu-lost =
     Grafik kartı Aurora için çalışmayı bıraktı: sürücüsü sıfırlandı (bir görüntüyü çizmek çok uzun sürdü veya video belleği doldu) ya da kart çıkarıldı veya başka bir program tarafından alındı. Artık hiçbir şey çizilemez: Tamam'a bastığınızda Aurora kapanır (oturumunuz düzgünce kapatılır).
 
@@ -2822,7 +2822,7 @@ ui-environment-based-on-day-cycle = Gün döngüsüne göre
 build-ui-object-bias = Sapma
 common-library = Kütüphane
 app-welcome = Hoş geldiniz!
-demo-welcome-to-the-aurora-viewer-demo = Aurora Viewer demosuna hoş geldiniz! 🐺✨❤️
+demo-welcome-to-the-aurora-viewer-demo = OliViewer demosuna hoş geldiniz! 🐺✨❤️
 demo-region-day-cycle = Kuzey Şafağı
 demo-region-telehub = Varış noktası
 demo-region-telehub-object = Varış taşı
@@ -3367,7 +3367,7 @@ ui-options-flash-conversations-nearby-hint = Sohbetler penceresi kapalıyken yak
 ui-options-announce-incoming-im = Gönderen yazmaya başlar başlamaz gelen Aİ'leri duyur
 ui-options-announce-incoming-im-hint = Bir sakin size bir anlık ileti yazmaya başladığında, ileti gelmeden önce sohbeti hemen "Gelen ileti" ve adıyla açılır.
 ui-options-unread-ims-in-window-title = Okunmamış Aİ sayısını pencere başlığında göster
-ui-options-unread-ims-in-window-title-hint = Özel iletiler, grup sohbetleri veya konferanslar okunmamış beklerken sayıları pencere başlığında en başta yer alır: "(3) Aurora Viewer"; görev çubuğu da bunu gösterir.
+ui-options-unread-ims-in-window-title-hint = Özel iletiler, grup sohbetleri veya konferanslar okunmamış beklerken sayıları pencere başlığında en başta yer alır: "(3) OliViewer"; görev çubuğu da bunu gösterir.
 ui-options-im-tab-order = Sohbet sekmelerini türe göre sırala
 ui-options-im-tab-order-hint = Yeni bir sohbet sekmesi sona değil, aşağıda seçilen sırada kendi türünün son sekmesinin arkasına gelir. Elle taşıdığınız sekmeler yerlerini korur.
 ui-options-im-tab-order-kinds = Sıra
@@ -4093,7 +4093,7 @@ ui-place-details-location-details-2 = { "Konum ayrıntıları: " }{ $value0 }
 common-expand = Genişlet
 ui-inventory-controls-expand-displayed-folders = Görüntülenen klasörleri genişlet
 ui-places-expand-all-folders = Tüm klasörleri genişlet
-demo-aurora-viewer-developer = Aurora Viewer geliştiricisi.
+demo-aurora-viewer-developer = OliViewer geliştiricisi.
 common-water = Su
 world-inventory-preview-water-haze-density-refraction-wave-scale-normal-texture = { "Su\u000A\u000APus yoğunluğu: " }{ $value0 }{ "\u000AKırılma: " }{ $value1 }{ "\u000ADalga ölçeği: " }{ $value2 }{ "\u000ANormal doku: " }{ $value3 }
 demo-env-turquoise-water = Turkuaz su
@@ -5125,9 +5125,9 @@ build-ui-general-next-owner = Sonraki sahip:
 build-ui-floaters-next-owner-can = Sonraki sahip şunları yapabilir:
 world-mod-could-not-save-the-profile = Profil kaydedilemedi ({ $reason }).
 ui-land-general-owner-contributes-when-deeding-land = Sahip, araziyi devrederken katkıda bulunur
-world-status-the-resident-you-messaged-has-enabled-aurora-viewer-s = İleti gönderdiğiniz sakin, Aurora Viewer'ın tüm arkadaşlık isteklerini reddeden modunu açmış. Arkadaşlık istekleriyle rahatsız edilmek istemiyor, ancak yine de ona bir anlık ileti gönderebilirsiniz.
-world-status-the-resident-you-messaged-has-enabled-aurora-viewer-s-2 = İleti gönderdiğiniz sakin, Aurora Viewer'ın tüm ışınlanma tekliflerini ve isteklerini reddeden modunu açmış. Işınlanma istekleriyle rahatsız edilmek istemiyor, ancak yine de ona bir anlık ileti gönderebilirsiniz.
-world-status-the-resident-you-messaged-has-enabled-aurora-viewer-s-3 = İleti gönderdiğiniz sakin, Aurora Viewer'ın otomatik yanıt modunu açmış ve rahatsız edilmek istemiyor. İletiniz daha sonra okunmak üzere yine de onun Aİ penceresinde görünecek.
+world-status-the-resident-you-messaged-has-enabled-aurora-viewer-s = İleti gönderdiğiniz sakin, OliViewer'ın tüm arkadaşlık isteklerini reddeden modunu açmış. Arkadaşlık istekleriyle rahatsız edilmek istemiyor, ancak yine de ona bir anlık ileti gönderebilirsiniz.
+world-status-the-resident-you-messaged-has-enabled-aurora-viewer-s-2 = İleti gönderdiğiniz sakin, OliViewer'ın tüm ışınlanma tekliflerini ve isteklerini reddeden modunu açmış. Işınlanma istekleriyle rahatsız edilmek istemiyor, ancak yine de ona bir anlık ileti gönderebilirsiniz.
+world-status-the-resident-you-messaged-has-enabled-aurora-viewer-s-3 = İleti gönderdiğiniz sakin, OliViewer'ın otomatik yanıt modunu açmış ve rahatsız edilmek istemiyor. İletiniz daha sonra okunmak üzere yine de onun Aİ penceresinde görünecek.
 world-status-the-resident-you-messaged-is-away-your-message-will = İleti gönderdiğiniz sakin uzakta. İletiniz daha sonra okunmak üzere onun Aİ penceresinde görünecek.
 world-status-the-resident-you-messaged-has-blocked-all-messages-from = İleti gönderdiğiniz sakin sizden gelen tüm iletileri engellemiş.
 inventory-operations-the-script-contains-compilation-errors-check-the-code-and = Komut dosyası derleme hataları içeriyor. Kodu denetleyip yeniden deneyin.
@@ -5849,8 +5849,8 @@ demo-fav-cats-island = Kedi Adası
 demo-fav-prism-gallery = Prism Galerisi
 demo-fav-shadow-forest = Gölge Ormanı
 demo-fav-orbital-station = Yörünge İstasyonu
-demo-land-aurora-viewer-s-offline-demo-parcel-visit-the-fountain = { "Aurora Viewer'ın çevrimdışı demo parseli.\u000AÇeşmeyi, plajı ve tepeyi ziyaret edin." }
-demo-aurora-viewer-s-offline-demo-parcel = Aurora Viewer'ın çevrimdışı demo parseli.
+demo-land-aurora-viewer-s-offline-demo-parcel-visit-the-fountain = { "OliViewer'ın çevrimdışı demo parseli.\u000AÇeşmeyi, plajı ve tepeyi ziyaret edin." }
+demo-aurora-viewer-s-offline-demo-parcel = OliViewer'ın çevrimdışı demo parseli.
 ui-parcel-icons-isolated-parcel-you-cannot-see-residents-on-other-parcels = Yalıtılmış parsel: diğer parsellerdeki sakinleri göremezsiniz, onlar da sizi göremez ve yakındaki sohbet sınırı geçmez.
 ui-parcel-icons-frozen-you-cannot-move-or-interact = Bir parsel sahibi veya gayrimenkul yöneticisi tarafından donduruldunuz: serbest bırakılana kadar hareket edemez ve dünyayla etkileşime giremezsiniz.
 ui-minimap-banned-parcels = Yasaklı parseller
@@ -6271,7 +6271,7 @@ world-mod-someone = Biri
 demo-has-anyone-seen-the-new-eep-sky = Yeni EEP gökyüzünü gören var mı?
 demo-conference-invitation = Meydanı gezmek isteyen var mı?
 common-quit = Çık
-ui-bars-quit-aurora-viewer = Aurora Viewer'dan Çık
+ui-bars-quit-aurora-viewer = OliViewer'dan Çık
 ui-options-camera-exit-with-mouse-wheel = Fare tekerleğiyle çık
 ui-contacts-leave-group = Gruptan ayrıl
 ui-contacts-leave-group-2 = “{ $n }” grubundan ayrılınsın mı?
@@ -6724,7 +6724,7 @@ ui-options-no-neighbour-regions = Yalnızca bulunduğum bölge
 ui-options-no-neighbour-regions-help = Komşu bölgelere bağlanma: ağa ve bilgisayara daha az yük biner, ancak bu bölgeler gösterilmez, yürüyerek veya araçla geçişler daha az güvenilir olur ve ışınlanmak gerekebilir. Bir sonraki ışınlanmadan sonra tam olarak etkili olur.
 ui-perf-network-to-world = Ağdan dünyaya
 common-resident = Sakin
-demo-resident-in-aurora-viewer-s-offline-demo = Aurora Viewer'ın çevrimdışı demosunda bir sakin 🐺✨
+demo-resident-in-aurora-viewer-s-offline-demo = OliViewer'ın çevrimdışı demosunda bir sakin 🐺✨
 ui-land-options-residential = Konut
 ui-options-residents = Sakinler
 ui-options-cascaded-shadow-resolution-and-distance = Kademeli gölge çözünürlüğü ve mesafesi
@@ -7081,7 +7081,7 @@ ui-bars-script-library = Komut dosyası kütüphanesi
 ui-bars-message-of-the-day = Günün iletisi
 ui-bars-wiki = Aurora Viewer wiki
 ui-bars-knowledge-base = Bilgi tabanı
-ui-bars-about = Aurora Viewer Hakkında
+ui-bars-about = OliViewer Hakkında
 cmdline-dice-successes = { "Başarı: " }{ $successes }
 build-manip-south = Güney
 common-next = Sonraki
@@ -9368,7 +9368,7 @@ hud-move-locked = Hızlı hareketi kilitle
 hud-local-scale-reset = %100'e geri döndür
 hud-local-scale-forget = Kaydedilen boyutu unut
 hud-local-scale-help = BÜG tuşunu basılı tutun: taşımak için sol sürükleyin, yeniden boyutlandırmak için tekerleği çevirin, daha ince adımlar için Shift. Boyut bu bilgisayarda, ad ve oluşturana göre, bu hesap için kaydedilir. Bir BÜG'ü düzenlerken, bu tuş olmadan tekerlek tüm BÜG'lerin görünümünü yakınlaştırır.
-cli-help = { "Aurora Viewer\u000A\u000AKullanım: aurora-viewer [--title <text>] [--fps-limit <fps>] [--vr] [--language <code>] [--grid <name>]\u000A                     [--login <first> <last> <password>] [--version] [--uninstall] [<slurl>]\u000A\u000A  --title <text>   Bu pencereyi (\"Aurora Viewer <version> - <text>\") ve günlük\u000A                   dosyasını adlandırır (aurora-<text>.log, demo modunda aurora-demo-<text>.log)\u000A  --fps-limit <fps>  Bu işlemi tercihleri kaydetmeden 1..500 FPS ile sınırlar\u000A  --language <code>  Bu işlemin arayüz dilini geçersiz kılar (" }{ $languages }{ ")\u000A  --grid <name>    agni, aditi, kayıtlı bir grid adı veya bir oturum açma URI'si üzerinde başlatır (ayrıca --loginuri <uri>)\u000A  --login <first> <last> <password>  Bu hesapla hemen oturum açar\u000A  <slurl>, --url <slurl>  Bu yerde başlatır; ondan sonrası okunmaz. Zaten çalışan\u000A                   bir görüntüleyici varsa onu o alır\u000A  --vr             Dünya görününce VR'a girer (VR gözlüğü bağlıyken)\u000A  -V, --version   Derlenmiş görüntüleyici sürümünü, başlatmadan gösterir\u000A  --uninstall      Aurora'nın klasörleri dışında kaydettiklerini kaldırır (bağlantı işleyici,\u000A                   kimlik bilgisi deposu, Blender eklentisi), bunları ve kalan klasörleri yazdırır, sonra çıkar\u000A  -h, --help       Bu yardımı gösterir\u000A\u000ATest anahtarları ortam değişkenleridir (AURORA_DEMO=1, AURORA_CAPTURE=...):\u000Abkz. README.md." }
+cli-help = { "OliViewer\u000A\u000AKullanım: aurora-viewer [--title <text>] [--fps-limit <fps>] [--vr] [--language <code>] [--grid <name>]\u000A                     [--login <first> <last> <password>] [--version] [--uninstall] [<slurl>]\u000A\u000A  --title <text>   Bu pencereyi (\"OliViewer <version> - <text>\") ve günlük\u000A                   dosyasını adlandırır (aurora-<text>.log, demo modunda aurora-demo-<text>.log)\u000A  --fps-limit <fps>  Bu işlemi tercihleri kaydetmeden 1..500 FPS ile sınırlar\u000A  --language <code>  Bu işlemin arayüz dilini geçersiz kılar (" }{ $languages }{ ")\u000A  --grid <name>    agni, aditi, kayıtlı bir grid adı veya bir oturum açma URI'si üzerinde başlatır (ayrıca --loginuri <uri>)\u000A  --login <first> <last> <password>  Bu hesapla hemen oturum açar\u000A  <slurl>, --url <slurl>  Bu yerde başlatır; ondan sonrası okunmaz. Zaten çalışan\u000A                   bir görüntüleyici varsa onu o alır\u000A  --vr             Dünya görününce VR'a girer (VR gözlüğü bağlıyken)\u000A  -V, --version   Derlenmiş görüntüleyici sürümünü, başlatmadan gösterir\u000A  --uninstall      Aurora'nın klasörleri dışında kaydettiklerini kaldırır (bağlantı işleyici,\u000A                   kimlik bilgisi deposu, Blender eklentisi), bunları ve kalan klasörleri yazdırır, sonra çıkar\u000A  -h, --help       Bu yardımı gösterir\u000A\u000ATest anahtarları ortam değişkenleridir (AURORA_DEMO=1, AURORA_CAPTURE=...):\u000Abkz. README.md." }
 demo-media-page = { "data:text/html;charset=utf-8,<html><body style='margin:0;height:100vh;background:linear-gradient(135deg,%232a1f4a,%230f6d6d);color:white;font:56px sans-serif;text-align:center'><h1 style='margin:40px 0 10px'>Aurora medyas%C4%B1</h1><p id='t' style='font-size:90px;margin:10px'>--</p><button onclick=\"document.body.style.background='%237a3b9c';this.textContent='T%C4%B1kland%C4%B1!'\" style='font-size:48px;padding:10px 40px'>T%C4%B1kla</button><br><input placeholder='Buraya yaz%C4%B1n' style='font-size:44px;margin-top:30px;width:70%'><script>setInterval(function(){document.getElementById('t').textContent=new Date().toLocaleTimeString()},250)</script></body></html>" }
 demo-nearby-media-page-cinema = { "data:text/html;charset=utf-8,<html><head><title>Meydan sinemas%C4%B1</title></head><body style='margin:0;height:100vh;background:%23402060;color:white;font:64px sans-serif;text-align:center'><h1 style='margin-top:180px'>Sinema</h1></body></html>" }
 demo-nearby-media-page-next-door = { "data:text/html;charset=utf-8,<html><head><title>Yandaki parsel</title></head><body style='margin:0;height:100vh;background:%23205040;color:white;font:64px sans-serif;text-align:center'><h1 style='margin-top:180px'>Yan parsel</h1></body></html>" }
@@ -9408,7 +9408,7 @@ status-fps-fps = { $fps }{ " fps" }
 status-unknown = (bilinmiyor)
 status-public = (herkese açık)
 status-readme-txt = README.txt
-status-aurora-viewer-skin-theme-json-colors = { "Aurora Viewer teması\u000A\u000Atheme.json  : renkler (#RRGGBB), köşeler, yazı tipi boyutları\u000Alayout.json : araç çubuğu düğmeleri (simge + komut), sohbet seçenekleri\u000A(varsayılan değerlerle başlamak için *.example.json dosyalarını kopyalayın)\u000Aicons/      : yerleşik simgelerin yerine geçen PNG dosyaları (aynı dosya adı)\u000A\u000ADeğişiklikler dünyadayken otomatik olarak yeniden yüklenir.\u000AKomutlar: help, conversations, speak, fly, mouselook, people, friends, inventory,\u000Aappearance, search, worldmap, minimap, performance, sit, home, preferences.\u000A" }
+status-aurora-viewer-skin-theme-json-colors = { "OliViewer teması\u000A\u000Atheme.json  : renkler (#RRGGBB), köşeler, yazı tipi boyutları\u000Alayout.json : araç çubuğu düğmeleri (simge + komut), sohbet seçenekleri\u000A(varsayılan değerlerle başlamak için *.example.json dosyalarını kopyalayın)\u000Aicons/      : yerleşik simgelerin yerine geçen PNG dosyaları (aynı dosya adı)\u000A\u000ADeğişiklikler dünyadayken otomatik olarak yeniden yüklenir.\u000AKomutlar: help, conversations, speak, fly, mouselook, people, friends, inventory,\u000Aappearance, search, worldmap, minimap, performance, sit, home, preferences.\u000A" }
 status-area-m-l-price-l-m = { $value0 }{ "\u000A" }{ $area }{ " m² L$ " }{ $price }{ " (" }{ $value1 }{ " L$/m²)" }
 status-days = { " gün" }
 status-hours = { " saat" }
@@ -9908,8 +9908,8 @@ monitor-media-face = Medya yüzü · { $what }
 monitor-media-search = Arama sayfası
 monitor-media-marketplace = Pazaryeri
 monitor-media-profile = Profil web sayfası
-crash-title = Aurora Viewer — Çökme raporu
-crash-heading = Aurora Viewer beklenmedik şekilde durdu
+crash-title = OliViewer — Çökme raporu
+crash-heading = OliViewer beklenmedik şekilde durdu
 crash-explanation = Oturumunuz sona erdi. Aşağıdaki ayrıntılar sorunun tespitinde yardımcı olabilir.
 crash-local-only = Bu ayrıntılar bu bilgisayara kaydedildi. Hiçbir şey gönderilmedi.
 crash-details = Teknik ayrıntılar
@@ -9950,9 +9950,9 @@ crash-publish = GitHub'da yayınla
 crash-open-browser = Tarayıcıda aç
 crash-body-copied = Rapor panoda: az önce açılan kayda (issue) yapıştırın.
 crash-back = Geri
-crash-report-summary = Aurora Viewer çökmesi
+crash-report-summary = OliViewer çökmesi
 crash-report-expected = Görüntüleyici çalışmaya devam etmeliydi.
-crash-report-actual = Aurora Viewer beklenmedik şekilde durdu.
+crash-report-actual = OliViewer beklenmedik şekilde durdu.
 crash-report-reason = Çökme türü
 crash-report-exit-code = İşlem çıkış kodu
 bug-log-native = yerel istisna
@@ -10010,8 +10010,8 @@ update-error-filesystem = Kurulum hazırlanamadı. Boş alanı ve klasöre yazma
 update-error-package = Paket eksik veya geçersiz. Mevcut kurulum korundu.
 update-error-unsupported = Bu sürüm, bu klasörden otomatik kurulamaz. Sürüm sayfasından indirin ve ayrı bir klasöre çıkarın.
 update-error-protected = Aurora bu klasörde kendini güncelleyemiyor. Klasör bir yalıtılmış pakete (Flatpak, Snap veya AppImage) ait olabilir ya da hesabınızın yazma izni olmayabilir. Aurora’yı kurduğunuz yöntemle güncelleyin veya yeni sürümü kendi sayfasından indirin.
-update-error-drive-root = Aurora, E:\Aurora Viewer gibi bir sürücünün kökündeki klasörde güncellenemez. Klasörü E:\Games\Aurora Viewer gibi bir alt konuma taşıyın, Aurora’yı oradan açıp yeniden deneyin.
-update-error-unsupported-macos = macOS’te yeni sürüm elle kurulur. Sürüm sayfasından indirin, ardından Uygulamalar klasöründeki Aurora Viewer’ı yenisiyle değiştirin.
+update-error-drive-root = Aurora, E:\OliViewer gibi bir sürücünün kökündeki klasörde güncellenemez. Klasörü E:\Games\OliViewer gibi bir alt konuma taşıyın, Aurora’yı oradan açıp yeniden deneyin.
+update-error-unsupported-macos = macOS’te yeni sürüm elle kurulur. Sürüm sayfasından indirin, ardından Uygulamalar klasöründeki OliViewer’ı yenisiyle değiştirin.
 update-error-startup = Güncelleme yardımcısı başlatılamadı. Mevcut kurulum korundu.
 update-rollback = Yeni sürüm düzgün başlamadı. Önceki kurulum geri yüklendi.
 update-rollback-install = Yeni sürüm kurulamadı. Önceki kurulum korundu.
@@ -12605,7 +12605,7 @@ buy-land-can-not-change = Birleştirilemez veya bölünemez.
 buy-land-covenant-section = Gayrimenkul sözleşmesi
 buy-land-must-agree = Gayrimenkul Sözleşmesini kabul etmeniz gerekir:
 buy-land-agree-covenant = Yukarıda tanımlanan sözleşmeyi kabul ediyorum.
-buy-land-cannot-close = Aurora Viewer bu işlemin fiyatını tahmin edene kadar Arazi Satın Al penceresini kapatamazsınız.
+buy-land-cannot-close = OliViewer bu işlemin fiyatını tahmin edene kadar Arazi Satın Al penceresini kapatamazsınız.
 buy-land-nothing-selected = Arazi satın alınamıyor: parsel seçilmedi.
 buy-land-across-regions = Seçim birden çok bölgeye yayıldığı için arazi satın alınamıyor. Lütfen daha küçük bir alan seçip yeniden deneyin.
 buy-land-only-officer = Grup için arazi satın alınamıyor: etkin grubunuz için arazi satın alma izniniz yok.
@@ -14830,9 +14830,9 @@ about-copied = Kopyalandı
 about-copy-hint = Yukarıdakilerin tümünü bir destek talebi veya hata raporu için İngilizce olarak kopyalar.
 about-click-to-copy = Bu değeri kopyalamak için tıklayın
 about-build-pill = { $profile } derlemesi
-about-third-party-viewer = Aurora Viewer, Second Life'ın yaratıcıları Linden Lab tarafından sağlanmayan veya desteklenmeyen üçüncü taraf bir görüntüleyicidir.
+about-third-party-viewer = OliViewer, Second Life'ın yaratıcıları Linden Lab tarafından sağlanmayan veya desteklenmeyen üçüncü taraf bir görüntüleyicidir.
 about-release-notes = Sürüm notları
-about-licence-title = Aurora Viewer'ın lisansı
+about-licence-title = OliViewer'ın lisansı
 about-licence-gpl = GNU GPL v3
 about-source-code = Kaynak kodu
 about-section-viewer = Görüntüleyici

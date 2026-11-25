@@ -8923,7 +8923,7 @@ impl App {
             self.camera.pan_edit(pan, &mut self.world.agent, &self.settings.camera);
         }
         if let Some(tap) = action.tap {
-            self.cursor_pos = (tap[0], tap[1]);
+            self.cursor_pos = (tap[0] * scale, tap[1] * scale);
             self.mouse_input(MouseButton::Left, true, false);
             self.mouse_input(MouseButton::Left, false, false);
         }
@@ -19967,6 +19967,9 @@ impl App {
                         recent_chat,
                     };
                     let hud_act = self.mobile_hud.show(ui.ctx(), &p, &hud_ctx);
+                    if hud_act.open_chat {
+                        self.chat_ui.conv_focus_request = true;
+                    }
                     if hud_act.toggle_mic {
                         self.mic_on = !self.mic_on;
                     }
@@ -19974,7 +19977,9 @@ impl App {
                         self.vr_toggle = true;
                     }
                     hud_act.apply(ui.ctx(), &mut self.panels);
-                    if let Some(out) = ui::ime_composer::show_chat_composer(ui.ctx(), &p, &mut self.chat_ui.input) {
+                    if !ui::widgets::mobile_container::has_active_sheet(ui.ctx())
+                        && let Some(out) = ui::ime_composer::show_chat_composer(ui.ctx(), &p, &mut self.chat_ui.input)
+                    {
                         a.chat = Some(out);
                     }
                 }
@@ -26477,7 +26482,8 @@ impl ApplicationHandler for App {
             && self.in_world()
         {
             crate::touch::trigger_haptic(crate::touch::HapticKind::LongPress);
-            self.cursor_pos = (pos[0], pos[1]);
+            let scale = self.gfx.as_ref().map_or(1.0, |g| g.window.scale_factor() as f32).max(0.5);
+            self.cursor_pos = (pos[0] * scale, pos[1] * scale);
             self.mouse_input(MouseButton::Right, true, false);
             self.mouse_input(MouseButton::Right, false, false);
         }

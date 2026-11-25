@@ -104,7 +104,7 @@ pub fn trigger_haptic(kind: HapticKind) {
 /// Minimum recommended touch target size in logical density-independent pixels.
 #[allow(dead_code)]
 pub const MIN_TOUCH_TARGET_DP: f32 = 48.0;
-const TAP_MAX_MOVE_DP: f32 = 12.0;
+const TAP_MAX_MOVE_DP: f32 = 18.0;
 const TAP_MAX_AGE: Duration = Duration::from_millis(350);
 const LONG_PRESS_AGE: Duration = Duration::from_millis(500);
 

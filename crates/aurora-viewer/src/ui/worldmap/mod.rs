@@ -174,7 +174,7 @@ impl WorldMapUi {
         };
         let by_script = quiet && !users;
         if self.was_open && (shown || expanding) {
-            self.focus_search |= !by_script;
+            self.focus_search |= !by_script && !crate::touch::FormFactor::is_touch_device();
         }
         by_script
     }
@@ -245,7 +245,7 @@ impl WorldMapUi {
             // opens focused: always for the user (toolbar, menus, Ctrl+M, "show
             // on map"), with BEACON_FOCUS_MAP for a script
             self.was_open = true;
-            self.focus_search = !by_script;
+            self.focus_search = !by_script && !crate::touch::FormFactor::is_touch_device();
             self.pan = Vec2::ZERO;
             self.target_pan = Vec2::ZERO;
             self.zoom = (opts.world_scale.max(1.0) / 256.0).log2().clamp(ZOOM_MIN, ZOOM_MAX);

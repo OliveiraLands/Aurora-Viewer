@@ -39,11 +39,14 @@ public class AuroraActivity extends NativeActivity {
     private static native void nativeOnWindowInsets(int top, int bottom, int left, int right, int imeBottom);
 
     private FrameLayout loadingOverlay;
+    private ProgressBar loadingProgressBar;
+    private TextView loadingStatusView;
     private boolean backConsumedDown;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
             WindowManager.LayoutParams lp = getWindow().getAttributes();
             lp.layoutInDisplayCutoutMode =
@@ -177,7 +180,9 @@ public class AuroraActivity extends NativeActivity {
         }
         FrameLayout root = new FrameLayout(this);
         root.setBackgroundColor(Color.parseColor("#0E131F"));
-        root.setClickable(false);
+        root.setElevation(100f);
+        root.setZ(100f);
+        root.setClickable(true);
         root.setFocusable(false);
 
         LinearLayout column = new LinearLayout(this);
@@ -201,11 +206,16 @@ public class AuroraActivity extends NativeActivity {
         titleParams.bottomMargin = dp(20);
         column.addView(title, titleParams);
 
-        ProgressBar spinner = new ProgressBar(this);
-        spinner.setIndeterminate(true);
-        LinearLayout.LayoutParams spinnerParams = new LinearLayout.LayoutParams(dp(36), dp(36));
-        spinnerParams.bottomMargin = dp(12);
-        column.addView(spinner, spinnerParams);
+        ProgressBar progressBar = new ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal);
+        progressBar.setIndeterminate(false);
+        progressBar.setMax(100);
+        progressBar.setProgress(3);
+        progressBar.setProgressTintList(android.content.res.ColorStateList.valueOf(Color.parseColor("#7C6BF5")));
+        progressBar.setProgressBackgroundTintList(android.content.res.ColorStateList.valueOf(Color.parseColor("#242C40")));
+        LinearLayout.LayoutParams progressParams = new LinearLayout.LayoutParams(dp(240), dp(8));
+        progressParams.bottomMargin = dp(12);
+        column.addView(progressBar, progressParams);
+        loadingProgressBar = progressBar;
 
         TextView status = new TextView(this);
         status.setText(R.string.loading_status);
@@ -213,6 +223,7 @@ public class AuroraActivity extends NativeActivity {
         status.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
         column.addView(status, new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        loadingStatusView = status;
 
         FrameLayout.LayoutParams centerParams = new FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.CENTER);
@@ -220,7 +231,19 @@ public class AuroraActivity extends NativeActivity {
 
         addContentView(root, new FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        root.bringToFront();
         loadingOverlay = root;
+    }
+
+    public void updateLoadingProgress(final int percent, final String status) {
+        runOnUiThread(() -> {
+            if (loadingProgressBar != null) {
+                loadingProgressBar.setProgress(Math.max(0, Math.min(100, percent)));
+            }
+            if (loadingStatusView != null && status != null && !status.isEmpty()) {
+                loadingStatusView.setText(status);
+            }
+        });
     }
 
     public void hideLoadingOverlay() {
@@ -230,6 +253,8 @@ public class AuroraActivity extends NativeActivity {
                 return;
             }
             loadingOverlay = null;
+            loadingProgressBar = null;
+            loadingStatusView = null;
             overlay.animate()
                     .alpha(0f)
                     .setDuration(250)

@@ -1785,15 +1785,15 @@ script-experiences-unavailable = Kan ikke laste inn opplevelsene dine. Den nåv�
 script-experience-demo = Demo-opplevelse
 script-disconnected = Frakoblet. Den ulagrede kildekoden er beholdt; du kan kopiere den, og neste pålogging tilbyr den igjen.
 script-recovery-title = Gjenoppretting av skript
-script-recovery-intro = Aurora Viewer har funnet skript med ulagrede endringer, trolig etter et krasj eller en tapt tilkobling. Skriptene du gjenoppretter, legges i mappen Hittegods i beholdningen din.
+script-recovery-intro = OliViewer har funnet skript med ulagrede endringer, trolig etter et krasj eller en tapt tilkobling. Skriptene du gjenoppretter, legges i mappen Hittegods i beholdningen din.
 script-recovery-recover = Gjenopprett
 script-recovery-unknown = (Ukjent skript)
 script-recovery-no-folder = Mappen Hittegods er ikke lastet inn ennå. Prøv igjen om et øyeblikk.
 script-recovery-failed = { $name } kunne ikke gjenopprettes: { $reason } Kopien beholdes til neste pålogging.
 script-recovery-demo-name = Demo-dørskript
-exit-title = Vil du lukke Aurora Viewer?
+exit-title = Vil du lukke OliViewer?
 exit-world-body = Vil du avslutte vieweren eller gå tilbake til påloggingsskjermen?
-exit-login-body = Vil du avslutte Aurora Viewer?
+exit-login-body = Vil du avslutte OliViewer?
 exit-waiting = Logger ut…
 exit-logout = Logg ut
 exit-logout-hint = Avslutt økten og gå tilbake til påloggingsskjermen.
@@ -2542,13 +2542,13 @@ ui-texture-picker-no-textures-in-the-loaded-inventory = Ingen teksturer i den in
 world-tphistory-today = I dag
 app-aurora-elsewhere = Aurora et annet sted
 common-aurora-demo = Aurora Demo
-demo-aurora-viewer-rust-vulkan = { "Aurora Viewer\u000ARust · Vulkan" }
-demo-aurora-viewer-rust-metal = { "Aurora Viewer\u000ARust · Metal" }
-ui-login-aurora-viewer-v = Aurora Viewer v{ $value0 }
-cli-aurora-viewer = { "Aurora Viewer " }{ $version }
-cli-aurora-viewer-2 = { "Aurora Viewer " }{ $version }{ " - " }{ $t }
-common-aurora-viewer = { "Aurora Viewer " }{ $value0 }
-app-aurora-viewer-unable-to-initialize-vulkan = { "Aurora Viewer: kan ikke initialisere Vulkan: " }{ $e }
+demo-aurora-viewer-rust-vulkan = { "OliViewer\u000ARust · Vulkan" }
+demo-aurora-viewer-rust-metal = { "OliViewer\u000ARust · Metal" }
+ui-login-aurora-viewer-v = OliViewer v{ $value0 }
+cli-aurora-viewer = { "OliViewer " }{ $version }
+cli-aurora-viewer-2 = { "OliViewer " }{ $version }{ " - " }{ $t }
+common-aurora-viewer = { "OliViewer " }{ $value0 }
+app-aurora-viewer-unable-to-initialize-vulkan = { "OliViewer: kan ikke initialisere Vulkan: " }{ $e }
 splash-starting = Starter…
 splash-settings = Leser innstillingene…
 splash-gpu = Klargjør grafikkortet…
@@ -2559,18 +2559,18 @@ splash-update-closing = Lukker den forrige versjonen…
 splash-update-installing = Installerer oppdateringen…
 splash-update-cache = Tømmer hurtigbufferen…
 splash-update-launching = Starter den nye versjonen…
-app-aurora-viewer-unable-to-initialize-metal = { "Aurora Viewer: kan ikke initialisere Metal: " }{ $e }
+app-aurora-viewer-unable-to-initialize-metal = { "OliViewer: kan ikke initialisere Metal: " }{ $e }
 app-graphics-start-memory-full =
-    Grafikkortet har ikke mer videominne igjen til Aurora Viewer: et annet program bruker det.
+    Grafikkortet har ikke mer videominne igjen til OliViewer: et annet program bruker det.
 
     Dette kan du prøve:
-    • lukk programmene som bruker grafikkortet (en annen viewer, et spill, et video- eller 3D-redigeringsprogram), og start Aurora Viewer på nytt;
-    • på en bærbar PC med to grafikkort: sjekk hvilket Aurora Viewer kjører på.
+    • lukk programmene som bruker grafikkortet (en annen viewer, et spill, et video- eller 3D-redigeringsprogram), og start OliViewer på nytt;
+    • på en bærbar PC med to grafikkort: sjekk hvilket OliViewer kjører på.
 
     Loggen for denne oppstarten: { $log }
-app-graphics-start-failed-title = Aurora Viewer kan ikke starte
+app-graphics-start-failed-title = OliViewer kan ikke starte
 app-graphics-start-failed =
-    Aurora Viewer kunne ikke åpne et grafikkort for å tegne vinduet sitt.
+    OliViewer kunne ikke åpne et grafikkort for å tegne vinduet sitt.
 
     Dette kan du prøve:
     • oppdater grafikkortdriveren;
@@ -2581,7 +2581,7 @@ app-graphics-start-failed =
     Detaljer: { $e }
 
     Loggen for denne oppstarten: { $log }
-app-gpu-stall-title = Aurora Viewer: grafikkortet svarer ikke
+app-gpu-stall-title = OliViewer: grafikkortet svarer ikke
 app-gpu-stall =
     Grafikkortet har ikke gjort ferdig et bilde på { $seconds } sekunder. Aurora fungerer fortsatt (verden, lyden og chatten fortsetter), men ingenting kan tegnes før kortet svarer igjen.
 
@@ -2598,7 +2598,7 @@ app-gpu-recovered-safe = Driveren til grafikkortet ble tilbakestilt igjen i løp
 app-vr-runtime-closed-title = VR-programvaren ble lukket
 app-vr-runtime-closed = VR-programvaren din (for eksempel SteamVR) ble lukket. Aurora åpnet vinduet igjen uten den: du er fortsatt pålogget, og verden lastes inn på nytt om et øyeblikk. VR kommer tilbake neste gang Aurora starter.
 app-vr-runtime-closed-at-start = VR-programvaren din (for eksempel SteamVR) ble lukket. Aurora åpnet vinduet igjen uten den: du er fortsatt pålogget, og verden lastes inn på nytt om et øyeblikk. VR kommer tilbake neste gang Aurora starter. Aurora laster inn VR-programvaren din ved hver oppstart: for å stoppe det slår du av Innstillinger › Kamera › VR › Konfigurer VR ved oppstart.
-app-gpu-lost-title = Aurora Viewer: grafikkortet gikk tapt
+app-gpu-lost-title = OliViewer: grafikkortet gikk tapt
 app-gpu-lost =
     Grafikkortet sluttet å fungere for Aurora: driveren ble tilbakestilt (den brukte for lang tid på å tegne et bilde, eller videominnet var fullt), eller kortet ble fjernet eller tatt av et annet program. Ingenting kan tegnes lenger: Aurora lukkes når du trykker OK (du logges ut på riktig måte).
 
@@ -2821,7 +2821,7 @@ ui-environment-based-on-day-cycle = Basert på døgnsyklus
 build-ui-object-bias = Skjevhet
 common-library = Bibliotek
 app-welcome = Velkommen!
-demo-welcome-to-the-aurora-viewer-demo = Velkommen til demoen av Aurora Viewer! 🐺✨❤️
+demo-welcome-to-the-aurora-viewer-demo = Velkommen til demoen av OliViewer! 🐺✨❤️
 demo-region-day-cycle = Nordisk daggry
 demo-region-telehub = Ankomstpunkt
 demo-region-telehub-object = Ankomststein
@@ -3366,7 +3366,7 @@ ui-options-flash-conversations-nearby-hint = En beboers linje i chat i nærheten
 ui-options-announce-incoming-im = Meld innkommende IM-er så snart avsenderen begynner å skrive
 ui-options-announce-incoming-im-hint = Når en beboer begynner å skrive en IM til deg, åpnes samtalen med vedkommende med en gang med «Innkommende melding fra» og navnet, før meldingen kommer.
 ui-options-unread-ims-in-window-title = Vis antall uleste IM-er i vindustittelen
-ui-options-unread-ims-in-window-title-hint = Mens private meldinger, gruppechatter eller konferanser venter uleste, kommer antallet først i vindustittelen, «(3) Aurora Viewer», som også oppgavelinjen viser.
+ui-options-unread-ims-in-window-title-hint = Mens private meldinger, gruppechatter eller konferanser venter uleste, kommer antallet først i vindustittelen, «(3) OliViewer», som også oppgavelinjen viser.
 ui-options-im-tab-order = Sorter samtalefaner etter type
 ui-options-im-tab-order-hint = En ny samtalefane plasseres etter den siste fanen av samme type, i rekkefølgen som er valgt nedenfor, i stedet for til slutt. Faner du har flyttet manuelt, beholder plassen sin.
 ui-options-im-tab-order-kinds = Rekkefølge
@@ -4092,7 +4092,7 @@ ui-place-details-location-details-2 = { "Stedsdetaljer: " }{ $value0 }
 common-expand = Utvid
 ui-inventory-controls-expand-displayed-folders = Utvid viste mapper
 ui-places-expand-all-folders = Utvid alle mapper
-demo-aurora-viewer-developer = Aurora Viewer-utvikler.
+demo-aurora-viewer-developer = OliViewer-utvikler.
 common-water = Vann
 world-inventory-preview-water-haze-density-refraction-wave-scale-normal-texture = { "Vann\u000A\u000ADisetetthet: " }{ $value0 }{ "\u000ABrytning: " }{ $value1 }{ "\u000ABølgeskala: " }{ $value2 }{ "\u000ANormaltekstur: " }{ $value3 }
 demo-env-turquoise-water = Turkis vann
@@ -5124,9 +5124,9 @@ build-ui-general-next-owner = Neste eier:
 build-ui-floaters-next-owner-can = Neste eier kan:
 world-mod-could-not-save-the-profile = Kunne ikke lagre profilen ({ $reason }).
 ui-land-general-owner-contributes-when-deeding-land = Eieren bidrar ved overdragelse av land
-world-status-the-resident-you-messaged-has-enabled-aurora-viewer-s = Beboeren du sendte melding til, har slått på modusen i Aurora Viewer som avviser alle venneforespørsler. Vedkommende vil ikke bli forstyrret av venneforespørsler, men du kan fortsatt sende en IM.
-world-status-the-resident-you-messaged-has-enabled-aurora-viewer-s-2 = Beboeren du sendte melding til, har slått på modusen i Aurora Viewer som avviser alle teleporttilbud og -forespørsler. Vedkommende vil ikke bli forstyrret av teleportforespørsler, men du kan fortsatt sende en IM.
-world-status-the-resident-you-messaged-has-enabled-aurora-viewer-s-3 = Beboeren du sendte melding til, har slått på modusen for automatisk svar i Aurora Viewer og vil ikke bli forstyrret. Meldingen din vises likevel i IM-vinduet til vedkommende, slik at den kan leses senere.
+world-status-the-resident-you-messaged-has-enabled-aurora-viewer-s = Beboeren du sendte melding til, har slått på modusen i OliViewer som avviser alle venneforespørsler. Vedkommende vil ikke bli forstyrret av venneforespørsler, men du kan fortsatt sende en IM.
+world-status-the-resident-you-messaged-has-enabled-aurora-viewer-s-2 = Beboeren du sendte melding til, har slått på modusen i OliViewer som avviser alle teleporttilbud og -forespørsler. Vedkommende vil ikke bli forstyrret av teleportforespørsler, men du kan fortsatt sende en IM.
+world-status-the-resident-you-messaged-has-enabled-aurora-viewer-s-3 = Beboeren du sendte melding til, har slått på modusen for automatisk svar i OliViewer og vil ikke bli forstyrret. Meldingen din vises likevel i IM-vinduet til vedkommende, slik at den kan leses senere.
 world-status-the-resident-you-messaged-is-away-your-message-will = Beboeren du sendte melding til, er borte. Meldingen din vises i IM-vinduet til vedkommende, slik at den kan leses senere.
 world-status-the-resident-you-messaged-has-blocked-all-messages-from = Beboeren du sendte melding til, har blokkert alle meldinger fra deg.
 inventory-operations-the-script-contains-compilation-errors-check-the-code-and = Skriptet inneholder kompileringsfeil. Kontroller koden og prøv igjen.
@@ -5845,8 +5845,8 @@ demo-fav-cats-island = Katteøya
 demo-fav-prism-gallery = Prismegalleriet
 demo-fav-shadow-forest = Skyggeskogen
 demo-fav-orbital-station = Romstasjonen
-demo-land-aurora-viewer-s-offline-demo-parcel-visit-the-fountain = { "Frakoblet demoparsell for Aurora Viewer.\u000ABesøk fontenen, stranden og bakken." }
-demo-aurora-viewer-s-offline-demo-parcel = Frakoblet demoparsell for Aurora Viewer.
+demo-land-aurora-viewer-s-offline-demo-parcel-visit-the-fountain = { "Frakoblet demoparsell for OliViewer.\u000ABesøk fontenen, stranden og bakken." }
+demo-aurora-viewer-s-offline-demo-parcel = Frakoblet demoparsell for OliViewer.
 ui-parcel-icons-isolated-parcel-you-cannot-see-residents-on-other-parcels = Isolert parsell: du kan ikke se beboere på andre parseller, de kan ikke se deg, og chat i nærheten krysser ikke grensen.
 ui-parcel-icons-frozen-you-cannot-move-or-interact = Frosset av en parselleier eller en eiendomsforvalter: du kan ikke bevege deg eller samhandle med verden før du blir frigitt.
 ui-minimap-banned-parcels = Parseller du er utestengt fra
@@ -6263,7 +6263,7 @@ world-mod-someone = Noen
 demo-has-anyone-seen-the-new-eep-sky = Har noen sett den nye EEP-himmelen?
 demo-conference-invitation = Noen som vil være med på en tur rundt torget?
 common-quit = Avslutt
-ui-bars-quit-aurora-viewer = Avslutt Aurora Viewer
+ui-bars-quit-aurora-viewer = Avslutt OliViewer
 ui-options-camera-exit-with-mouse-wheel = Avslutt med musehjulet
 ui-contacts-leave-group = Forlat gruppen
 ui-contacts-leave-group-2 = Forlate gruppen «{ $n }»?
@@ -6714,7 +6714,7 @@ ui-options-no-neighbour-regions = Bare regionen jeg er i
 ui-options-no-neighbour-regions-help = Ikke koble til naboregionene: lettere for nettverket og datamaskinen, men de vises ikke, kryssinger til fots eller i kjøretøy er mindre pålitelige, og en teleport kan bli nødvendig. Trer fullt i kraft etter neste teleport.
 ui-perf-network-to-world = Nettverk til verden
 common-resident = Beboer
-demo-resident-in-aurora-viewer-s-offline-demo = Beboer i frakoblet demo av Aurora Viewer 🐺✨
+demo-resident-in-aurora-viewer-s-offline-demo = Beboer i frakoblet demo av OliViewer 🐺✨
 ui-land-options-residential = Bolig
 ui-options-residents = Beboere
 ui-options-cascaded-shadow-resolution-and-distance = Oppløsning og avstand for kaskadeskygger
@@ -7067,7 +7067,7 @@ ui-bars-script-library = Skriptbibliotek
 ui-bars-message-of-the-day = Dagens melding
 ui-bars-wiki = Aurora Viewer-wiki
 ui-bars-knowledge-base = Kunnskapsbase
-ui-bars-about = Om Aurora Viewer
+ui-bars-about = Om OliViewer
 cmdline-dice-successes = { "Suksesser: " }{ $successes }
 build-manip-south = Sør
 common-next = Neste
@@ -9354,7 +9354,7 @@ hud-move-locked = Lås rask flytting
 hud-local-scale-reset = Tilbakestill til 100 %
 hud-local-scale-forget = Glem lagret størrelse
 hud-local-scale-help = Hold inne HUD-tasten: dra med venstre knapp for å flytte, hjulet for å endre størrelse, Shift for finere trinn. Størrelsen lagres på denne PC-en etter navn og skaper, for denne kontoen. Mens du redigerer en HUD, zoomer hjulet uten denne tasten visningen av alle HUD-er.
-cli-help = { "Aurora Viewer\u000A\u000ABruk: aurora-viewer [--title <text>] [--fps-limit <fps>] [--vr] [--language <code>] [--grid <name>]\u000A                     [--login <first> <last> <password>] [--version] [--uninstall] [<slurl>]\u000A\u000A  --title <text>   Gir dette vinduet et navn (\"Aurora Viewer <version> - <text>\"), og likeså\u000A                   loggfilen (aurora-<text>.log, aurora-demo-<text>.log i demomodus)\u000A  --fps-limit <fps>  Begrenser denne prosessen til 1..500 FPS uten å lagre innstillingene\u000A  --language <code>  Overstyrer grensesnittspråket for denne prosessen (" }{ $languages }{ ")\u000A  --grid <name>    Starter på agni, aditi, et lagret gridnavn eller en påloggings-URI (også --loginuri <uri>)\u000A  --login <first> <last> <password>  Logger inn med denne kontoen med en gang\u000A  <slurl>, --url <slurl>  Starter på dette stedet; ingenting etter det leses. En viewer\u000A                   som allerede kjører, mottar det i stedet\u000A  --vr             Går over til VR så snart verden vises (hodesett tilkoblet)\u000A  -V, --version   Viser den kompilerte viewer-versjonen uten å starte den\u000A  --uninstall      Fjerner det Aurora har registrert utenfor mappene sine (lenkebehandler,\u000A                   påloggingslager, Blender-tillegg), skriver det ut sammen med mappene som er igjen, og avslutter\u000A  -h, --help       Viser denne hjelpen\u000A\u000ATestbrytere er miljøvariabler (AURORA_DEMO=1, AURORA_CAPTURE=...):\u000Ase README.md." }
+cli-help = { "OliViewer\u000A\u000ABruk: aurora-viewer [--title <text>] [--fps-limit <fps>] [--vr] [--language <code>] [--grid <name>]\u000A                     [--login <first> <last> <password>] [--version] [--uninstall] [<slurl>]\u000A\u000A  --title <text>   Gir dette vinduet et navn (\"OliViewer <version> - <text>\"), og likeså\u000A                   loggfilen (aurora-<text>.log, aurora-demo-<text>.log i demomodus)\u000A  --fps-limit <fps>  Begrenser denne prosessen til 1..500 FPS uten å lagre innstillingene\u000A  --language <code>  Overstyrer grensesnittspråket for denne prosessen (" }{ $languages }{ ")\u000A  --grid <name>    Starter på agni, aditi, et lagret gridnavn eller en påloggings-URI (også --loginuri <uri>)\u000A  --login <first> <last> <password>  Logger inn med denne kontoen med en gang\u000A  <slurl>, --url <slurl>  Starter på dette stedet; ingenting etter det leses. En viewer\u000A                   som allerede kjører, mottar det i stedet\u000A  --vr             Går over til VR så snart verden vises (hodesett tilkoblet)\u000A  -V, --version   Viser den kompilerte viewer-versjonen uten å starte den\u000A  --uninstall      Fjerner det Aurora har registrert utenfor mappene sine (lenkebehandler,\u000A                   påloggingslager, Blender-tillegg), skriver det ut sammen med mappene som er igjen, og avslutter\u000A  -h, --help       Viser denne hjelpen\u000A\u000ATestbrytere er miljøvariabler (AURORA_DEMO=1, AURORA_CAPTURE=...):\u000Ase README.md." }
 demo-media-page = { "data:text/html;charset=utf-8,<html><body style='margin:0;height:100vh;background:linear-gradient(135deg,%232a1f4a,%230f6d6d);color:white;font:56px sans-serif;text-align:center'><h1 style='margin:40px 0 10px'>Aurora-medier</h1><p id='t' style='font-size:90px;margin:10px'>--</p><button onclick=\"document.body.style.background='%237a3b9c';this.textContent='Klikket!'\" style='font-size:48px;padding:10px 40px'>Klikk</button><br><input placeholder='Skriv her' style='font-size:44px;margin-top:30px;width:70%'><script>setInterval(function(){document.getElementById('t').textContent=new Date().toLocaleTimeString()},250)</script></body></html>" }
 demo-nearby-media-page-cinema = { "data:text/html;charset=utf-8,<html><head><title>Plaza-kino</title></head><body style='margin:0;height:100vh;background:%23402060;color:white;font:64px sans-serif;text-align:center'><h1 style='margin-top:180px'>Kino</h1></body></html>" }
 demo-nearby-media-page-next-door = { "data:text/html;charset=utf-8,<html><head><title>Naboparsellen</title></head><body style='margin:0;height:100vh;background:%23205040;color:white;font:64px sans-serif;text-align:center'><h1 style='margin-top:180px'>Naboen</h1></body></html>" }
@@ -9394,7 +9394,7 @@ status-fps-fps = { $fps }{ " fps" }
 status-unknown = (ukjent)
 status-public = (offentlig)
 status-readme-txt = README.txt
-status-aurora-viewer-skin-theme-json-colors = { "Aurora Viewer-skall\u000A\u000Atheme.json  : farger (#RRGGBB), hjørner, skriftstørrelser\u000Alayout.json : verktøylinjeknapper (ikon + kommando), chatalternativer\u000A(kopier *.example.json-filene for å starte med standardverdiene)\u000Aicons/      : PNG-filer som erstatter de innebygde ikonene (samme filnavn)\u000A\u000AEndringer lastes inn på nytt automatisk mens du er i verden.\u000AKommandoer: help, conversations, speak, fly, mouselook, people, friends, inventory,\u000Aappearance, search, worldmap, minimap, performance, sit, home, preferences.\u000A" }
+status-aurora-viewer-skin-theme-json-colors = { "OliViewer-skall\u000A\u000Atheme.json  : farger (#RRGGBB), hjørner, skriftstørrelser\u000Alayout.json : verktøylinjeknapper (ikon + kommando), chatalternativer\u000A(kopier *.example.json-filene for å starte med standardverdiene)\u000Aicons/      : PNG-filer som erstatter de innebygde ikonene (samme filnavn)\u000A\u000AEndringer lastes inn på nytt automatisk mens du er i verden.\u000AKommandoer: help, conversations, speak, fly, mouselook, people, friends, inventory,\u000Aappearance, search, worldmap, minimap, performance, sit, home, preferences.\u000A" }
 status-area-m-l-price-l-m = { $value0 }{ "\u000A" }{ $area }{ " m² L$ " }{ $price }{ " (" }{ $value1 }{ " L$/m²)" }
 status-days = { " dager" }
 status-hours = { " timer" }
@@ -9894,8 +9894,8 @@ monitor-media-face = Medieflate · { $what }
 monitor-media-search = Søkeside
 monitor-media-marketplace = Marketplace
 monitor-media-profile = Nettside for profil
-crash-title = Aurora Viewer – krasjrapport
-crash-heading = Aurora Viewer stoppet uventet
+crash-title = OliViewer – krasjrapport
+crash-heading = OliViewer stoppet uventet
 crash-explanation = Økten din er avsluttet. Detaljene nedenfor kan hjelpe med å finne problemet.
 crash-local-only = Disse detaljene er lagret på denne datamaskinen. Ingenting er sendt.
 crash-details = Tekniske detaljer
@@ -9936,9 +9936,9 @@ crash-publish = Publiser på GitHub
 crash-open-browser = Åpne i nettleseren
 crash-body-copied = Rapporten ligger på utklippstavlen: lim den inn i saken som nettopp ble åpnet.
 crash-back = Tilbake
-crash-report-summary = Krasj i Aurora Viewer
+crash-report-summary = Krasj i OliViewer
 crash-report-expected = Vieweren skal fortsette å kjøre.
-crash-report-actual = Aurora Viewer stoppet uventet.
+crash-report-actual = OliViewer stoppet uventet.
 crash-report-reason = Krasjtype
 crash-report-exit-code = Prosessens avslutningskode
 bug-log-native = systemunntak (native kode)
@@ -9996,8 +9996,8 @@ update-error-filesystem = Kan ikke klargjøre installasjonen. Sjekk ledig plass 
 update-error-package = Pakken er ufullstendig eller ugyldig. Den gjeldende installasjonen beholdes.
 update-error-unsupported = Denne utgivelsen kan ikke installeres automatisk fra denne mappen. Last den ned fra siden dens, og pakk den ut i en egen mappe.
 update-error-protected = Aurora kan ikke erstatte seg selv her: denne mappen tilhører en isolert pakke (Flatpak, Snap, AppImage), eller kontoen din kan ikke skrive til den. Oppdater den på samme måte som den ble installert, eller last ned den nye versjonen fra siden dens.
-update-error-drive-root = Aurora kan ikke oppdatere seg selv i en mappe i roten av en stasjon, som E:\Aurora Viewer. Flytt mappen ett nivå ned, for eksempel til E:\Games\Aurora Viewer, start Aurora derfra, og oppdater deretter.
-update-error-unsupported-macos = På macOS installeres en ny versjon manuelt. Last den ned fra siden dens, og erstatt deretter Aurora Viewer i Programmer-mappen med den nye.
+update-error-drive-root = Aurora kan ikke oppdatere seg selv i en mappe i roten av en stasjon, som E:\OliViewer. Flytt mappen ett nivå ned, for eksempel til E:\Games\OliViewer, start Aurora derfra, og oppdater deretter.
+update-error-unsupported-macos = På macOS installeres en ny versjon manuelt. Last den ned fra siden dens, og erstatt deretter OliViewer i Programmer-mappen med den nye.
 update-error-startup = Oppdateringshjelperen kunne ikke starte. Den gjeldende installasjonen beholdes.
 update-rollback = Den nye versjonen startet ikke riktig. Den forrige installasjonen ble gjenopprettet.
 update-rollback-install = Den nye versjonen kunne ikke installeres. Den forrige installasjonen ble beholdt.
@@ -12589,7 +12589,7 @@ buy-land-can-not-change = Kan ikke slås sammen eller deles opp.
 buy-land-covenant-section = Eiendomsavtale
 buy-land-must-agree = Du må godta eiendomsavtalen:
 buy-land-agree-covenant = Jeg godtar avtalen ovenfor.
-buy-land-cannot-close = Du kan ikke lukke «Kjøp land»-vinduet før Aurora Viewer har beregnet prisen på denne transaksjonen.
+buy-land-cannot-close = Du kan ikke lukke «Kjøp land»-vinduet før OliViewer har beregnet prisen på denne transaksjonen.
 buy-land-nothing-selected = Kan ikke kjøpe land: ingen parsell er valgt.
 buy-land-across-regions = Kan ikke kjøpe land fordi utvalget strekker seg over flere regioner. Velg et mindre område og prøv igjen.
 buy-land-only-officer = Kan ikke kjøpe land for gruppen: du har ikke tillatelse til å kjøpe land for den aktive gruppen din.
@@ -14814,9 +14814,9 @@ about-copied = Kopiert
 about-copy-hint = Kopierer alt ovenfor på engelsk, til en støtteforespørsel eller en feilrapport.
 about-click-to-copy = Klikk for å kopiere denne verdien
 about-build-pill = { $profile }-bygg
-about-third-party-viewer = Aurora Viewer er en tredjepartsviewer som ikke leveres eller støttes av Linden Lab, som lager Second Life.
+about-third-party-viewer = OliViewer er en tredjepartsviewer som ikke leveres eller støttes av Linden Lab, som lager Second Life.
 about-release-notes = Versjonsmerknader
-about-licence-title = Lisensen til Aurora Viewer
+about-licence-title = Lisensen til OliViewer
 about-licence-gpl = GNU GPL v3
 about-source-code = Kildekode
 about-section-viewer = Viewer

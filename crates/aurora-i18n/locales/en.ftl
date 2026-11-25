@@ -1910,15 +1910,15 @@ script-experiences-unavailable = Unable to load your experiences. The current as
 script-experience-demo = Demo experience
 script-disconnected = Disconnected. The unsaved source has been kept; you can copy it, and the next login offers it back.
 script-recovery-title = Script recovery
-script-recovery-intro = Aurora Viewer has found scripts with unsaved changes, probably left by a crash or a lost connection. The scripts you recover are placed in the Lost And Found folder of your inventory.
+script-recovery-intro = OliViewer has found scripts with unsaved changes, probably left by a crash or a lost connection. The scripts you recover are placed in the Lost And Found folder of your inventory.
 script-recovery-recover = Recover
 script-recovery-unknown = (Unknown script)
 script-recovery-no-folder = The Lost And Found folder is not loaded yet. Try again in a moment.
 script-recovery-failed = { $name } could not be recovered: { $reason } Its copy is kept for the next login.
 script-recovery-demo-name = Demo door script
-exit-title = Close Aurora Viewer?
+exit-title = Close OliViewer?
 exit-world-body = Quit the viewer or return to the login screen?
-exit-login-body = Do you want to quit Aurora Viewer?
+exit-login-body = Do you want to quit OliViewer?
 exit-waiting = Logging out…
 exit-logout = Log out
 exit-logout-hint = End the session and return to the login screen.
@@ -2674,13 +2674,13 @@ ui-texture-picker-no-textures-in-the-loaded-inventory = No textures in the loade
 world-tphistory-today = Today
 app-aurora-elsewhere = Aurora Elsewhere
 common-aurora-demo = Aurora Demo
-demo-aurora-viewer-rust-vulkan = { "Aurora Viewer\u000ARust · Vulkan" }
-demo-aurora-viewer-rust-metal = { "Aurora Viewer\u000ARust · Metal" }
-ui-login-aurora-viewer-v = Aurora Viewer v{ $value0 }
-cli-aurora-viewer = { "Aurora Viewer " }{ $version }
-cli-aurora-viewer-2 = { "Aurora Viewer " }{ $version }{ " - " }{ $t }
-common-aurora-viewer = { "Aurora Viewer " }{ $value0 }
-app-aurora-viewer-unable-to-initialize-vulkan = { "Aurora Viewer: unable to initialize Vulkan: " }{ $e }
+demo-aurora-viewer-rust-vulkan = { "OliViewer\u000ARust · Vulkan" }
+demo-aurora-viewer-rust-metal = { "OliViewer\u000ARust · Metal" }
+ui-login-aurora-viewer-v = OliViewer v{ $value0 }
+cli-aurora-viewer = { "OliViewer " }{ $version }
+cli-aurora-viewer-2 = { "OliViewer " }{ $version }{ " - " }{ $t }
+common-aurora-viewer = { "OliViewer " }{ $value0 }
+app-aurora-viewer-unable-to-initialize-vulkan = { "OliViewer: unable to initialize Vulkan: " }{ $e }
 splash-starting = Starting…
 splash-settings = Reading the settings…
 splash-gpu = Preparing the graphics card…
@@ -2691,18 +2691,18 @@ splash-update-closing = Closing the previous version…
 splash-update-installing = Installing the update…
 splash-update-cache = Clearing the cache…
 splash-update-launching = Starting the new version…
-app-aurora-viewer-unable-to-initialize-metal = { "Aurora Viewer: unable to initialize Metal: " }{ $e }
+app-aurora-viewer-unable-to-initialize-metal = { "OliViewer: unable to initialize Metal: " }{ $e }
 app-graphics-start-memory-full =
-    The graphics card has no video memory left for Aurora Viewer: another program holds it.
+    The graphics card has no video memory left for OliViewer: another program holds it.
 
     What to try:
-    • close the programs that use the graphics card (another viewer, a game, a video or 3D editor), then start Aurora Viewer again;
-    • on a laptop with two graphics cards, check which one Aurora Viewer runs on.
+    • close the programs that use the graphics card (another viewer, a game, a video or 3D editor), then start OliViewer again;
+    • on a laptop with two graphics cards, check which one OliViewer runs on.
 
     The log of this start: { $log }
-app-graphics-start-failed-title = Aurora Viewer cannot start
+app-graphics-start-failed-title = OliViewer cannot start
 app-graphics-start-failed =
-    Aurora Viewer could not open a graphics card to draw its window.
+    OliViewer could not open a graphics card to draw its window.
 
     What to try:
     • update the graphics card driver;
@@ -2713,7 +2713,7 @@ app-graphics-start-failed =
     Details: { $e }
 
     The log of this start: { $log }
-app-gpu-stall-title = Aurora Viewer: the graphics card is not responding
+app-gpu-stall-title = OliViewer: the graphics card is not responding
 app-gpu-stall =
     The graphics card has not finished an image for { $seconds } seconds. Aurora still works (the world, the sound, the chat go on) but nothing can be drawn until the card answers again.
 
@@ -2730,7 +2730,7 @@ app-gpu-recovered-safe = The graphics card's driver was reset again within a few
 app-vr-runtime-closed-title = VR software closed
 app-vr-runtime-closed = Your VR software (SteamVR, for example) was closed. Aurora reopened its window without it: you stayed logged in, and the world reloads in a moment. VR comes back at the next start of Aurora.
 app-vr-runtime-closed-at-start = Your VR software (SteamVR, for example) was closed. Aurora reopened its window without it: you stayed logged in, and the world reloads in a moment. VR comes back at the next start of Aurora. Aurora loads your VR software at every start: to stop that, turn off Preferences › Camera › VR › Set up VR at startup.
-app-gpu-lost-title = Aurora Viewer: the graphics card was lost
+app-gpu-lost-title = OliViewer: the graphics card was lost
 app-gpu-lost =
     The graphics card stopped working for Aurora: its driver was reset (it took too long to draw an image, or its video memory was full), or the card was removed or taken by another program. Nothing can be drawn any more: Aurora closes when you press OK (you are logged out properly).
 
@@ -2956,7 +2956,7 @@ ui-environment-based-on-day-cycle = Based on day cycle
 build-ui-object-bias = Bias
 common-library = Library
 app-welcome = Welcome!
-demo-welcome-to-the-aurora-viewer-demo = Welcome to the Aurora Viewer demo! 🐺✨❤️
+demo-welcome-to-the-aurora-viewer-demo = Welcome to the OliViewer demo! 🐺✨❤️
 demo-region-day-cycle = Nordic Dawn
 demo-region-telehub = Arrival point
 demo-region-telehub-object = Arrival stone
@@ -3510,7 +3510,7 @@ ui-options-flash-conversations-nearby-hint = A resident's line in nearby chat fl
 ui-options-announce-incoming-im = Announce incoming IMs as soon as the sender starts typing
 ui-options-announce-incoming-im-hint = When a resident starts typing an IM to you, their conversation opens right away with "Incoming message from" and their name, before the message arrives.
 ui-options-unread-ims-in-window-title = Show the number of unread IMs in the window title
-ui-options-unread-ims-in-window-title-hint = While private messages, group chats or conferences wait unread, their count comes first in the window title, "(3) Aurora Viewer", which the taskbar shows too.
+ui-options-unread-ims-in-window-title-hint = While private messages, group chats or conferences wait unread, their count comes first in the window title, "(3) OliViewer", which the taskbar shows too.
 ui-options-im-tab-order = Sort conversation tabs by type
 ui-options-im-tab-order-hint = A new conversation tab goes after the last tab of its type, in the order chosen below, instead of at the end. Tabs you moved by hand keep their place.
 ui-options-im-tab-order-kinds = Order
@@ -4299,7 +4299,7 @@ ui-place-details-location-details-2 = { "Location details: " }{ $value0 }
 common-expand = Expand
 ui-inventory-controls-expand-displayed-folders = Expand displayed folders
 ui-places-expand-all-folders = Expand all folders
-demo-aurora-viewer-developer = Aurora Viewer developer.
+demo-aurora-viewer-developer = OliViewer developer.
 common-water = Water
 world-inventory-preview-water-haze-density-refraction-wave-scale-normal-texture = { "Water\u000A\u000AHaze density: " }{ $value0 }{ "\u000ARefraction: " }{ $value1 }{ "\u000AWave scale: " }{ $value2 }{ "\u000ANormal texture: " }{ $value3 }
 demo-env-turquoise-water = Turquoise water
@@ -5340,9 +5340,9 @@ build-ui-general-next-owner = Next owner:
 build-ui-floaters-next-owner-can = Next owner can:
 world-mod-could-not-save-the-profile = Could not save the profile ({ $reason }).
 ui-land-general-owner-contributes-when-deeding-land = Owner contributes when deeding land
-world-status-the-resident-you-messaged-has-enabled-aurora-viewer-s = The resident you messaged has enabled Aurora Viewer's mode that rejects all friendship requests. They do not want to be disturbed by friendship requests, but you can still send them an IM.
-world-status-the-resident-you-messaged-has-enabled-aurora-viewer-s-2 = The resident you messaged has enabled Aurora Viewer's mode that rejects all teleport offers and requests. They do not want to be disturbed by teleport requests, but you can still send them an IM.
-world-status-the-resident-you-messaged-has-enabled-aurora-viewer-s-3 = The resident you messaged has enabled Aurora Viewer's auto-response mode and does not want to be disturbed. Your message will still appear in their IM window for later reading.
+world-status-the-resident-you-messaged-has-enabled-aurora-viewer-s = The resident you messaged has enabled OliViewer's mode that rejects all friendship requests. They do not want to be disturbed by friendship requests, but you can still send them an IM.
+world-status-the-resident-you-messaged-has-enabled-aurora-viewer-s-2 = The resident you messaged has enabled OliViewer's mode that rejects all teleport offers and requests. They do not want to be disturbed by teleport requests, but you can still send them an IM.
+world-status-the-resident-you-messaged-has-enabled-aurora-viewer-s-3 = The resident you messaged has enabled OliViewer's auto-response mode and does not want to be disturbed. Your message will still appear in their IM window for later reading.
 world-status-the-resident-you-messaged-is-away-your-message-will = The resident you messaged is away. Your message will appear in their IM window for later reading.
 world-status-the-resident-you-messaged-has-blocked-all-messages-from = The resident you messaged has blocked all messages from you.
 inventory-operations-the-script-contains-compilation-errors-check-the-code-and = The script contains compilation errors. Check the code and try again.
@@ -6102,8 +6102,8 @@ demo-fav-cats-island = Cats Island
 demo-fav-prism-gallery = Prism Gallery
 demo-fav-shadow-forest = Shadow Forest
 demo-fav-orbital-station = Orbital Station
-demo-land-aurora-viewer-s-offline-demo-parcel-visit-the-fountain = { "Aurora Viewer's offline demo parcel.\u000AVisit the fountain, beach and hill." }
-demo-aurora-viewer-s-offline-demo-parcel = Aurora Viewer's offline demo parcel.
+demo-land-aurora-viewer-s-offline-demo-parcel-visit-the-fountain = { "OliViewer's offline demo parcel.\u000AVisit the fountain, beach and hill." }
+demo-aurora-viewer-s-offline-demo-parcel = OliViewer's offline demo parcel.
 ui-parcel-icons-isolated-parcel-you-cannot-see-residents-on-other-parcels = Isolated parcel: you cannot see residents on other parcels, they cannot see you, and nearby chat does not cross the boundary.
 ui-parcel-icons-frozen-you-cannot-move-or-interact = Frozen by a parcel owner or an estate manager: you cannot move or interact with the world until you are released.
 ui-minimap-banned-parcels = Banned parcels
@@ -6528,7 +6528,7 @@ world-mod-someone = Someone
 demo-has-anyone-seen-the-new-eep-sky = Has anyone seen the new EEP sky?
 demo-conference-invitation = Anyone up for a tour of the plaza?
 common-quit = Quit
-ui-bars-quit-aurora-viewer = Quit Aurora Viewer
+ui-bars-quit-aurora-viewer = Quit OliViewer
 ui-options-camera-exit-with-mouse-wheel = Exit with mouse wheel
 ui-contacts-leave-group = Leave group
 ui-contacts-leave-group-2 = Leave group '{ $n }'?
@@ -6991,7 +6991,7 @@ ui-options-no-neighbour-regions = Only the region I am in
 ui-options-no-neighbour-regions-help = Do not connect to the neighbouring regions: lighter on the network and the computer, but they are not shown, crossings on foot or in vehicles are less reliable and a teleport may be needed. Takes full effect after the next teleport.
 ui-perf-network-to-world = Network to world
 common-resident = Resident
-demo-resident-in-aurora-viewer-s-offline-demo = Resident in Aurora Viewer's offline demo 🐺✨
+demo-resident-in-aurora-viewer-s-offline-demo = Resident in OliViewer's offline demo 🐺✨
 ui-land-options-residential = Residential
 ui-options-residents = Residents
 ui-options-cascaded-shadow-resolution-and-distance = Cascaded shadow resolution and distance
@@ -7347,7 +7347,7 @@ ui-bars-script-library = Script library
 ui-bars-message-of-the-day = Message of the day
 ui-bars-wiki = Aurora Viewer wiki
 ui-bars-knowledge-base = Knowledge base
-ui-bars-about = About Aurora Viewer
+ui-bars-about = About OliViewer
 cmdline-dice-successes = { "Successes: " }{ $successes }
 build-manip-south = South
 common-next = Next
@@ -9697,7 +9697,7 @@ hud-move-locked = Lock quick movement
 hud-local-scale-reset = Reset to 100%
 hud-local-scale-forget = Forget saved size
 hud-local-scale-help = Hold the HUD key: left drag to move, wheel to resize, Shift for finer steps. Size is saved on this PC by name and creator, for this account. While editing a HUD, the wheel without this key zooms the view of all HUDs.
-cli-help = { "Aurora Viewer\u000A\u000AUsage: aurora-viewer [--title <text>] [--fps-limit <fps>] [--vr] [--language <code>] [--grid <name>]\u000A                     [--login <first> <last> <password>] [--version] [--uninstall] [<slurl>]\u000A\u000A  --title <text>   Name this window (\"Aurora Viewer <version> - <text>\") and its log\u000A                   file (aurora-<text>.log, aurora-demo-<text>.log in demo mode)\u000A  --fps-limit <fps>  Cap this process at 1..500 FPS without saving preferences\u000A  --language <code>  Override this process's UI language (" }{ $languages }{ ")\u000A  --grid <name>    Start on agni, aditi, a saved grid name or a login URI (also --loginuri <uri>)\u000A  --login <first> <last> <password>  Log in with this account at once\u000A  <slurl>, --url <slurl>  Start at this place; nothing after it is read. A viewer\u000A                   already running receives it instead\u000A  --vr             Enter VR once the world shows (headset connected)\u000A  -V, --version   Show the compiled viewer version without starting it\u000A  --uninstall      Remove what Aurora registered outside its folders (link handler,\u000A                   credential store, Blender add-on), print it and the folders left, then exit\u000A  -h, --help       Show this help\u000A\u000ATest switches are environment variables (AURORA_DEMO=1, AURORA_CAPTURE=...):\u000Asee README.md." }
+cli-help = { "OliViewer\u000A\u000AUsage: aurora-viewer [--title <text>] [--fps-limit <fps>] [--vr] [--language <code>] [--grid <name>]\u000A                     [--login <first> <last> <password>] [--version] [--uninstall] [<slurl>]\u000A\u000A  --title <text>   Name this window (\"OliViewer <version> - <text>\") and its log\u000A                   file (aurora-<text>.log, aurora-demo-<text>.log in demo mode)\u000A  --fps-limit <fps>  Cap this process at 1..500 FPS without saving preferences\u000A  --language <code>  Override this process's UI language (" }{ $languages }{ ")\u000A  --grid <name>    Start on agni, aditi, a saved grid name or a login URI (also --loginuri <uri>)\u000A  --login <first> <last> <password>  Log in with this account at once\u000A  <slurl>, --url <slurl>  Start at this place; nothing after it is read. A viewer\u000A                   already running receives it instead\u000A  --vr             Enter VR once the world shows (headset connected)\u000A  -V, --version   Show the compiled viewer version without starting it\u000A  --uninstall      Remove what Aurora registered outside its folders (link handler,\u000A                   credential store, Blender add-on), print it and the folders left, then exit\u000A  -h, --help       Show this help\u000A\u000ATest switches are environment variables (AURORA_DEMO=1, AURORA_CAPTURE=...):\u000Asee README.md." }
 demo-media-page = { "data:text/html;charset=utf-8,<html><body style='margin:0;height:100vh;background:linear-gradient(135deg,%232a1f4a,%230f6d6d);color:white;font:56px sans-serif;text-align:center'><h1 style='margin:40px 0 10px'>Aurora media</h1><p id='t' style='font-size:90px;margin:10px'>--</p><button onclick=\"document.body.style.background='%237a3b9c';this.textContent='Clicked!'\" style='font-size:48px;padding:10px 40px'>Click</button><br><input placeholder='Type here' style='font-size:44px;margin-top:30px;width:70%'><script>setInterval(function(){document.getElementById('t').textContent=new Date().toLocaleTimeString()},250)</script></body></html>" }
 demo-nearby-media-page-cinema = { "data:text/html;charset=utf-8,<html><head><title>Plaza cinema</title></head><body style='margin:0;height:100vh;background:%23402060;color:white;font:64px sans-serif;text-align:center'><h1 style='margin-top:180px'>Cinema</h1></body></html>" }
 demo-nearby-media-page-next-door = { "data:text/html;charset=utf-8,<html><head><title>Parcel next door</title></head><body style='margin:0;height:100vh;background:%23205040;color:white;font:64px sans-serif;text-align:center'><h1 style='margin-top:180px'>Next door</h1></body></html>" }
@@ -9739,7 +9739,7 @@ status-fps-fps = { $fps }{ " fps" }
 status-unknown = (unknown)
 status-public = (public)
 status-readme-txt = README.txt
-status-aurora-viewer-skin-theme-json-colors = { "Aurora Viewer skin\u000A\u000Atheme.json  : colors (#RRGGBB), corners, font sizes\u000Alayout.json : toolbar buttons (icon + command), chat options\u000A(copy the *.example.json files to start with default values)\u000Aicons/      : PNG files replacing built-in icons (same filename)\u000A\u000AChanges are reloaded automatically while in world.\u000ACommands: help, conversations, speak, fly, mouselook, people, friends, inventory,\u000Aappearance, search, worldmap, minimap, performance, sit, home, preferences.\u000A" }
+status-aurora-viewer-skin-theme-json-colors = { "OliViewer skin\u000A\u000Atheme.json  : colors (#RRGGBB), corners, font sizes\u000Alayout.json : toolbar buttons (icon + command), chat options\u000A(copy the *.example.json files to start with default values)\u000Aicons/      : PNG files replacing built-in icons (same filename)\u000A\u000AChanges are reloaded automatically while in world.\u000ACommands: help, conversations, speak, fly, mouselook, people, friends, inventory,\u000Aappearance, search, worldmap, minimap, performance, sit, home, preferences.\u000A" }
 status-area-m-l-price-l-m = { $value0 }{ "\u000A" }{ $area }{ " m² L$ " }{ $price }{ " (" }{ $value1 }{ " L$/m²)" }
 status-days = { " days" }
 status-hours = { " hours" }
@@ -10243,8 +10243,8 @@ monitor-media-marketplace = Marketplace
 monitor-media-profile = Profile web page
 
 # Independent crash recovery window
-crash-title = Aurora Viewer — Crash report
-crash-heading = Aurora Viewer stopped unexpectedly
+crash-title = OliViewer — Crash report
+crash-heading = OliViewer stopped unexpectedly
 crash-explanation = Your session has ended. The details below can help identify the problem.
 crash-local-only = These details are saved on this computer. Nothing has been sent.
 crash-details = Technical details
@@ -10285,9 +10285,9 @@ crash-publish = Publish on GitHub
 crash-open-browser = Open in the browser
 crash-body-copied = The report is in the clipboard: paste it into the issue that just opened.
 crash-back = Back
-crash-report-summary = Aurora Viewer crash
+crash-report-summary = OliViewer crash
 crash-report-expected = The viewer should continue running.
-crash-report-actual = Aurora Viewer stopped unexpectedly.
+crash-report-actual = OliViewer stopped unexpectedly.
 crash-report-reason = Crash type
 crash-report-exit-code = Process exit code
 bug-log-native = native exception
@@ -10346,8 +10346,8 @@ update-error-filesystem = Unable to prepare installation. Check free space and f
 update-error-package = The package is incomplete or invalid. The current installation is preserved.
 update-error-unsupported = This release cannot be installed automatically from this folder. Download it from its page and extract it into a dedicated folder.
 update-error-protected = Aurora cannot replace itself here: this folder belongs to a sandboxed package (Flatpak, Snap, AppImage) or your account cannot write to it. Update it the way it was installed, or download the new version from its page.
-update-error-drive-root = Aurora cannot update itself in a folder at the root of a drive, like E:\Aurora Viewer. Move the folder one level down, for example to E:\Games\Aurora Viewer, start Aurora from there, then update.
-update-error-unsupported-macos = On macOS, a new version is installed by hand. Download it from its page, then replace Aurora Viewer in your Applications folder with the new one.
+update-error-drive-root = Aurora cannot update itself in a folder at the root of a drive, like E:\OliViewer. Move the folder one level down, for example to E:\Games\OliViewer, start Aurora from there, then update.
+update-error-unsupported-macos = On macOS, a new version is installed by hand. Download it from its page, then replace OliViewer in your Applications folder with the new one.
 update-error-startup = The update helper could not start. The current installation is preserved.
 update-rollback = The new version did not start correctly. The previous installation was restored.
 update-rollback-install = The new version could not be installed. The previous installation was kept.
@@ -12970,7 +12970,7 @@ buy-land-can-not-change = May not be joined or subdivided.
 buy-land-covenant-section = Estate covenant
 buy-land-must-agree = You must agree to the Estate Covenant:
 buy-land-agree-covenant = I agree to the covenant defined above.
-buy-land-cannot-close = You cannot close the Buy Land window until Aurora Viewer estimates the price of this transaction.
+buy-land-cannot-close = You cannot close the Buy Land window until OliViewer estimates the price of this transaction.
 buy-land-nothing-selected = Unable to buy land: no parcel selected.
 buy-land-across-regions = Unable to buy land because selection spans multiple regions. Please select a smaller area and try again.
 buy-land-only-officer = Unable to buy land for the group: you do not have permission to buy land for your active group.
@@ -15455,9 +15455,9 @@ about-copied = Copied
 about-copy-hint = Copies all of the above in English, for a support request or a bug report.
 about-click-to-copy = Click to copy this value
 about-build-pill = { $profile } build
-about-third-party-viewer = Aurora Viewer is a third-party viewer, not provided or supported by Linden Lab, the makers of Second Life.
+about-third-party-viewer = OliViewer is a third-party viewer, not provided or supported by Linden Lab, the makers of Second Life.
 about-release-notes = Release notes
-about-licence-title = Aurora Viewer's license
+about-licence-title = OliViewer's license
 about-licence-gpl = GNU GPL v3
 about-source-code = Source code
 about-section-viewer = Viewer
