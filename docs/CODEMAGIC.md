@@ -30,15 +30,16 @@ If `BRAND_LOCAL_JSON` is omitted, the build uses the default links and `Aurora V
 
 ---
 
-## 3. Android Configuration (`android_signing` group)
+## 3. Android Configuration (`android_signing: "ecostura"` & `Google-Credential`)
 
-1. Generate or locate your upload keystore (see [docs/PLAYSTORE.md](PLAYSTORE.md)).
-2. In Codemagic **App settings → Code signing identities → Android keystores**, upload your `.jks` / `.keystore` file and note its reference name, or store its values in the `android_signing` environment variable group:
-   - `CM_KEYSTORE_PATH` (automatically populated if uploaded via Codemagic Code Signing, or decoded in a custom step)
-   - `CM_KEYSTORE_PASSWORD` (Secure)
-   - `CM_KEY_PASSWORD` (Secure)
-   - `CM_KEY_ALIAS` (e.g. `oliviewer-upload`)
-3. Optionally, add a `publishing` block under `android-release` in `codemagic.yaml` with your Google Play service account JSON (`GCLOUD_SERVICE_ACCOUNT_CREDENTIALS`) to upload `.aab` directly to the `internal` track.
+`codemagic.yaml` is preconfigured to reuse the existing Codemagic Android keystore and Google Play credentials:
+
+1. **Keystore (`android_signing: ["ecostura"]`)**:
+   - In Codemagic **Team / App settings → Code signing identities → Android keystores**, ensure the keystore reference named `ecostura` is available to this app.
+   - Codemagic automatically injects `CM_KEYSTORE_PATH`, `CM_KEYSTORE_PASSWORD`, `CM_KEY_ALIAS`, and `CM_KEY_PASSWORD`, which are written to `packaging/android/key.properties` so Gradle signs both `.aab` and `.apk`.
+2. **Google Play publishing (`Google-Credential` group)**:
+   - Attach the `Google-Credential` environment variable group containing `GCP_SERVICE_ACCOUNT_KEY` (service account JSON).
+   - `codemagic.yaml` publishes the signed `.aab` to the `internal` track (`versionCode` is automatically set from Codemagic's `BUILD_NUMBER`).
 
 ---
 

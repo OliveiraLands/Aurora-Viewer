@@ -1,5 +1,6 @@
 import groovy.json.JsonSlurper
 import java.io.File
+import java.util.Properties
 
 plugins {
     id("com.android.application")
@@ -35,6 +36,27 @@ val brandAndroidResDir: File? = (brandIcons["android_res_dir"] as? String)
     }
     ?.takeIf { it.isDirectory }
 
+val keyPropsFile: File = rootProject.file("key.properties")
+val keyProps = Properties()
+if (keyPropsFile.isFile) {
+    keyPropsFile.inputStream().use { keyProps.load(it) }
+}
+val releaseStoreFile: String? = keyProps.getProperty("storeFile")?.takeIf { it.isNotBlank() }
+    ?: System.getenv("CM_KEYSTORE_PATH")?.takeIf { it.isNotBlank() }
+val releaseStorePassword: String? = keyProps.getProperty("storePassword")?.takeIf { it.isNotBlank() }
+    ?: System.getenv("CM_KEYSTORE_PASSWORD")?.takeIf { it.isNotBlank() }
+val releaseKeyAlias: String? = keyProps.getProperty("keyAlias")?.takeIf { it.isNotBlank() }
+    ?: System.getenv("CM_KEY_ALIAS")?.takeIf { it.isNotBlank() }
+val releaseKeyPassword: String? = keyProps.getProperty("keyPassword")?.takeIf { it.isNotBlank() }
+    ?: System.getenv("CM_KEY_PASSWORD")?.takeIf { it.isNotBlank() }
+val hasReleaseSigning: Boolean = releaseStoreFile != null
+    && releaseStorePassword != null
+    && releaseKeyAlias != null
+    && releaseKeyPassword != null
+
+val ciBuildNumber: Int? = System.getenv("BUILD_NUMBER")?.toIntOrNull()
+    ?: System.getenv("PROJECT_BUILD_NUMBER")?.toIntOrNull()
+
 android {
     namespace = "org.auroraviewer.aurora"
     compileSdk = 35
@@ -43,8 +65,8 @@ android {
         applicationId = brandPackage
         minSdk = 26
         targetSdk = 35
-        versionCode = 1
-        versionName = "0.1.0"
+        versionCode = ciBuildNumber ?: 1
+        versionName = if (ciBuildNumber != null) "0.1.$ciBuildNumber" else "0.1.0"
 
         resValue("string", "app_name", brandAppName)
         manifestPlaceholders["appIcon"] = if (brandAndroidResDir != null) {
@@ -58,9 +80,23 @@ android {
         }
     }
 
+    signingConfigs {
+        if (hasReleaseSigning) {
+            create("release") {
+                storeFile = file(releaseStoreFile!!)
+                storePassword = releaseStorePassword
+                keyAlias = releaseKeyAlias
+                keyPassword = releaseKeyPassword
+            }
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false
+            if (hasReleaseSigning) {
+                signingConfig = signingConfigs.getByName("release")
+            }
         }
     }
 

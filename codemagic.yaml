@@ -5,14 +5,23 @@ workflows:
     instance_type: linux_x2
     environment:
       java: 17
+      android_signing:
+        - "ecostura"
       groups:
-        - android_signing
+        - Google-Credential
         - brand_config
       vars:
         PACKAGE_NAME: com.oliveiralands.oliviewer
         ANDROID_ABI: arm64-v8a
         ANDROID_PLATFORM: 26
     scripts:
+      - name: Debug Signing Variables
+        script: |
+          echo "Checking Android signing variables..."
+          echo "CM_KEYSTORE_PATH: ${CM_KEYSTORE_PATH:+'Set'}"
+          echo "CM_KEYSTORE_PASSWORD: ${CM_KEYSTORE_PASSWORD:+'Set'}"
+          echo "CM_KEY_ALIAS: ${CM_KEY_ALIAS:+'Set'}"
+          echo "CM_KEY_PASSWORD: ${CM_KEY_PASSWORD:+'Set'}"
       - name: Restore optional brand.local.json
         script: |
           if [ -n "${BRAND_LOCAL_JSON:-}" ]; then
@@ -37,28 +46,27 @@ workflows:
           LIBCXX=$(find "$NDK_DIR/toolchains/llvm/prebuilt" -name "libc++_shared.so" -path "*/aarch64-linux-android/*" | head -n 1)
           mkdir -p packaging/android/app/src/main/jniLibs/arm64-v8a
           cp "$LIBCXX" packaging/android/app/src/main/jniLibs/arm64-v8a/libc++_shared.so
-      - name: Build Android App Bundle (.aab) and APK
+      - name: Set up key.properties
+        script: |
+          if [ -n "${CM_KEYSTORE_PATH:-}" ]; then
+            cat > "$CM_BUILD_DIR/packaging/android/key.properties" <<EOF
+          storePassword=$CM_KEYSTORE_PASSWORD
+          keyPassword=$CM_KEY_PASSWORD
+          keyAlias=$CM_KEY_ALIAS
+          storeFile=$CM_KEYSTORE_PATH
+          EOF
+          fi
+      - name: Build signed Android App Bundle (.aab) and APK
         script: |
           chmod +x packaging/android/gradlew
           ./packaging/android/gradlew -p packaging/android bundleRelease assembleRelease
-      - name: Sign AAB and APK if keystore is configured
-        script: |
-          if [ -n "${CM_KEYSTORE_PATH:-}" ] && [ -n "${CM_KEYSTORE_PASSWORD:-}" ]; then
-            AAB="packaging/android/app/build/outputs/bundle/release/app-release.aab"
-            if [ ! -f "$AAB" ]; then
-              AAB=$(find packaging/android/app/build/outputs/bundle/release -name "*.aab" | head -n 1)
-            fi
-            jarsigner -verbose -sigalg SHA256withRSA -digestalg SHA-256 \
-              -keystore "$CM_KEYSTORE_PATH" \
-              -storepass "$CM_KEYSTORE_PASSWORD" \
-              -keypass "$CM_KEY_PASSWORD" \
-              "$AAB" "$CM_KEY_ALIAS"
-          else
-            echo "CM_KEYSTORE_PATH not set; skipping jarsigner (unsigned release outputs)."
-          fi
     artifacts:
       - packaging/android/app/build/outputs/bundle/release/*.aab
       - packaging/android/app/build/outputs/apk/release/*.apk
+    publishing:
+      google_play:
+        credentials: $GCP_SERVICE_ACCOUNT_KEY
+        track: internal
 
   ios-release:
     name: OliViewer iOS Release (IPA)
