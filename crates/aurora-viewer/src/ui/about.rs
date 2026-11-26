@@ -122,12 +122,13 @@ pub fn release_notes(version: &str) -> Option<String> {
 /// a block per card, a line per value (LLFloaterAbout::getInfo's order,
 /// its English labels).
 pub fn copy_text(sections: &[Section]) -> String {
-    let version = aurora_version::version();
-    let mut out = format!("{} {version}\n", crate::brand::APP_NAME);
+    let display_ver = aurora_version::display_version();
+    let upstream_ver = aurora_version::version();
+    let mut out = format!("{} {display_ver}\n", crate::brand::APP_NAME);
     if crate::brand::IS_MODIFIED {
-        out.push_str("Based on Aurora Viewer (modified version)\n");
+        out.push_str(&format!("Based on Aurora Viewer {upstream_ver} (modified version)\n"));
     }
-    if let Some(url) = release_notes(version) {
+    if let Some(url) = release_notes(upstream_ver) {
         out.push_str(&format!("Release notes: {url}\n"));
     }
     for section in sections {
@@ -286,7 +287,11 @@ fn hero(ui: &mut egui::Ui, p: &Palette, logo: Option<&egui::TextureHandle>) {
             ui.add_space(4.0);
             ui.horizontal_wrapped(|ui| {
                 ui.spacing_mut().item_spacing = Vec2::new(6.0, 6.0);
-                sheet::pill(ui, p, Tone::Group, "tag-filled", aurora_version::version());
+                sheet::pill(ui, p, Tone::Group, "tag-filled", aurora_version::display_version());
+                if aurora_version::brand_version().is_some() {
+                    let base = format!("Aurora {}", aurora_version::version());
+                    sheet::pill(ui, p, Tone::Neutral, "", &base);
+                }
                 let build = aurora_i18n::tr!("about-build-pill", profile = build_label());
                 sheet::pill(ui, p, Tone::Neutral, "", &build);
             });
@@ -534,8 +539,8 @@ mod tests {
     #[test]
     fn release_notes_only_for_a_published_version() {
         assert_eq!(
-            release_notes("0.7.0").as_deref(),
-            Some("https://github.com/Aurora-Viewer/Aurora-Viewer/releases/tag/v0.7.0")
+            release_notes("0.7.0"),
+            Some(format!("{}/releases/tag/v0.7.0", crate::links::GITHUB))
         );
         assert_eq!(release_notes("0.7.0+3.gabcdef123"), None);
         assert_eq!(release_notes("0.0.0"), None);
@@ -557,7 +562,7 @@ mod tests {
         ];
         let text = copy_text(&sections);
         let blocks: Vec<&str> = text.split("\n\n").collect();
-        assert!(blocks[0].starts_with(&format!("{} {}", crate::brand::APP_NAME, aurora_version::version())));
+        assert!(blocks[0].starts_with(&format!("{} {}", crate::brand::APP_NAME, aurora_version::display_version())));
         assert_eq!(
             blocks[1],
             format!(

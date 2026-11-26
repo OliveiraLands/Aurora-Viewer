@@ -62,3 +62,13 @@ If `BRAND_LOCAL_JSON` is omitted, the build uses the default links and `Aurora V
 
 - Open Codemagic → **Start new build** → select `android-release` or `ios-release`.
 - Download the `.aab` / `.apk` or `.ipa` from the build **Artifacts** tab.
+
+---
+
+## 6. Versioning Policy on Every Push
+
+Before pushing changes meant for a new build/release, bump OliViewer's version according to the scope of the implementation:
+
+- **Patch (`+0.0.1`)**: bug fixes, small UI tweaks, CI/docs updates.
+- **Minor (`+0.1.0`)**: new features, major UI changes, or significant `upstream/main` merges.
+- **Major (`+1.0.0`)**: milestone releases (e.g. `1.0.0` public store launch).

@@ -12,6 +12,9 @@ fn main() {
     println!("cargo:rerun-if-env-changed=AURORA_VERSION_TAG");
     println!("cargo:rerun-if-env-changed=AURORA_UPDATE_TEST_VERSION");
     println!("cargo:rerun-if-env-changed=AURORA_BRAND_CONFIG");
+    println!("cargo:rerun-if-env-changed=OLIVIEWER_VERSION");
+    println!("cargo:rerun-if-env-changed=BUILD_NUMBER");
+    println!("cargo:rerun-if-env-changed=PROJECT_BUILD_NUMBER");
     let manifest = std::env::var_os("CARGO_MANIFEST_DIR").expect("Cargo supplies CARGO_MANIFEST_DIR");
     let root = Path::new(&manifest).join("../..");
     emit_brand(&root);
@@ -83,10 +86,30 @@ fn emit_brand(root: &Path) {
         .and_then(|t| json_string_field(t, "user_agent_product"))
         .filter(|s| !s.is_empty())
         .unwrap_or_else(|| "AuroraViewer".to_owned());
+    let base_app_version = std::env::var("OLIVIEWER_VERSION")
+        .ok()
+        .map(|s| s.trim().to_owned())
+        .filter(|s| !s.is_empty())
+        .or_else(|| {
+            text.as_deref()
+                .and_then(|t| json_string_field(t, "app_version"))
+                .filter(|s| !s.is_empty())
+        });
+    let build_number = std::env::var("BUILD_NUMBER")
+        .ok()
+        .or_else(|| std::env::var("PROJECT_BUILD_NUMBER").ok())
+        .map(|s| s.trim().to_owned())
+        .filter(|s| !s.is_empty());
+    let brand_app_version = match (base_app_version, build_number) {
+        (Some(base), Some(build)) => format!("{base} (build {build})"),
+        (Some(base), None) => base,
+        (None, _) => String::new(),
+    };
 
     println!("cargo:rustc-env=AURORA_BRAND_APP_NAME={app_name}");
     println!("cargo:rustc-env=AURORA_BRAND_CHANNEL={channel}");
     println!("cargo:rustc-env=AURORA_BRAND_USER_AGENT_PRODUCT={ua_product}");
+    println!("cargo:rustc-env=AURORA_BRAND_APP_VERSION={brand_app_version}");
 }
 
 /// Extracts a top-level string value `"key": "value"` from JSON text.

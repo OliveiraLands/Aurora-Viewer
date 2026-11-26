@@ -41,7 +41,7 @@ pub fn sidebar(ctx: &Context, p: &Palette, icons: &Icons, info: &LoginInfo, card
 }
 
 fn version(ui: &mut egui::Ui, p: &Palette) {
-    let label = format!("{} v{}", crate::brand::APP_NAME, aurora_version::version());
+    let label = format!("{} v{}", crate::brand::APP_NAME, aurora_version::display_version());
     ui.label(RichText::new(label).size(11.5).color(p.muted_dim));
 }
 
