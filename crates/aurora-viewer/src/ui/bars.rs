@@ -4063,7 +4063,7 @@ pub fn bottom_bar(
                 let target = ui.interact(zone, egui::Id::unique("toolbar_background"), egui::Sense::click());
                 toolbar.context(&target, p, bar, style, None, toolbar_settings.locked);
                 let mut rects = Vec::new();
-                egui::ScrollArea::horizontal()
+                let scroll_out = egui::ScrollArea::horizontal()
                     .id_salt("toolbar_scroll")
                     .auto_shrink([false, false])
                     .scroll_bar_visibility(egui::scroll_area::ScrollBarVisibility::AlwaysHidden)
@@ -4102,6 +4102,15 @@ pub fn bottom_bar(
                             rects = toolbar_row(ui, p, icons, buttons, look, toolbar, panels, mic, &row, &mut action);
                         });
                     });
+                paint_scroll_edge_arrows(
+                    ui.painter(),
+                    zone,
+                    scroll_out.state.clamped_offset().x,
+                    scroll_out.content_size.x,
+                    scroll_out.inner_rect.width(),
+                    p.ink,
+                    p.bar,
+                );
                 toolbar.drop_bar(&target, bar, &rects, p, toolbar_settings.locked);
             });
         });
@@ -4109,6 +4118,46 @@ pub fn bottom_bar(
         super::widgets::finish_bar_glass(&painter, slot, resp.response.rect, p);
     }
     (out, action, resp.response.rect.top(), width_committed)
+}
+
+/// Paints subtle left/right edge chevron indicators when a horizontal toolbar
+/// overflows its viewport, hinting that more buttons can be scrolled into view.
+pub(super) fn paint_scroll_edge_arrows(
+    painter: &egui::Painter,
+    rect: egui::Rect,
+    offset_x: f32,
+    content_w: f32,
+    viewport_w: f32,
+    ink: egui::Color32,
+    bg: egui::Color32,
+) {
+    if content_w <= viewport_w + 1.0 || rect.width() < 28.0 {
+        return;
+    }
+    let can_left = offset_x > 1.0;
+    let can_right = content_w > viewport_w + offset_x + 1.0;
+    let badge_w = 14.0_f32;
+    let stroke = egui::Stroke::new(1.6, ink.gamma_multiply(0.85));
+    let badge_bg = egui::Color32::from_rgba_unmultiplied(bg.r(), bg.g(), bg.b(), 195);
+    let cy = rect.center().y;
+
+    for (show, is_left) in [(can_left, true), (can_right, false)] {
+        if !show {
+            continue;
+        }
+        let badge = if is_left {
+            egui::Rect::from_min_max(rect.min, egui::pos2(rect.left() + badge_w, rect.bottom()))
+        } else {
+            egui::Rect::from_min_max(egui::pos2(rect.right() - badge_w, rect.top()), rect.max)
+        };
+        painter.rect_filled(badge, 4.0, badge_bg);
+        let cx = badge.center().x;
+        let dx = if is_left { 2.0 } else { -2.0 };
+        let tip_x = cx - dx;
+        let dy = 3.8_f32.min((rect.height() * 0.28).max(2.0));
+        painter.line_segment([egui::pos2(cx + dx, cy - dy), egui::pos2(tip_x, cy)], stroke);
+        painter.line_segment([egui::pos2(tip_x, cy), egui::pos2(cx + dx, cy + dy)], stroke);
+    }
 }
 
 /// Advanced › Admin: the Object, Parcel and Region entries of the Legacy

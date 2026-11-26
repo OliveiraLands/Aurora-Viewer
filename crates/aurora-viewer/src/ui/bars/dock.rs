@@ -278,7 +278,7 @@ pub fn bottom(
                 editing: row.editing,
             }
         };
-        let rects = egui::ScrollArea::horizontal()
+        let scroll_out = egui::ScrollArea::horizontal()
             .id_salt("dock_toolbar_scroll")
             .auto_shrink([false, false])
             .scroll_bar_visibility(egui::scroll_area::ScrollBarVisibility::AlwaysHidden)
@@ -290,8 +290,17 @@ pub fn bottom(
                     toolbar_row(ui, p, icons, buttons, look, toolbar, panels, mic, row, &mut action)
                 })
                 .inner
-            })
-            .inner;
+            });
+        let rects = scroll_out.inner;
+        super::paint_scroll_edge_arrows(
+            ui.painter(),
+            inner,
+            scroll_out.state.clamped_offset().x,
+            scroll_out.content_size.x,
+            scroll_out.inner_rect.width(),
+            p.ink,
+            p.bar,
+        );
         if cfg!(test)
             && let Some(speak) = buttons.iter().position(|b| b.command == "speak").and_then(|i| rects.get(i))
         {
