@@ -113,11 +113,11 @@ fn branding() -> BrandBuild {
     let android_package = str_field("android_package", "org.auroraviewer.aurora");
     let desktop_id = str_field("desktop_id", "aurora-viewer");
 
-    let github = link_field("github", "https://github.com/Aurora-Viewer/Aurora-Viewer");
-    let new_issue = link_field("new_issue", "https://github.com/Aurora-Viewer/Aurora-Viewer/issues/new/choose");
+    let github = link_field("github", "https://github.com/OliveiraLands/Aurora-Viewer");
+    let new_issue = link_field("new_issue", "https://github.com/OliveiraLands/Aurora-Viewer/issues/new/choose");
     let wiki = link_field("wiki", "https://github.com/Aurora-Viewer/Aurora-Viewer/wiki");
     let discord = link_field("discord", "https://discord.gg/TK4nbMGmKt");
-    let website = link_field("website", "https://aurora-viewer.org");
+    let website = link_field("website", "https://oligrid.net");
     let privacy_policy = link_field("privacy_policy", "https://aurora-viewer.org/privacy/");
     let news_feed = link_field(
         "news_feed",

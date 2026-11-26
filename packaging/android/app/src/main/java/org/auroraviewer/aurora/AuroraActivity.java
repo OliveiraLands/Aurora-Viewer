@@ -1,5 +1,6 @@
 package org.auroraviewer.aurora;
 
+import android.app.Dialog;
 import android.app.NativeActivity;
 import android.content.Context;
 import android.graphics.Color;
@@ -38,6 +39,7 @@ public class AuroraActivity extends NativeActivity {
     private static native boolean nativeOnBackPressed();
     private static native void nativeOnWindowInsets(int top, int bottom, int left, int right, int imeBottom);
 
+    private Dialog loadingDialog;
     private FrameLayout loadingOverlay;
     private ProgressBar loadingProgressBar;
     private TextView loadingStatusView;
@@ -229,9 +231,25 @@ public class AuroraActivity extends NativeActivity {
                 ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.CENTER);
         root.addView(column, centerParams);
 
-        addContentView(root, new FrameLayout.LayoutParams(
+        Dialog dialog = new Dialog(this, android.R.style.Theme_Black_NoTitleBar_Fullscreen);
+        dialog.setCancelable(false);
+        if (dialog.getWindow() != null) {
+            dialog.getWindow().addFlags(
+                    WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
+                            | WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
+                            | WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
+                            | WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                WindowManager.LayoutParams dlp = dialog.getWindow().getAttributes();
+                dlp.layoutInDisplayCutoutMode =
+                        WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES;
+                dialog.getWindow().setAttributes(dlp);
+            }
+        }
+        dialog.setContentView(root, new ViewGroup.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
-        root.bringToFront();
+        dialog.show();
+        loadingDialog = dialog;
         loadingOverlay = root;
     }
 
@@ -248,24 +266,43 @@ public class AuroraActivity extends NativeActivity {
 
     public void hideLoadingOverlay() {
         runOnUiThread(() -> {
+            final Dialog dialog = loadingDialog;
             final FrameLayout overlay = loadingOverlay;
-            if (overlay == null) {
-                return;
-            }
+            loadingDialog = null;
             loadingOverlay = null;
             loadingProgressBar = null;
             loadingStatusView = null;
+            if (overlay == null) {
+                if (dialog != null && dialog.isShowing()) {
+                    dialog.dismiss();
+                }
+                return;
+            }
             overlay.animate()
                     .alpha(0f)
                     .setDuration(250)
                     .withEndAction(() -> {
-                        ViewGroup parent = (ViewGroup) overlay.getParent();
-                        if (parent != null) {
-                            parent.removeView(overlay);
+                        if (dialog != null && dialog.isShowing()) {
+                            try {
+                                dialog.dismiss();
+                            } catch (IllegalArgumentException ignored) {
+                            }
                         }
                     })
                     .start();
         });
+    }
+
+    @Override
+    protected void onDestroy() {
+        if (loadingDialog != null && loadingDialog.isShowing()) {
+            try {
+                loadingDialog.dismiss();
+            } catch (IllegalArgumentException ignored) {
+            }
+        }
+        loadingDialog = null;
+        super.onDestroy();
     }
 
     @Override

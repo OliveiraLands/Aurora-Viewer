@@ -11,7 +11,7 @@ description = "Media plugin host for Aurora Viewer: drives SLPlugin media plugin
 aurora-llsd = { version = "0.1.0", path = "../aurora-llsd" }
 log = "0.4.34"
 
-[target.'cfg(not(target_os = "android"))'.dependencies]
+[target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
 # The same native picker as the viewer, for CEF's blocking pick_file request.
 rfd = "0.17.2"
 

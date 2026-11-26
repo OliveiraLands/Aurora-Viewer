@@ -1,0 +1,109 @@
+workflows:
+  android-release:
+    name: OliViewer Android Release (AAB + APK)
+    max_build_duration: 120
+    instance_type: linux_x2
+    environment:
+      java: 17
+      groups:
+        - android_signing
+        - brand_config
+      vars:
+        PACKAGE_NAME: com.oliveiralands.oliviewer
+        ANDROID_ABI: arm64-v8a
+        ANDROID_PLATFORM: 26
+    scripts:
+      - name: Restore optional brand.local.json
+        script: |
+          if [ -n "${BRAND_LOCAL_JSON:-}" ]; then
+            printf '%s' "$BRAND_LOCAL_JSON" | base64 --decode > brand.local.json
+          fi
+      - name: Install Rust toolchain and cargo-ndk
+        script: |
+          curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain stable
+          export PATH="$HOME/.cargo/bin:$PATH"
+          rustup target add aarch64-linux-android
+          cargo install cargo-ndk --locked
+      - name: Build Rust Android native library
+        script: |
+          export PATH="$HOME/.cargo/bin:$PATH"
+          cargo ndk -t "$ANDROID_ABI" --platform "$ANDROID_PLATFORM" -o packaging/android/app/src/main/jniLibs build --lib -p aurora-viewer --release --locked
+      - name: Copy libc++_shared.so from Android NDK
+        script: |
+          NDK_DIR=$(ls -d "$ANDROID_SDK_ROOT"/ndk/* 2>/dev/null | sort -V | tail -n 1)
+          if [ -z "$NDK_DIR" ] && [ -n "${ANDROID_NDK_ROOT:-}" ]; then
+            NDK_DIR="$ANDROID_NDK_ROOT"
+          fi
+          LIBCXX=$(find "$NDK_DIR/toolchains/llvm/prebuilt" -name "libc++_shared.so" -path "*/aarch64-linux-android/*" | head -n 1)
+          mkdir -p packaging/android/app/src/main/jniLibs/arm64-v8a
+          cp "$LIBCXX" packaging/android/app/src/main/jniLibs/arm64-v8a/libc++_shared.so
+      - name: Build Android App Bundle (.aab) and APK
+        script: |
+          chmod +x packaging/android/gradlew
+          ./packaging/android/gradlew -p packaging/android bundleRelease assembleRelease
+      - name: Sign AAB and APK if keystore is configured
+        script: |
+          if [ -n "${CM_KEYSTORE_PATH:-}" ] && [ -n "${CM_KEYSTORE_PASSWORD:-}" ]; then
+            AAB="packaging/android/app/build/outputs/bundle/release/app-release.aab"
+            if [ ! -f "$AAB" ]; then
+              AAB=$(find packaging/android/app/build/outputs/bundle/release -name "*.aab" | head -n 1)
+            fi
+            jarsigner -verbose -sigalg SHA256withRSA -digestalg SHA-256 \
+              -keystore "$CM_KEYSTORE_PATH" \
+              -storepass "$CM_KEYSTORE_PASSWORD" \
+              -keypass "$CM_KEY_PASSWORD" \
+              "$AAB" "$CM_KEY_ALIAS"
+          else
+            echo "CM_KEYSTORE_PATH not set; skipping jarsigner (unsigned release outputs)."
+          fi
+    artifacts:
+      - packaging/android/app/build/outputs/bundle/release/*.aab
+      - packaging/android/app/build/outputs/apk/release/*.apk
+
+  ios-release:
+    name: OliViewer iOS Release (IPA)
+    max_build_duration: 120
+    instance_type: mac_mini_m2
+    integrations:
+      app_store_connect: OliViewer_ASC
+    environment:
+      xcode: latest
+      groups:
+        - ios_signing
+        - brand_config
+      vars:
+        BUNDLE_ID: com.oliveiralands.oliviewer
+        XCODE_PROJECT: packaging/ios/OliViewer.xcodeproj
+        XCODE_SCHEME: OliViewer
+    scripts:
+      - name: Restore optional brand.local.json
+        script: |
+          if [ -n "${BRAND_LOCAL_JSON:-}" ]; then
+            printf '%s' "$BRAND_LOCAL_JSON" | base64 -D > brand.local.json
+          fi
+      - name: Install Rust iOS target and XcodeGen
+        script: |
+          curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain stable
+          export PATH="$HOME/.cargo/bin:$PATH"
+          rustup target add aarch64-apple-ios
+          if ! command -v xcodegen >/dev/null 2>&1; then
+            brew install xcodegen
+          fi
+      - name: Build Rust iOS static library
+        script: |
+          export PATH="$HOME/.cargo/bin:$PATH"
+          cargo build --lib -p aurora-viewer --target aarch64-apple-ios --release --locked
+      - name: Generate Xcode project
+        script: |
+          xcodegen generate --spec packaging/ios/project.yml
+      - name: Configure iOS code signing
+        script: |
+          xcode-project use-profiles
+      - name: Build signed IPA
+        script: |
+          xcode-project build-ipa \
+            --project "$XCODE_PROJECT" \
+            --scheme "$XCODE_SCHEME"
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log

@@ -402,3 +402,14 @@ fn run_viewer_inner(configure_event_loop: impl FnOnce(&mut winit::event_loop::Ev
     }
     Ok(())
 }
+
+/// C-callable entry point for the iOS host executable (`packaging/ios/`).
+#[cfg(target_os = "ios")]
+#[unsafe(no_mangle)]
+pub extern "C" fn aurora_ios_main() -> std::ffi::c_int {
+    if let Err(error) = desktop_main() {
+        log::error!("iOS viewer error: {error:#}");
+        return 1;
+    }
+    0
+}
