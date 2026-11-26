@@ -76,7 +76,7 @@ In `packaging/android/app/build.gradle.kts`:
 
 - Increment `versionCode` for every Play Console upload.
 - Update `versionName` (for example `"0.9.14"`).
-- `minSdk = 26` and `targetSdk = 35` are already configured to meet Google Play requirements.
+- `minSdk = 26` and `targetSdk = 36` are already configured to meet Google Play requirements.
 
 Build the signed Android App Bundle:
 

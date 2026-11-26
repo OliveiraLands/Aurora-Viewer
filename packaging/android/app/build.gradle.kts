@@ -59,12 +59,12 @@ val ciBuildNumber: Int? = System.getenv("BUILD_NUMBER")?.toIntOrNull()
 
 android {
     namespace = "org.auroraviewer.aurora"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = brandPackage
         minSdk = 26
-        targetSdk = 35
+        targetSdk = 36
         versionCode = ciBuildNumber ?: 1
         versionName = if (ciBuildNumber != null) "0.1.$ciBuildNumber" else "0.1.0"
 
@@ -93,7 +93,15 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            isShrinkResources = false
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro",
+            )
+            ndk {
+                debugSymbolLevel = "SYMBOL_TABLE"
+            }
             if (hasReleaseSigning) {
                 signingConfig = signingConfigs.getByName("release")
             }
@@ -112,4 +120,5 @@ android {
 
 dependencies {
     implementation("org.rustls:rustls-platform-verifier:0.2.0")
+    implementation("org.jetbrains.kotlin:kotlin-stdlib:2.1.0")
 }
