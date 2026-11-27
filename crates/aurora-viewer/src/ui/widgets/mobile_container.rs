@@ -110,12 +110,16 @@ pub(crate) fn sheet_rect(layout: ResponsiveLayout, expanded: bool) -> Rect {
 }
 
 /// Pure geometry calculation for a responsive mobile modal: returns
-/// `(center_offset_from_screen_center, max_content_width)` so modals stay
-/// centered inside `usable_rect` above the virtual keyboard.
-pub(crate) fn modal_layout(layout: ResponsiveLayout) -> (Vec2, f32) {
+/// `(center_offset_from_screen_center, max_content_width, max_content_height)`
+/// so modals stay centered inside `usable_rect` above the virtual keyboard,
+/// widen when vertical space is tight, and scroll cleanly when needed.
+pub(crate) fn modal_layout(layout: ResponsiveLayout) -> (Vec2, f32, f32) {
     let offset = layout.usable_rect.center() - layout.screen_rect.center();
-    let max_width = (layout.usable_rect.width() - 28.0).clamp(240.0, 480.0);
-    (offset, max_width)
+    let short = layout.usable_rect.height() < 540.0;
+    let width_cap = if short { 680.0 } else { 520.0 };
+    let max_width = (layout.usable_rect.width() - 24.0).clamp(240.0, width_cap);
+    let max_height = (layout.usable_rect.height() - 48.0).max(140.0);
+    (offset, max_width, max_height)
 }
 
 fn claim_active_slot(ctx: &egui::Context, window_id: Id) -> (bool, bool) {
@@ -428,9 +432,15 @@ mod tests {
     fn modal_layout_shifts_above_ime_and_clamps_width() {
         let screen = Rect::from_min_size(Pos2::ZERO, Vec2::new(390.0, 844.0));
         let layout = ResponsiveLayout::compute(screen, SafeInsets::ZERO, 300.0);
-        let (offset, max_w) = modal_layout(layout);
+        let (offset, max_w, max_h) = modal_layout(layout);
         assert!(offset.y < -100.0, "modal shifts upward above keyboard");
-        assert!((240.0..=362.0).contains(&max_w));
+        assert!((240.0..=366.0).contains(&max_w));
+        assert!(max_h <= layout.usable_rect.height());
+
+        let landscape = Rect::from_min_size(Pos2::ZERO, Vec2::new(844.0, 390.0));
+        let (_, wide_w, short_h) = modal_layout(ResponsiveLayout::compute(landscape, SafeInsets::ZERO, 0.0));
+        assert!(wide_w > 520.0, "short landscape screens widen modals");
+        assert!(short_h < 390.0);
     }
 
     #[test]

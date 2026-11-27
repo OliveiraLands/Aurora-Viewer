@@ -761,6 +761,13 @@ fn news_panel(ui: &mut egui::Ui, p: &Palette, icons: &Icons, info: &LoginInfo, h
     });
 }
 
+/// Responsive login card width for touch devices: widens when vertical space
+/// is tight so the full card fits comfortably without excessive vertical scroll.
+fn mobile_login_card_width(usable: egui::Rect, widen: bool) -> f32 {
+    let cap = if widen { 560.0 } else { 420.0 };
+    (usable.width() - 24.0).clamp(240.0, cap)
+}
+
 #[allow(clippy::too_many_arguments)]
 pub fn show(
     ui: &mut egui::Ui,
@@ -779,10 +786,24 @@ pub fn show(
     let mut action = LoginAction::None;
     let ctx = ui.ctx().clone();
     let screen = ctx.content_rect();
+    let touch_device = crate::touch::FormFactor::is_touch_device();
+    let usable = if touch_device {
+        crate::touch::ResponsiveLayout::from_ctx(&ctx).usable_rect
+    } else {
+        screen
+    };
     let wide = screen.width() >= 1100.0;
-    let short = screen.height() < 620.0;
-    let compact = screen.width() < 600.0 || short;
-    let card_w = if compact && !short {
+    let short = usable.height() < 620.0;
+    let compact = usable.width() < 600.0 || short;
+    let area = egui::Id::unique("login_area");
+    let buttons_top = screen.bottom() - BAR_MARGIN - BAR_BUTTON;
+    let lowest = buttons_top.min(usable.bottom()) - BAR_GAP;
+    let max_h = (lowest - usable.top().max(BAR_GAP)).max(160.0);
+    let last_height = ctx.memory(|m| m.area_rect(area)).map(|rect| rect.height());
+    let overflows_vertically = last_height.is_some_and(|h| h >= max_h - 4.0);
+    let card_w = if touch_device {
+        mobile_login_card_width(usable, short || overflows_vertically)
+    } else if compact && !short {
         300.0f32.min(screen.width() - 48.0)
     } else {
         380.0f32.min(screen.width() - 32.0)
@@ -791,14 +812,11 @@ pub fn show(
 
     // ---- brand + login card (center)
     let mut login_card = egui::Rect::NOTHING;
-    let area = egui::Id::unique("login_area");
     // In a low window (1280 × 720) the centred block would reach the line of
     // buttons along the bottom: the news, as tall as the card, then stood
     // over the version and Quit. The block moves up by what it needs, and
     // the logo gives up the height still missing (the height of the block
     // is the one of the frame before).
-    let buttons_top = screen.bottom() - BAR_MARGIN - BAR_BUTTON;
-    let lowest = buttons_top - BAR_GAP;
     let logo_drawn = area.with("logo");
     let last = ctx
         .memory(|m| m.area_rect(area))
@@ -809,14 +827,21 @@ pub fn show(
     let drawn = if logo.is_some() { logo_size } else { 0.0 };
     let lift = last.map_or(0.0, |(height, before)| {
         let height = height - before + drawn;
-        let top = screen.center().y + CENTER_OFFSET - height / 2.0;
-        (top + height - lowest).min(top - BAR_GAP).max(0.0)
+        let top = usable.center().y + CENTER_OFFSET - height / 2.0;
+        (top + height - lowest).min(top - usable.top().max(BAR_GAP)).max(0.0)
     });
+    let anchor_offset = if touch_device {
+        Vec2::new(
+            usable.center().x - screen.center().x,
+            usable.center().y - screen.center().y + CENTER_OFFSET - lift,
+        )
+    } else {
+        Vec2::new(0.0, CENTER_OFFSET - lift)
+    };
     ctx.data_mut(|d| d.insert_temp(logo_drawn, drawn));
     egui::Area::new(area)
-        .anchor(egui::Align2::CENTER_CENTER, Vec2::new(0.0, CENTER_OFFSET - lift))
+        .anchor(egui::Align2::CENTER_CENTER, anchor_offset)
         .show(&ctx, |ui| {
-            let max_h = (lowest - BAR_GAP).max(160.0);
             egui::ScrollArea::vertical()
                 .id_salt("login_scroll")
                 .max_height(max_h)
@@ -1917,5 +1942,21 @@ mod tests {
             ("synthetic.resident", "synthetic-input")
         );
         assert!(settings.remember_password);
+    }
+
+    #[test]
+    fn mobile_login_card_widens_when_short_or_overflowing() {
+        let portrait = egui::Rect::from_min_size(egui::Pos2::ZERO, Vec2::new(390.0, 844.0));
+        let normal_w = mobile_login_card_width(portrait, false);
+        let wider_portrait_w = mobile_login_card_width(portrait, true);
+        assert_eq!(normal_w, 366.0);
+        assert_eq!(wider_portrait_w, 366.0);
+
+        let landscape = egui::Rect::from_min_size(egui::Pos2::ZERO, Vec2::new(844.0, 390.0));
+        let landscape_w = mobile_login_card_width(landscape, true);
+        assert!(
+            landscape_w >= 540.0,
+            "expected wider login card on short screens, got {landscape_w}"
+        );
     }
 }

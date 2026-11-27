@@ -44,6 +44,56 @@ public class AuroraActivity extends NativeActivity {
     private ProgressBar loadingProgressBar;
     private TextView loadingStatusView;
     private boolean backConsumedDown;
+    private volatile boolean crashlyticsChecked;
+    private volatile Object crashlytics;
+
+    private Object getCrashlytics() {
+        if (!crashlyticsChecked) {
+            crashlyticsChecked = true;
+            try {
+                Class<?> cls = Class.forName("com.google.firebase.crashlytics.FirebaseCrashlytics");
+                crashlytics = cls.getMethod("getInstance").invoke(null);
+            } catch (Throwable ignored) {
+                crashlytics = null;
+            }
+        }
+        return crashlytics;
+    }
+
+    public void crashlyticsLog(String message) {
+        Object instance = getCrashlytics();
+        if (instance == null || message == null) {
+            return;
+        }
+        try {
+            instance.getClass().getMethod("log", String.class).invoke(instance, message);
+        } catch (Throwable ignored) {
+        }
+    }
+
+    public void crashlyticsSetKey(String key, String value) {
+        Object instance = getCrashlytics();
+        if (instance == null || key == null || value == null) {
+            return;
+        }
+        try {
+            instance.getClass().getMethod("setCustomKey", String.class, String.class).invoke(instance, key, value);
+        } catch (Throwable ignored) {
+        }
+    }
+
+    public void crashlyticsRecordError(String message) {
+        Object instance = getCrashlytics();
+        if (instance == null || message == null) {
+            return;
+        }
+        try {
+            instance.getClass()
+                    .getMethod("recordException", Throwable.class)
+                    .invoke(instance, new RuntimeException(message));
+        } catch (Throwable ignored) {
+        }
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -58,6 +108,10 @@ public class AuroraActivity extends NativeActivity {
         applyImmersiveFullscreen();
         installWindowInsetsBridge();
         showLoadingOverlay();
+        crashlyticsSetKey("device_model", Build.MANUFACTURER + " " + Build.MODEL);
+        crashlyticsSetKey("device_hardware", Build.HARDWARE + " / " + Build.BOARD);
+        crashlyticsSetKey("android_sdk", String.valueOf(Build.VERSION.SDK_INT));
+        crashlyticsLog("AuroraActivity.onCreate");
     }
 
     private void installWindowInsetsBridge() {

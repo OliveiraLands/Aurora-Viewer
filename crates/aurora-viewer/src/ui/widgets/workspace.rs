@@ -891,18 +891,27 @@ impl Modal {
         let keys = super::modal_keys::begin(ctx, self.0.area.layer());
         let mobile_bounds = crate::touch::FormFactor::is_touch_device()
             .then(|| super::mobile_container::modal_layout(crate::touch::ResponsiveLayout::from_ctx(ctx)));
-        let modal = if let Some((offset, _)) = mobile_bounds {
+        let modal = if let Some((offset, _, _)) = mobile_bounds {
             let area = self.0.area.clone().anchor(egui::Align2::CENTER_CENTER, offset);
             self.0.area(area)
         } else {
             self.0
         };
         let response = modal.frame(frame).show(ctx, |ui| {
-            if let Some((_, max_w)) = mobile_bounds {
-                ui.set_max_width(max_w);
-            }
             glass_slot = Some((ui.painter().clone(), ui.painter().add(egui::Shape::Noop)));
-            body(ui)
+            if let Some((_, max_w, max_h)) = mobile_bounds {
+                ui.set_max_width(max_w);
+                egui::ScrollArea::vertical()
+                    .max_height(max_h)
+                    .auto_shrink([true, true])
+                    .show(ui, |ui| {
+                        ui.set_max_width(max_w);
+                        body(ui)
+                    })
+                    .inner
+            } else {
+                body(ui)
+            }
         });
         super::modal_keys::end(ctx, keys);
         if let Some((painter, slot)) = glass_slot {

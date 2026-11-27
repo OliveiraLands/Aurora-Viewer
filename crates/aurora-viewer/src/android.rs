@@ -508,6 +508,111 @@ pub(crate) fn perform_haptic(kind: i32) {
     }
 }
 
+fn call_activity_string_method(method: &CStr, arg1: &str, arg2: Option<&str>) {
+    let Some(app) = ANDROID_APP.get() else {
+        return;
+    };
+    let Ok(c_arg1) = CString::new(arg1) else {
+        return;
+    };
+    let c_arg2 = match arg2 {
+        Some(s) => match CString::new(s) {
+            Ok(c) => Some(c),
+            Err(_) => return,
+        },
+        None => None,
+    };
+    // SAFETY: `app` holds valid `JavaVM*` and `Activity` references; all JNI
+    // local references created here are deleted before returning.
+    unsafe {
+        let Some(env) = attach_jni_env(app) else {
+            return;
+        };
+        let activity = app.activity_as_ptr();
+        if activity.is_null() {
+            return;
+        }
+        let vtable = *(env as *const *const *const c_void);
+        let get_object_class: GetObjectClassFn = std::mem::transmute(*vtable.add(31));
+        let get_method_id: GetMethodIdFn = std::mem::transmute(*vtable.add(33));
+        let new_string_utf: NewStringUtfFn = std::mem::transmute(*vtable.add(167));
+        let call_void_method_a: CallVoidMethodAFn = std::mem::transmute(*vtable.add(63));
+        let delete_local_ref: DeleteLocalRefFn = std::mem::transmute(*vtable.add(23));
+
+        let cls = get_object_class(env, activity);
+        if cls.is_null() || clear_exception(env, vtable) {
+            return;
+        }
+        let sig = if c_arg2.is_some() {
+            c"(Ljava/lang/String;Ljava/lang/String;)V"
+        } else {
+            c"(Ljava/lang/String;)V"
+        };
+        let mid = get_method_id(env, cls, method.as_ptr(), sig.as_ptr());
+        if !mid.is_null() && !clear_exception(env, vtable) {
+            let j1 = new_string_utf(env, c_arg1.as_ptr());
+            if !j1.is_null() && !clear_exception(env, vtable) {
+                if let Some(ref c2) = c_arg2 {
+                    let j2 = new_string_utf(env, c2.as_ptr());
+                    if !j2.is_null() && !clear_exception(env, vtable) {
+                        let args = [JValue { l: j1 }, JValue { l: j2 }];
+                        call_void_method_a(env, activity, mid, args.as_ptr());
+                        let _ = clear_exception(env, vtable);
+                    }
+                    if !j2.is_null() {
+                        delete_local_ref(env, j2);
+                    }
+                } else {
+                    let args = [JValue { l: j1 }];
+                    call_void_method_a(env, activity, mid, args.as_ptr());
+                    let _ = clear_exception(env, vtable);
+                }
+            }
+            if !j1.is_null() {
+                delete_local_ref(env, j1);
+            }
+        }
+        delete_local_ref(env, cls);
+    }
+}
+
+/// Logs a breadcrumb message to Firebase Crashlytics when configured.
+pub(crate) fn crashlytics_log(message: &str) {
+    call_activity_string_method(c"crashlyticsLog", message, None);
+}
+
+/// Sets a custom diagnostic key/value in Firebase Crashlytics when configured.
+pub(crate) fn crashlytics_set_key(key: &str, value: &str) {
+    call_activity_string_method(c"crashlyticsSetKey", key, Some(value));
+}
+
+/// Records a non-fatal / panic diagnostic event in Firebase Crashlytics when configured.
+pub(crate) fn crashlytics_record_error(message: &str) {
+    call_activity_string_method(c"crashlyticsRecordError", message, None);
+}
+
+fn install_panic_hook() {
+    let previous = std::panic::take_hook();
+    std::panic::set_hook(Box::new(move |info| {
+        let location = info
+            .location()
+            .map(|loc| format!("{}:{}:{}", loc.file(), loc.line(), loc.column()))
+            .unwrap_or_else(|| "unknown".to_owned());
+        let payload = if let Some(s) = info.payload().downcast_ref::<&str>() {
+            (*s).to_owned()
+        } else if let Some(s) = info.payload().downcast_ref::<String>() {
+            s.clone()
+        } else {
+            "non-string panic payload".to_owned()
+        };
+        let summary = format!("Rust panic at {location}: {payload}");
+        crashlytics_set_key("panic_location", &location);
+        crashlytics_log(&summary);
+        crashlytics_record_error(&summary);
+        previous(info);
+    }));
+}
+
 #[unsafe(no_mangle)]
 pub extern "C" fn Java_org_auroraviewer_aurora_AuroraActivity_nativeOnWindowInsets(
     _env: *mut c_void,
@@ -636,9 +741,12 @@ pub fn android_main(app: AndroidApp) {
     let _ = ANDROID_APP.set(app.clone());
     aurora_i18n::select("default", None);
     crate::logging::init();
+    install_panic_hook();
+    crashlytics_log("android_main: start");
     init_tls_platform_verifier(&app);
     if let Err(error) = crate::run_viewer_with_android(Some(app)) {
         log::error!("Android viewer error: {error:#}");
+        crashlytics_record_error(&format!("Android viewer error: {error:#}"));
     }
     crate::logging::drain(crate::logging::DRAIN_WAIT);
     // Terminate the process so a subsequent Activity launch does not inherit

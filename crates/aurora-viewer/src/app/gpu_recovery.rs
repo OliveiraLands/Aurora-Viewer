@@ -60,7 +60,22 @@ impl App {
         // restart the VR button offers) or Preferences › Camera › VR (#2309);
         // never again in a run whose runtime closed (`reopen_without_vr`)
         self.vr_set_up = !self.vr_runtime_gone && (crate::cli::get().vr || self.settings.camera.vr_at_start);
-        let renderer = Renderer::new(window.clone(), size.width, size.height, self.settings.vsync, &gpu, self.vr_set_up)?;
+        #[cfg(target_os = "android")]
+        crate::android::crashlytics_log("open_renderer: starting Renderer::new");
+        let renderer = match Renderer::new(window.clone(), size.width, size.height, self.settings.vsync, &gpu, self.vr_set_up) {
+            Ok(renderer) => renderer,
+            Err(error) => {
+                #[cfg(target_os = "android")]
+                crate::android::crashlytics_record_error(&format!("Renderer::new failed: {error}"));
+                return Err(error);
+            }
+        };
+        #[cfg(target_os = "android")]
+        {
+            crate::android::crashlytics_set_key("gpu_name", &renderer.info.name);
+            crate::android::crashlytics_set_key("gpu_backend", &format!("{:?}", renderer.info.backend));
+            crate::android::crashlytics_log("open_renderer: renderer ready");
+        }
         log::info!(
             "renderer ready: {} via {} ({} texture slots in {} pages at most, GPU timers: {})",
             renderer.info.name,

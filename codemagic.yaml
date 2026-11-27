@@ -27,6 +27,11 @@ workflows:
           if [ -n "${BRAND_LOCAL_JSON:-}" ]; then
             printf '%s' "$BRAND_LOCAL_JSON" | base64 --decode > brand.local.json
           fi
+      - name: Restore optional google-services.json
+        script: |
+          if [ -n "${GOOGLE_SERVICES_JSON:-}" ]; then
+            printf '%s' "$GOOGLE_SERVICES_JSON" | base64 --decode > packaging/android/app/google-services.json
+          fi
       - name: Install Rust toolchain and cargo-ndk
         script: |
           curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain stable

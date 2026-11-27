@@ -305,20 +305,17 @@ impl TouchPadState {
                 });
         }
 
-        // 2. Right-thumb circular action cluster.
+        // 2. Right-thumb circular action cluster (or left-thumb in left-handed mode).
         // Keep the lowest button (down_pos at +32 + SECONDARY_BTN_SIZE * 0.5) clear of the bottom dock.
-        let anchor_x = usable.right() - 20.0 - PRIMARY_BTN_SIZE * 0.5;
-        let anchor_y = usable.bottom() - bottom_pad - 32.0 - SECONDARY_BTN_SIZE * 0.5;
+        let cluster = action_cluster_layout(usable, bottom_pad, prefs.left_handed);
 
         let mut jump_held = false;
         let mut down_held = false;
 
         egui::Area::new(Id::unique("mobile_action_cluster"))
             .order(egui::Order::Foreground)
-            .fixed_pos(Pos2::new(anchor_x - 120.0, anchor_y - 120.0))
+            .fixed_pos(cluster.area_pos)
             .show(ctx, |ui| {
-                let origin = Pos2::new(anchor_x, anchor_y);
-
                 // Primary button: Stand (if sitting), Rise (if flying), or Jump (on ground).
                 let primary_icon = if sitting {
                     "walk"
@@ -327,9 +324,16 @@ impl TouchPadState {
                 } else {
                     "arrow-big-up-filled"
                 };
-                self.last_primary_rect = Some(Rect::from_center_size(origin, Vec2::splat(PRIMARY_BTN_SIZE)));
-                let primary_resp =
-                    circle_action_button(ui, p, origin, PRIMARY_BTN_SIZE, primary_icon, self.jump_finger.is_some(), !sitting);
+                self.last_primary_rect = Some(Rect::from_center_size(cluster.primary, Vec2::splat(PRIMARY_BTN_SIZE)));
+                let primary_resp = circle_action_button(
+                    ui,
+                    p,
+                    cluster.primary,
+                    PRIMARY_BTN_SIZE,
+                    primary_icon,
+                    self.jump_finger.is_some(),
+                    !sitting,
+                );
                 if sitting {
                     if primary_resp.clicked() {
                         actions.bar_action = BarAction::StandUp;
@@ -338,30 +342,26 @@ impl TouchPadState {
                     jump_held = true;
                 }
 
-                // Fly / Land toggle (upper-left of primary button).
-                let fly_pos = origin + Vec2::new(-64.0, -20.0);
-                if circle_action_button(ui, p, fly_pos, SECONDARY_BTN_SIZE, "wind", flying, false).clicked() {
+                // Fly / Land toggle (upper-inward of primary button).
+                if circle_action_button(ui, p, cluster.fly, SECONDARY_BTN_SIZE, "wind", flying, false).clicked() {
                     actions.bar_action = BarAction::ToggleFly;
                 }
 
-                // Descend / Crouch button (directly left of primary button).
-                let down_pos = origin + Vec2::new(-70.0, 32.0);
+                // Descend / Crouch button (inward of primary button).
                 let down_icon = if flying { "arrow-down" } else { "chevrons-down" };
-                self.last_down_rect = Some(Rect::from_center_size(down_pos, Vec2::splat(SECONDARY_BTN_SIZE)));
-                let down_resp = circle_action_button(ui, p, down_pos, SECONDARY_BTN_SIZE, down_icon, self.down_finger.is_some(), true);
+                self.last_down_rect = Some(Rect::from_center_size(cluster.down, Vec2::splat(SECONDARY_BTN_SIZE)));
+                let down_resp = circle_action_button(ui, p, cluster.down, SECONDARY_BTN_SIZE, down_icon, self.down_finger.is_some(), true);
                 if down_resp.is_pointer_button_down_on() || down_resp.dragged() {
                     down_held = true;
                 }
 
                 // Mouselook / 1st person toggle (above primary button).
-                let ml_pos = origin + Vec2::new(-6.0, -68.0);
-                if circle_action_button(ui, p, ml_pos, SECONDARY_BTN_SIZE, "eye-filled", mouselook, false).clicked() {
+                if circle_action_button(ui, p, cluster.mouselook, SECONDARY_BTN_SIZE, "eye-filled", mouselook, false).clicked() {
                     actions.bar_action = BarAction::ToggleMouselook;
                 }
 
-                // Reset camera button (upper-left arc).
-                let reset_pos = origin + Vec2::new(-54.0, -76.0);
-                if circle_action_button(ui, p, reset_pos, 40.0, "focus-centered", false, false).clicked() {
+                // Reset camera button (upper-inward arc).
+                if circle_action_button(ui, p, cluster.reset_camera, 40.0, "focus-centered", false, false).clicked() {
                     actions.bar_action = BarAction::ResetCamera;
                 }
             });
@@ -369,6 +369,39 @@ impl TouchPadState {
         self.jump_held = jump_held || self.jump_finger.is_some();
         self.down_held = down_held || self.down_finger.is_some();
         actions
+    }
+}
+
+struct ActionClusterLayout {
+    area_pos: Pos2,
+    primary: Pos2,
+    fly: Pos2,
+    down: Pos2,
+    mouselook: Pos2,
+    reset_camera: Pos2,
+}
+
+fn action_cluster_layout(usable: Rect, bottom_pad: f32, left_handed: bool) -> ActionClusterLayout {
+    let anchor_x = if left_handed {
+        usable.left() + 20.0 + PRIMARY_BTN_SIZE * 0.5
+    } else {
+        usable.right() - 20.0 - PRIMARY_BTN_SIZE * 0.5
+    };
+    let anchor_y = usable.bottom() - bottom_pad - 32.0 - SECONDARY_BTN_SIZE * 0.5;
+    let origin = Pos2::new(anchor_x, anchor_y);
+    let dir_x = if left_handed { -1.0 } else { 1.0 };
+    let area_x = if left_handed {
+        anchor_x - PRIMARY_BTN_SIZE * 0.5
+    } else {
+        anchor_x - 120.0
+    };
+    ActionClusterLayout {
+        area_pos: Pos2::new(area_x, anchor_y - 120.0),
+        primary: origin,
+        fly: origin + Vec2::new(-64.0 * dir_x, -20.0),
+        down: origin + Vec2::new(-70.0 * dir_x, 32.0),
+        mouselook: origin + Vec2::new(-6.0 * dir_x, -68.0),
+        reset_camera: origin + Vec2::new(-54.0 * dir_x, -76.0),
     }
 }
 
@@ -539,5 +572,31 @@ mod tests {
         pad.apply_to_move_input(&mut down_input);
         assert!(down_input.down);
         assert!(pad.handle_touch(TouchPhase::Ended, 3, [727.0, 292.0], usable));
+    }
+
+    #[test]
+    fn left_handed_mirrors_action_cluster_to_left_side() {
+        let usable = Rect::from_min_size(Pos2::ZERO, Vec2::new(844.0, 390.0));
+        let right_handed = action_cluster_layout(usable, 76.0, false);
+        let left_handed = action_cluster_layout(usable, 76.0, true);
+
+        // Right-handed: cluster sits on the right with secondary buttons fanning left.
+        assert!(right_handed.primary.x > usable.center().x);
+        assert!(right_handed.fly.x < right_handed.primary.x);
+        assert!(right_handed.down.x < right_handed.primary.x);
+        assert!(right_handed.mouselook.x < right_handed.primary.x);
+        assert!(right_handed.reset_camera.x < right_handed.primary.x);
+
+        // Left-handed: cluster mirrors to the left with secondary buttons fanning right,
+        // opposite the right-side thumbstick zone.
+        assert!(left_handed.primary.x < usable.center().x);
+        assert_eq!(left_handed.primary.x + right_handed.primary.x, usable.right());
+        assert_eq!(left_handed.fly.x + right_handed.fly.x, usable.right());
+        assert_eq!(left_handed.down.x + right_handed.down.x, usable.right());
+        assert_eq!(left_handed.mouselook.x + right_handed.mouselook.x, usable.right());
+        assert_eq!(left_handed.reset_camera.x + right_handed.reset_camera.x, usable.right());
+        assert_eq!(left_handed.primary.y, right_handed.primary.y);
+        assert!(left_handed.area_pos.x >= usable.left());
+        assert!(left_handed.down.x < thumbstick_zone(usable, true).min.x);
     }
 }

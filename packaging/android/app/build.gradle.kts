@@ -6,6 +6,12 @@ plugins {
     id("com.android.application")
 }
 
+val hasGoogleServices: Boolean = file("google-services.json").isFile
+if (hasGoogleServices) {
+    apply(plugin = "com.google.gms.google-services")
+    apply(plugin = "com.google.firebase.crashlytics")
+}
+
 // Optional downstream branding overrides from AURORA_BRAND_CONFIG or <repo>/brand.local.json
 val repoRoot: File = rootProject.projectDir.resolve("../..").canonicalFile
 val brandConfigEnv: String? = System.getenv("AURORA_BRAND_CONFIG")?.takeIf { it.isNotBlank() }
@@ -105,6 +111,12 @@ android {
             if (hasReleaseSigning) {
                 signingConfig = signingConfigs.getByName("release")
             }
+            if (hasGoogleServices) {
+                extensions.findByType(com.google.firebase.crashlytics.buildtools.gradle.CrashlyticsExtension::class.java)?.apply {
+                    nativeSymbolUploadEnabled = true
+                    unstrippedNativeLibsDir = file("src/main/jniLibs")
+                }
+            }
         }
     }
 
@@ -121,4 +133,9 @@ android {
 dependencies {
     implementation("org.rustls:rustls-platform-verifier:0.2.0")
     implementation("org.jetbrains.kotlin:kotlin-stdlib:2.1.0")
+    if (hasGoogleServices) {
+        implementation(platform("com.google.firebase:firebase-bom:33.10.0"))
+        implementation("com.google.firebase:firebase-crashlytics")
+        implementation("com.google.firebase:firebase-crashlytics-ndk")
+    }
 }
