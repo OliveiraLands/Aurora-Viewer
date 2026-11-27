@@ -1234,7 +1234,14 @@ impl Renderer {
                     self.writes.write_buffer(buffer, (a * 64) as u64, bytemuck::cast_slice(&mats[a..b]));
                 }
             }
-            Self::mirror_palettes_into(&w.device, &mut self.rt_palettes, &mut self.rt_written, mats, a, ((slot + 1) * per).min(fits));
+            Self::mirror_palettes_into(
+                &w.device,
+                &mut self.rt_palettes,
+                &mut self.rt_written,
+                mats,
+                a,
+                ((slot + 1) * per).min(fits),
+            );
         }
     }
 

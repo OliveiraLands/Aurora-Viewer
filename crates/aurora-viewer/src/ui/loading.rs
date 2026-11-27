@@ -402,8 +402,10 @@ fn banner(
         let mut shadow = ctx.global_style().visuals.window_shadow;
         shadow.color = shadow.color.gamma_multiply(a);
         painter.add(shadow.as_shape(rect, radius));
-        painter
-            .add(egui::epaint::RectShape::filled(rect, radius, super::widgets::PICTURE_TINT.gamma_multiply(a)).with_texture(place.tile.expect("tile").id(), uv));
+        painter.add(
+            egui::epaint::RectShape::filled(rect, radius, super::widgets::PICTURE_TINT.gamma_multiply(a))
+                .with_texture(place.tile.expect("tile").id(), uv),
+        );
         painter.rect_stroke(
             rect,
             radius,

@@ -63,7 +63,11 @@ pub enum ActiveBackend {
 impl ActiveBackend {
     /// Platform's primary native backend.
     pub const fn platform_native() -> Self {
-        if cfg!(any(target_os = "macos", target_os = "ios")) { Self::Metal } else { Self::Vulkan }
+        if cfg!(any(target_os = "macos", target_os = "ios")) {
+            Self::Metal
+        } else {
+            Self::Vulkan
+        }
     }
 
     /// Maps a `wgpu::Backend` to `ActiveBackend`, if it is one of Aurora's supported backends.

@@ -97,10 +97,7 @@ impl TouchPadState {
         let p = Pos2::new(pos[0], pos[1]);
         match phase {
             TouchPhase::Started => {
-                if !self.last_sitting
-                    && self.jump_finger.is_none()
-                    && self.last_primary_rect.is_some_and(|r| r.expand(6.0).contains(p))
-                {
+                if !self.last_sitting && self.jump_finger.is_none() && self.last_primary_rect.is_some_and(|r| r.expand(6.0).contains(p)) {
                     self.jump_finger = Some(id);
                     self.jump_held = true;
                     return true;
@@ -331,15 +328,8 @@ impl TouchPadState {
                     "arrow-big-up-filled"
                 };
                 self.last_primary_rect = Some(Rect::from_center_size(origin, Vec2::splat(PRIMARY_BTN_SIZE)));
-                let primary_resp = circle_action_button(
-                    ui,
-                    p,
-                    origin,
-                    PRIMARY_BTN_SIZE,
-                    primary_icon,
-                    self.jump_finger.is_some(),
-                    !sitting,
-                );
+                let primary_resp =
+                    circle_action_button(ui, p, origin, PRIMARY_BTN_SIZE, primary_icon, self.jump_finger.is_some(), !sitting);
                 if sitting {
                     if primary_resp.clicked() {
                         actions.bar_action = BarAction::StandUp;
@@ -358,15 +348,7 @@ impl TouchPadState {
                 let down_pos = origin + Vec2::new(-70.0, 32.0);
                 let down_icon = if flying { "arrow-down" } else { "chevrons-down" };
                 self.last_down_rect = Some(Rect::from_center_size(down_pos, Vec2::splat(SECONDARY_BTN_SIZE)));
-                let down_resp = circle_action_button(
-                    ui,
-                    p,
-                    down_pos,
-                    SECONDARY_BTN_SIZE,
-                    down_icon,
-                    self.down_finger.is_some(),
-                    true,
-                );
+                let down_resp = circle_action_button(ui, p, down_pos, SECONDARY_BTN_SIZE, down_icon, self.down_finger.is_some(), true);
                 if down_resp.is_pointer_button_down_on() || down_resp.dragged() {
                     down_held = true;
                 }

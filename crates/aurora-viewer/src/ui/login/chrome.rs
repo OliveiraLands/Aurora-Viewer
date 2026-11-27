@@ -167,7 +167,7 @@ pub fn footer(ctx: &Context, p: &Palette, icons: &Icons, info: &LoginInfo, sideb
                 let quit_size = if phone { Vec2::splat(btn_h) } else { Vec2::new(0.0, btn_h) };
                 if widgets::action_button(ui, p, "power", quit_label, ActionKind::FlatDanger, quit_size)
                     .on_hover_text(aurora_i18n::tr!("common-quit"))
-                .clicked()
+                    .clicked()
                 {
                     action = LoginAction::Quit;
                 }

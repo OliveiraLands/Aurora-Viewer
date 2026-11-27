@@ -2,7 +2,6 @@
 
 #![cfg_attr(all(windows, not(debug_assertions)), windows_subsystem = "windows")]
 
-
 /// Hybrid-GPU hints (#894): on a PC with an integrated and a dedicated GPU,
 /// the NVIDIA (Optimus) and AMD (PowerXpress) drivers run a program that
 /// exports these on the dedicated one. The Legacy Viewer exports the same

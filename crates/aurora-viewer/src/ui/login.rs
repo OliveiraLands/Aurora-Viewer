@@ -1114,112 +1114,112 @@ pub fn show(
                                 action = LoginAction::Login;
                             }
                         }
-                if let Some(reason) = form.block_reason {
-                    ui.add_space(8.0);
-                    ui.label(RichText::new(reason).size(12.0).color(p.amber));
-                }
-                if let Some(msg) = form.tos_message.clone() {
-                    ui.add_space(8.0);
-                    widgets::divider(ui, p);
-                    ui.label(RichText::new(aurora_i18n::tr!("ui-login-terms-of-service")).strong().color(p.amber));
-                    egui::ScrollArea::vertical().max_height(120.0).show(ui, |ui| {
-                        ui.label(RichText::new(&msg).size(12.0).color(p.muted));
-                    });
-                    if let Some(url) = terms_url(&msg, &settings.login_uri()) {
-                        terms_link(ui, p, &url);
-                    }
-                    if ui
-                        .add_enabled(
-                            form.block_reason.is_none() && !form.busy,
-                            egui::Button::new(aurora_i18n::tr!("ui-login-i-accept-the-terms-and-want-to-log-in")),
-                        )
-                        .clicked()
-                    {
-                        form.agree_tos = true;
-                        form.tos_message = None;
-                        action = LoginAction::Login;
-                    }
-                }
-                // a step of its own, as the Legacy Viewer's message_critical
-                // floater: reading it acknowledges this message only
-                if let Some(msg) = form.critical_message.clone() {
-                    ui.add_space(8.0);
-                    widgets::divider(ui, p);
-                    ui.label(RichText::new(aurora_i18n::tr!("ui-login-critical-message")).strong().color(p.amber));
-                    egui::ScrollArea::vertical()
-                        .id_salt("critical_message")
-                        .max_height(120.0)
-                        .show(ui, |ui| {
-                            ui.label(RichText::new(msg).size(12.0).color(p.muted));
-                        });
-                    if ui
-                        .add_enabled(
-                            form.block_reason.is_none() && !form.busy,
-                            egui::Button::new(aurora_i18n::tr!("ui-login-critical-message-read")),
-                        )
-                        .clicked()
-                    {
-                        form.read_critical = true;
-                        form.critical_message = None;
-                        action = LoginAction::Login;
-                    }
-                }
-                // the login would go on to another server: the user decides
-                if let Some(server) = form.next_server.clone() {
-                    ui.add_space(8.0);
-                    widgets::divider(ui, p);
-                    ui.label(RichText::new(aurora_i18n::tr!("ui-login-next-server")).strong());
-                    ui.label(
-                        RichText::new(aurora_i18n::tr!("ui-login-next-server-body", server = server.as_str()))
-                            .size(12.0)
-                            .color(p.muted),
-                    );
-                    if ui
-                        .add_enabled(
-                            form.block_reason.is_none() && !form.busy,
-                            egui::Button::new(aurora_i18n::tr!("ui-login-next-server-accept")),
-                        )
-                        .clicked()
-                    {
-                        form.accepted_next_servers.push(server);
-                        form.next_server = None;
-                        action = LoginAction::Login;
-                    }
-                }
-                // the login would travel unencrypted: the user decides
-                if let Some(server) = form.unencrypted_server.clone() {
-                    ui.add_space(8.0);
-                    widgets::divider(ui, p);
-                    ui.label(RichText::new(aurora_i18n::tr!("ui-login-unencrypted")).strong().color(p.amber));
-                    ui.label(
-                        RichText::new(aurora_i18n::tr!("ui-login-unencrypted-body", server = server.as_str()))
-                            .size(12.0)
-                            .color(p.muted),
-                    );
-                    if ui
-                        .add_enabled(
-                            form.block_reason.is_none() && !form.busy,
-                            egui::Button::new(aurora_i18n::tr!("ui-login-unencrypted-accept")),
-                        )
-                        .clicked()
-                    {
-                        form.accepted_unencrypted.push(server);
-                        form.unencrypted_server = None;
-                        action = LoginAction::Login;
-                    }
-                }
-                if let Some((msg, frac)) = progress {
-                    ui.add_space(10.0);
-                    widgets::progress(ui, p, "login_progress", frac, ui.available_width(), "", None);
-                    ui.label(RichText::new(msg).size(12.0).color(p.violet_pale));
-                }
-                if let Some(err) = &form.error {
-                    ui.add_space(8.0);
-                    ui.label(RichText::new(err).size(12.5).color(p.danger));
-                }
-            })
-            .response
-            .rect;
+                        if let Some(reason) = form.block_reason {
+                            ui.add_space(8.0);
+                            ui.label(RichText::new(reason).size(12.0).color(p.amber));
+                        }
+                        if let Some(msg) = form.tos_message.clone() {
+                            ui.add_space(8.0);
+                            widgets::divider(ui, p);
+                            ui.label(RichText::new(aurora_i18n::tr!("ui-login-terms-of-service")).strong().color(p.amber));
+                            egui::ScrollArea::vertical().max_height(120.0).show(ui, |ui| {
+                                ui.label(RichText::new(&msg).size(12.0).color(p.muted));
+                            });
+                            if let Some(url) = terms_url(&msg, &settings.login_uri()) {
+                                terms_link(ui, p, &url);
+                            }
+                            if ui
+                                .add_enabled(
+                                    form.block_reason.is_none() && !form.busy,
+                                    egui::Button::new(aurora_i18n::tr!("ui-login-i-accept-the-terms-and-want-to-log-in")),
+                                )
+                                .clicked()
+                            {
+                                form.agree_tos = true;
+                                form.tos_message = None;
+                                action = LoginAction::Login;
+                            }
+                        }
+                        // a step of its own, as the Legacy Viewer's message_critical
+                        // floater: reading it acknowledges this message only
+                        if let Some(msg) = form.critical_message.clone() {
+                            ui.add_space(8.0);
+                            widgets::divider(ui, p);
+                            ui.label(RichText::new(aurora_i18n::tr!("ui-login-critical-message")).strong().color(p.amber));
+                            egui::ScrollArea::vertical()
+                                .id_salt("critical_message")
+                                .max_height(120.0)
+                                .show(ui, |ui| {
+                                    ui.label(RichText::new(msg).size(12.0).color(p.muted));
+                                });
+                            if ui
+                                .add_enabled(
+                                    form.block_reason.is_none() && !form.busy,
+                                    egui::Button::new(aurora_i18n::tr!("ui-login-critical-message-read")),
+                                )
+                                .clicked()
+                            {
+                                form.read_critical = true;
+                                form.critical_message = None;
+                                action = LoginAction::Login;
+                            }
+                        }
+                        // the login would go on to another server: the user decides
+                        if let Some(server) = form.next_server.clone() {
+                            ui.add_space(8.0);
+                            widgets::divider(ui, p);
+                            ui.label(RichText::new(aurora_i18n::tr!("ui-login-next-server")).strong());
+                            ui.label(
+                                RichText::new(aurora_i18n::tr!("ui-login-next-server-body", server = server.as_str()))
+                                    .size(12.0)
+                                    .color(p.muted),
+                            );
+                            if ui
+                                .add_enabled(
+                                    form.block_reason.is_none() && !form.busy,
+                                    egui::Button::new(aurora_i18n::tr!("ui-login-next-server-accept")),
+                                )
+                                .clicked()
+                            {
+                                form.accepted_next_servers.push(server);
+                                form.next_server = None;
+                                action = LoginAction::Login;
+                            }
+                        }
+                        // the login would travel unencrypted: the user decides
+                        if let Some(server) = form.unencrypted_server.clone() {
+                            ui.add_space(8.0);
+                            widgets::divider(ui, p);
+                            ui.label(RichText::new(aurora_i18n::tr!("ui-login-unencrypted")).strong().color(p.amber));
+                            ui.label(
+                                RichText::new(aurora_i18n::tr!("ui-login-unencrypted-body", server = server.as_str()))
+                                    .size(12.0)
+                                    .color(p.muted),
+                            );
+                            if ui
+                                .add_enabled(
+                                    form.block_reason.is_none() && !form.busy,
+                                    egui::Button::new(aurora_i18n::tr!("ui-login-unencrypted-accept")),
+                                )
+                                .clicked()
+                            {
+                                form.accepted_unencrypted.push(server);
+                                form.unencrypted_server = None;
+                                action = LoginAction::Login;
+                            }
+                        }
+                        if let Some((msg, frac)) = progress {
+                            ui.add_space(10.0);
+                            widgets::progress(ui, p, "login_progress", frac, ui.available_width(), "", None);
+                            ui.label(RichText::new(msg).size(12.0).color(p.violet_pale));
+                        }
+                        if let Some(err) = &form.error {
+                            ui.add_space(8.0);
+                            ui.label(RichText::new(err).size(12.5).color(p.danger));
+                        }
+                    })
+                    .response
+                    .rect;
                 });
         });
 
