@@ -165,9 +165,9 @@ ui-context-attach-cancelled = Attach cancelled.
 
 ui-options-above-this-limit-the-avatar-appears-as-a-gray = Above this limit, the avatar appears as a grey silhouette without attachments (as in the Legacy Viewer; far right: unlimited)
 
-app-aurora-viewer-unable-to-initialize-vulkan = { "Aurora Viewer: unable to initialise Vulkan: " }{ $e }
+app-aurora-viewer-unable-to-initialize-vulkan = { "OliViewer: unable to initialise Vulkan: " }{ $e }
 
-app-aurora-viewer-unable-to-initialize-metal = { "Aurora Viewer: unable to initialise Metal: " }{ $e }
+app-aurora-viewer-unable-to-initialize-metal = { "OliViewer: unable to initialise Metal: " }{ $e }
 
 demo-region-notecard-rules-text = Rules of the Aurora demo estate: build tidily, keep your scripts light, be kind to your neighbours.
 
@@ -753,7 +753,7 @@ wearable-param-715 = Nail Polish Colour
 
 about-tab-licences = Licences
 
-about-licence-title = Aurora Viewer's licence
+about-licence-title = OliViewer's licence
 
 particle-editor-start-color = Start colour
 
