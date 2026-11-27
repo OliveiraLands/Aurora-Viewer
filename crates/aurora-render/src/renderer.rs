@@ -10051,6 +10051,7 @@ impl Backend {
             self.drawn_pick.begin(
                 (self.config.width, self.config.height),
                 main_vp.inverse(),
+                unjittered_vp.inverse(),
                 Curvature::new(f.camera_pos, f.curvature),
             )
         } else {
